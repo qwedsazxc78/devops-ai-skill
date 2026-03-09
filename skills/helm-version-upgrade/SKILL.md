@@ -176,6 +176,51 @@ When invoked with check-only (e.g., from `*health` pipeline):
 - **Nightly versions**: Semver parsing needs to handle pre-release suffixes (e.g., `1.81.8-nightly-latest`).
 - **Version in module block comment**: Ignore comments, only update the `install_version` value.
 
+## Error Handling
+
+### Discovery Failures
+- **0 orchestrator files found**: Report "No Helm module orchestrator found in this repository. This skill requires Terraform files with Helm module blocks." and stop.
+- **Module directory doesn't exist**: Skip that module, log warning, continue with remaining modules.
+- **No variable file found for a module**: Skip version consistency check for that module, warn user.
+- **No version doc found**: Skip documentation updates silently (already covered in Step 0d).
+
+### API Failures
+- **ArtifactHub unreachable or returns error**: Fall back to displaying "???" in the Latest column and suggest manual checking. Provide the chart's repository URL so the user can check manually. Never block the pipeline on an API failure.
+- **ArtifactHub returns unexpected format**: Log the raw response, skip that chart, continue with others.
+- **Rate limited (HTTP 429)**: Wait 5 seconds and retry once. If still failing, fall back to manual check mode.
+
+### Update Failures
+- **File write fails**: Report which file failed and which files were already updated. Provide the original values for manual rollback.
+- **Regex pattern doesn't match**: Report the expected vs. actual file content for the user to investigate. Do NOT force-write.
+
+## Dry-Run Support
+
+When invoked with `--dry-run` or when the user asks to "preview" or "check only":
+
+1. Execute Steps 0-5 normally (discovery + version comparison)
+2. For Step 7, instead of writing files, display a **diff preview** for each file:
+   ```
+   --- a/3-gke-package.tf
+   +++ b/3-gke-package.tf
+   @@ module "grafana" @@
+   -  install_version = "10.5.4"
+   +  install_version = "10.6.0"
+   ```
+3. Ask user to confirm before applying any changes
+4. This is the default behavior — always show the diff preview before writing, unless the user explicitly requests immediate application
+
+## Rollback Strategy
+
+If an update needs to be reverted:
+
+1. Before making changes in Step 7, record the **original values** for each file in memory:
+   - File path, line number, original content
+2. If the user requests rollback or if a subsequent validation fails:
+   - Restore each file to its original content using the recorded values
+   - Verify restoration by re-reading the files
+3. If automatic rollback fails, provide the user with the exact original values and line numbers for manual restoration
+4. Suggest `git checkout -- <file>` as a last resort if working in a clean Git state
+
 ## Dependencies
 
 - UPGRADE_PATTERNS.md — File-specific regex patterns and edge cases

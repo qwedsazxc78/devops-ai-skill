@@ -196,6 +196,69 @@ The skill CANNOT auto-fix (requires user decision):
 - GKE cluster-level security settings (requires terraform apply)
 - Network policy rules (requires understanding of traffic patterns)
 
+## Hardcoded Secret Detection Patterns
+
+When scanning for secrets in Step 2, use these specific patterns to reduce false positives:
+
+### High Confidence (likely real secrets)
+- Base64-encoded strings > 20 chars assigned to `password`, `secret`, `token`, or `key` fields
+- Strings matching `AKIA[0-9A-Z]{16}` (AWS access keys)
+- Strings matching `ghp_[a-zA-Z0-9]{36}` (GitHub personal tokens)
+- Strings matching `gcp_[a-zA-Z0-9-]+\.json` referenced inline (GCP service account keys)
+- Private keys: `-----BEGIN (RSA |EC )?PRIVATE KEY-----`
+
+### Medium Confidence (check context)
+- Any string literal assigned to a variable named `*password*`, `*secret*`, `*token*`, `*api_key*`
+- URLs containing `@` (may contain embedded credentials)
+- `.env` files referenced without being in `.gitignore`
+
+### Low Confidence (informational)
+- Variables with `sensitive = true` not set (Terraform best practice)
+- Secrets not using `data.google_secret_manager_secret_version` or equivalent
+
+### False Positive Exclusions
+- Example/placeholder values: `"changeme"`, `"REPLACE_ME"`, `"TODO"`, `"<secret>"`
+- Terraform data source references: `data.google_secret_manager_*`
+- Variable references: `var.secret_name` (the reference is fine, the value matters)
+- Helm value paths: `"{{ .Values.secret }}"` (template, not actual secret)
+
+## Multi-Cloud Awareness
+
+While this skill was designed for GKE, the discovery step (Step 0a) already detects AWS and Azure resources. When non-GKE cloud resources are found:
+
+- **AWS (EKS)**: Check for `aws_eks_cluster` settings — public endpoint access, encryption, logging. Reference AWS CIS benchmarks instead of GKE_HARDENING.md.
+- **Azure (AKS)**: Check for `azurerm_kubernetes_cluster` settings — network profile, RBAC, Azure AD integration. Reference Azure CIS benchmarks.
+- **Multi-cloud**: If multiple providers detected, run checks for each provider separately and note in the report header which cloud providers were analyzed.
+- **Unknown provider**: If no cloud provider is detected (pure Helm/K8s), skip cluster hardening (Step 1) and focus on Steps 2-4.
+
+## Error Handling
+
+### Discovery Failures
+- **0 cloud/cluster config files found**: Skip Step 1 (cluster hardening). Continue with Steps 2-5 — code-level security scanning still works.
+- **0 Helm module files found**: Skip Step 3 (Helm security). Continue with other steps.
+- **0 IAM/identity files found**: Skip IAM portions of Step 2. Continue with other checks.
+
+### Tool Failures
+- **`tfsec` not installed**: Skip external tool-based scanning. Rely on pattern-based analysis (Steps 1-4 are all file-reading, no external tools required).
+- **`checkov` not installed**: Same as above — skip and note install command.
+- **File too large to read**: Skip that file, warn user, suggest using `tfsec` or `checkov` CLI directly.
+
+### Report Generation
+- If all steps are skipped due to missing files, still generate a report explaining what was checked and what was skipped. Never produce an empty report.
+
+## Dry-Run Support
+
+This skill is **read-only by default** — security auditing doesn't modify files. The only modifications are auto-fix suggestions:
+
+- When offering auto-fixes (adding network policies, resource limits), always show the exact changes as a diff preview
+- Never auto-fix IAM changes, cluster settings, or anything requiring `terraform apply`
+
+## Rollback Strategy
+
+- Auto-fix changes are applied via file edits — use `git checkout -- <file>` to revert
+- For Helm values changes, the original values are displayed in the finding report
+- Security audit itself is non-destructive — no rollback needed for read-only analysis
+
 ## Dependencies
 
 - GKE_HARDENING.md — GKE security checklist with current state

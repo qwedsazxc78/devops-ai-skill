@@ -143,3 +143,19 @@ Choose the agent that matches your current task.
 - Never block agent activation — this is advisory only
 - If detection takes too long, skip and show both agents
 - Detection should complete in under 2 seconds (file existence checks only, no heavy scanning)
+
+## Error Handling
+
+### Discovery Failures
+- **Empty repository (no files)**: Show both agents as options with a note that no indicators were found.
+- **Permission denied on directories**: Skip those directories, continue scanning accessible areas.
+- **Very large repository (> 10,000 files)**: Limit `find` depth to `-maxdepth 4` and respect `.gitignore` patterns. Speed is more important than exhaustive scanning.
+
+### Edge Cases
+- **Monorepo with multiple IaC/GitOps areas**: If both IaC and GitOps scores are high (both > 5), present both agents and note that this appears to be a monorepo. Suggest the user specify which subdirectory to focus on.
+- **Minimum score threshold**: If a type's score is > 0 but < 3 (only LOW indicators), present it as "weak signal" rather than a confident recommendation.
+- **Helm-only repo (no Terraform, no Kustomize)**: Score will be low for both types. Suggest Horus if `Chart.yaml` or `helmfile.yaml` is found, as Helm management aligns with Horus capabilities.
+
+## Dry-Run Support
+
+This skill is **read-only** — it only scans files and reports findings. No modifications, no rollback needed.

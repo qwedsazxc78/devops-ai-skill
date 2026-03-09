@@ -147,6 +147,60 @@ Produce updated pipeline file(s) for the detected CI system incorporating:
 
 Present as a diff for user review.
 
+## Step 2a: Generated Snippet Validation
+
+After generating CI job snippets in Step 2, validate them before presenting to the user:
+
+1. **YAML syntax check**: Parse each generated snippet to verify it's valid YAML
+2. **Required fields check**: Verify the snippet includes all required fields for the detected CI system:
+   - GitLab: `stage`, `script` (or `extends`)
+   - GitHub Actions: `runs-on`, `steps`
+   - Jenkins: `stage`, `steps`
+3. **Variable reference check**: Verify any `$VARIABLE` or `${{ vars.X }}` references match variables defined in the existing pipeline or are clearly documented as new requirements
+4. **Image reference check**: Verify Docker images referenced in the snippet use specific tags (not `latest`)
+5. **Idempotency check**: Verify the snippet won't duplicate existing stages (compare with Step 1 gap analysis)
+
+If validation fails, fix the snippet before presenting. If it can't be auto-fixed, present with a warning note explaining what needs manual adjustment.
+
+## Error Handling
+
+### Discovery Failures
+- **No CI configuration files found**: Report "No CI/CD system detected." and offer to scaffold a new pipeline from scratch using PIPELINE_PATTERNS.md templates.
+- **Multiple CI systems detected**: List all found systems, ask user which one to focus on. Don't try to update all simultaneously.
+- **CI config file is invalid YAML**: Report the parse error and stop. The existing pipeline must be valid before we can improve it.
+
+### Tool Failures
+- **No external tools needed**: This skill works entirely by reading and writing CI config files. No external tool dependencies.
+- **Template rendering issues**: If a PIPELINE_PATTERNS.md snippet references a tool that doesn't exist in the repo, note it as a prerequisite in the generated snippet comments.
+
+### Generation Failures
+- **Can't determine Terraform root**: Fall back to `.` as root and note the assumption in the generated snippet.
+- **Snippet conflicts with existing pipeline**: Show both the existing and proposed configurations side-by-side, let user choose.
+
+## Dry-Run Support
+
+When invoked with "analyze only" or "review" mode:
+- Execute Steps 0-1 (discovery and gap analysis) and Step 3 (quality gate review)
+- Skip Steps 2, 4, 5 (no snippets generated, no pipeline modifications)
+- Present the gap analysis report only
+
+For full mode, always show the generated pipeline as a **diff preview** before writing:
+```diff
+--- a/.gitlab-ci.yml
++++ b/.gitlab-ci.yml
++ security-scan:
++   stage: test
++   script:
++     - tfsec .
+```
+
+## Rollback Strategy
+
+- All pipeline changes are file edits — use `git checkout -- <file>` to revert
+- Before modifying any CI config file, record the original content
+- If the user reports the pipeline is broken after changes, provide the exact `git checkout` command for each modified file
+- Recommend testing CI changes in a feature branch before merging to main
+
 ## Dependencies
 
 - PIPELINE_PATTERNS.md — CI job YAML snippets

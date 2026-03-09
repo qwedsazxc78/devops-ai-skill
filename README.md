@@ -10,7 +10,7 @@
 
 > 跨平台 DevOps AI 技能包 — 兩個 AI 驅動的 DevOps Agent 與共用流水線工作流，支援 **Claude Code**、**OpenAI Codex CLI** 和 **Google Gemini CLI**。
 
-🚀 [快速開始](#快速開始) · 🤖 [Agent](#agent-代理) · 🛠️ [技能模組](#技能模組) · 📖 [安裝指南](docs/setup.md) · 🌐 [GitHub Repo](https://github.com/qwedsazxc78/devops-ai-skill)
+🚀 [快速開始](#快速開始) · 🤖 [Agent](#agent-代理) · 🔧 [工具安裝](#工具安裝) · 🛠️ [技能模組](#技能模組) · 📖 [安裝指南](docs/setup.md) · 🌐 [GitHub Repo](https://github.com/qwedsazxc78/devops-ai-skill)
 
 [繁體中文](#繁體中文) | [English](#english) | [简体中文](#简体中文)
 
@@ -91,6 +91,59 @@ npx skills update
 | Skills 格式 | SKILL.md（原生） | SKILL.md（原生） | gemini-extension.json |
 | Agent 定義 | `.claude/agents/*.md` | 透過 AGENTS.md | `.gemini/agents/*.md` |
 | Bash 執行 | Yes | Yes (`!cmd`) | Yes (`run_shell_command`) |
+
+## 工具安裝
+
+一鍵安裝所有必要工具，支援 macOS (Homebrew)、Linux (apt/snap)、Python (pip)：
+
+```bash
+# 互動模式：檢查 + 提示安裝
+./scripts/install-tools.sh
+
+# 僅檢查工具狀態
+./scripts/install-tools.sh check
+
+# 安裝全部缺少的工具
+./scripts/install-tools.sh install
+
+# 僅安裝特定 Agent 的工具
+./scripts/install-tools.sh install horus   # IaC 工具
+./scripts/install-tools.sh install zeus    # GitOps 工具
+```
+
+### 共用工具
+
+| 工具 | 等級 | macOS (brew) | Linux (apt/snap) | 說明 |
+|------|------|-------------|-------------------|------|
+| git | 必要 | `brew install git` | `apt-get install git` | 版本控制 |
+| kubectl | 必要 | `brew install kubectl` | `snap install kubectl` | K8s CLI |
+| jq | 必要 | `brew install jq` | `apt-get install jq` | JSON 處理 |
+| yq | 建議 | `brew install yq` | `snap install yq` | YAML 處理 |
+
+### Horus 工具（IaC）
+
+| 工具 | 等級 | macOS (brew) | pip | 說明 |
+|------|------|-------------|-----|------|
+| terraform | 必要 | `brew install terraform` | — | IaC 引擎 |
+| tflint | 建議 | `brew install tflint` | — | Terraform Lint |
+| tfsec | 建議 | `brew install tfsec` | — | Terraform 安全掃描 |
+| pre-commit | 建議 | — | `pip install pre-commit` | Git Hook 管理 |
+
+### Zeus 工具（GitOps）
+
+| 工具 | 等級 | macOS (brew) | pip | 說明 |
+|------|------|-------------|-----|------|
+| kustomize | 必要 | `brew install kustomize` | — | Kustomize 建置 |
+| yamllint | 建議 | — | `pip install yamllint` | YAML Lint |
+| kubeconform | 建議 | `brew install kubeconform` | — | K8s 資源驗證 |
+| kube-score | 建議 | `brew install kube-score` | — | K8s 最佳實踐 |
+| kube-linter | 建議 | `brew install kube-linter` | — | K8s Lint |
+| polaris | 建議 | `brew install FairwindsOps/tap/polaris` | — | K8s 政策檢查 |
+| pluto | 建議 | `brew install FairwindsOps/tap/pluto` | — | 廢棄 API 偵測 |
+| conftest | 建議 | `brew install conftest` | — | 政策測試 |
+| checkov | 建議 | — | `pip install checkov` | IaC 安全掃描 |
+| trivy | 建議 | `brew install trivy` | — | 漏洞掃描 |
+| gitleaks | 建議 | `brew install gitleaks` | — | 機密偵測 |
 
 ## Horus 流水線（IaC）
 
@@ -228,7 +281,7 @@ MIT
 
 > Cross-platform DevOps AI Skill Pack — two AI-powered agents and shared pipeline workflows for **Claude Code**, **OpenAI Codex CLI**, and **Google Gemini CLI**.
 
-🚀 [Quick Start](#quick-start) · 🤖 [Agents](#agents) · 🛠️ [Skills](#skills) · 📖 [Setup Guide](docs/setup.md) · 🌐 [GitHub Repo](https://github.com/qwedsazxc78/devops-ai-skill)
+🚀 [Quick Start](#quick-start) · 🤖 [Agents](#agents) · 🔧 [Tool Installation](#tool-installation) · 🛠️ [Skills](#skills) · 📖 [Setup Guide](docs/setup.md) · 🌐 [GitHub Repo](https://github.com/qwedsazxc78/devops-ai-skill)
 
 ### Agents
 
@@ -304,6 +357,59 @@ npx skills update
 | Agent definitions | `.claude/agents/*.md` | via AGENTS.md | `.gemini/agents/*.md` |
 | Bash execution | Yes | Yes (`!cmd`) | Yes (`run_shell_command`) |
 
+### Tool Installation
+
+One-command installer supporting macOS (Homebrew), Linux (apt/snap), and Python (pip):
+
+```bash
+# Interactive: check + prompt install
+./scripts/install-tools.sh
+
+# Check tool status only
+./scripts/install-tools.sh check
+
+# Install all missing tools
+./scripts/install-tools.sh install
+
+# Install tools for a specific agent
+./scripts/install-tools.sh install horus   # IaC tools
+./scripts/install-tools.sh install zeus    # GitOps tools
+```
+
+#### Shared Tools
+
+| Tool | Tier | macOS (brew) | Linux (apt/snap) | Purpose |
+|------|------|-------------|-------------------|---------|
+| git | Required | `brew install git` | `apt-get install git` | Version control |
+| kubectl | Required | `brew install kubectl` | `snap install kubectl` | K8s CLI |
+| jq | Required | `brew install jq` | `apt-get install jq` | JSON processor |
+| yq | Recommended | `brew install yq` | `snap install yq` | YAML processor |
+
+#### Horus Tools (IaC)
+
+| Tool | Tier | macOS (brew) | pip | Purpose |
+|------|------|-------------|-----|---------|
+| terraform | Required | `brew install terraform` | — | IaC engine |
+| tflint | Recommended | `brew install tflint` | — | Terraform linter |
+| tfsec | Recommended | `brew install tfsec` | — | Terraform security scanner |
+| pre-commit | Recommended | — | `pip install pre-commit` | Git hook manager |
+
+#### Zeus Tools (GitOps)
+
+| Tool | Tier | macOS (brew) | pip | Purpose |
+|------|------|-------------|-----|---------|
+| kustomize | Required | `brew install kustomize` | — | Kustomize build |
+| yamllint | Recommended | — | `pip install yamllint` | YAML linter |
+| kubeconform | Recommended | `brew install kubeconform` | — | K8s resource validation |
+| kube-score | Recommended | `brew install kube-score` | — | K8s best practices |
+| kube-linter | Recommended | `brew install kube-linter` | — | K8s linter |
+| polaris | Recommended | `brew install FairwindsOps/tap/polaris` | — | K8s policy check |
+| pluto | Recommended | `brew install FairwindsOps/tap/pluto` | — | Deprecated API detection |
+| conftest | Recommended | `brew install conftest` | — | Policy testing |
+| checkov | Recommended | — | `pip install checkov` | IaC security scanner |
+| trivy | Recommended | `brew install trivy` | — | Vulnerability scanner |
+| gitleaks | Recommended | `brew install gitleaks` | — | Secret detection |
+
 ### Horus Pipelines (IaC)
 
 | Pipeline | Description |
@@ -362,7 +468,7 @@ MIT
 
 > 跨平台 DevOps AI 技能包 — 两个 AI 驱动的 DevOps Agent 与共用流水线工作流，支持 **Claude Code**、**OpenAI Codex CLI** 和 **Google Gemini CLI**。
 
-🚀 [快速开始](#快速开始-1) · 🤖 [Agent](#agent-代理-1) · 🛠️ [技能模块](#技能模块) · 📖 [安装指南](docs/setup.md) · 🌐 [GitHub Repo](https://github.com/qwedsazxc78/devops-ai-skill)
+🚀 [快速开始](#快速开始-1) · 🤖 [Agent](#agent-代理-1) · 🔧 [工具安装](#工具安装) · 🛠️ [技能模块](#技能模块) · 📖 [安装指南](docs/setup.md) · 🌐 [GitHub Repo](https://github.com/qwedsazxc78/devops-ai-skill)
 
 ### Agent 代理
 
@@ -437,6 +543,59 @@ npx skills update
 | Skills 格式 | SKILL.md（原生） | SKILL.md（原生） | gemini-extension.json |
 | Agent 定义 | `.claude/agents/*.md` | 通过 AGENTS.md | `.gemini/agents/*.md` |
 | Bash 执行 | Yes | Yes (`!cmd`) | Yes (`run_shell_command`) |
+
+### 工具安装
+
+一键安装所有必要工具，支持 macOS (Homebrew)、Linux (apt/snap)、Python (pip)：
+
+```bash
+# 交互模式：检查 + 提示安装
+./scripts/install-tools.sh
+
+# 仅检查工具状态
+./scripts/install-tools.sh check
+
+# 安装全部缺少的工具
+./scripts/install-tools.sh install
+
+# 仅安装特定 Agent 的工具
+./scripts/install-tools.sh install horus   # IaC 工具
+./scripts/install-tools.sh install zeus    # GitOps 工具
+```
+
+#### 共用工具
+
+| 工具 | 等级 | macOS (brew) | Linux (apt/snap) | 说明 |
+|------|------|-------------|-------------------|------|
+| git | 必要 | `brew install git` | `apt-get install git` | 版本控制 |
+| kubectl | 必要 | `brew install kubectl` | `snap install kubectl` | K8s CLI |
+| jq | 必要 | `brew install jq` | `apt-get install jq` | JSON 处理 |
+| yq | 建议 | `brew install yq` | `snap install yq` | YAML 处理 |
+
+#### Horus 工具（IaC）
+
+| 工具 | 等级 | macOS (brew) | pip | 说明 |
+|------|------|-------------|-----|------|
+| terraform | 必要 | `brew install terraform` | — | IaC 引擎 |
+| tflint | 建议 | `brew install tflint` | — | Terraform Lint |
+| tfsec | 建议 | `brew install tfsec` | — | Terraform 安全扫描 |
+| pre-commit | 建议 | — | `pip install pre-commit` | Git Hook 管理 |
+
+#### Zeus 工具（GitOps）
+
+| 工具 | 等级 | macOS (brew) | pip | 说明 |
+|------|------|-------------|-----|------|
+| kustomize | 必要 | `brew install kustomize` | — | Kustomize 构建 |
+| yamllint | 建议 | — | `pip install yamllint` | YAML Lint |
+| kubeconform | 建议 | `brew install kubeconform` | — | K8s 资源验证 |
+| kube-score | 建议 | `brew install kube-score` | — | K8s 最佳实践 |
+| kube-linter | 建议 | `brew install kube-linter` | — | K8s Lint |
+| polaris | 建议 | `brew install FairwindsOps/tap/polaris` | — | K8s 策略检查 |
+| pluto | 建议 | `brew install FairwindsOps/tap/pluto` | — | 废弃 API 检测 |
+| conftest | 建议 | `brew install conftest` | — | 策略测试 |
+| checkov | 建议 | — | `pip install checkov` | IaC 安全扫描 |
+| trivy | 建议 | `brew install trivy` | — | 漏洞扫描 |
+| gitleaks | 建议 | `brew install gitleaks` | — | 机密检测 |
 
 ### Horus 流水线（IaC）
 

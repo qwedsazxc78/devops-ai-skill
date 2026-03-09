@@ -180,6 +180,50 @@ List all created/modified files and suggest next steps:
 3. Review generated values files
 4. Test with `terraform apply -target=module.<chart-name>`
 
+## Error Handling
+
+### Discovery Failures
+- **0 existing Helm modules found (Step 0a)**: Cannot infer conventions. Ask the user to specify: module directory pattern, variable naming convention, and file naming convention. Provide sensible defaults (e.g., `modules/helm/<name>/`, `variables.tf`, `install_version`).
+- **No orchestrator file found (Step 0b)**: Ask user where module blocks should be registered. If unknown, create a new file following the most common convention (`helm-modules.tf`).
+- **Can't determine conventions from existing modules (Step 0c)**: Use MODULE_PATTERNS.md "Standard" pattern defaults. Note the assumption in the output.
+
+### Generation Failures
+- **Module directory already exists**: HALT. Report the conflict and ask user whether to overwrite, rename, or abort.
+- **Orchestrator file is too complex to parse**: Show the user where to manually add the module block, with the exact HCL snippet to paste.
+- **Identity file not found but workload identity requested**: Generate the module files without identity registration. Warn user to manually configure workload identity.
+
+### Pattern Selection Ambiguity
+- If inputs match multiple patterns, present the top 2 options with pros/cons and let the user choose. Default to "Standard" pattern when in doubt.
+
+## Dry-Run Support
+
+When invoked with `--dry-run` or when the user asks to "preview":
+
+1. Execute Steps 0-2 (discovery + input gathering + pattern selection)
+2. For Step 3, display all files that **would be created** with their full content, but don't write them:
+   ```
+   Would create: modules/helm/redis/main.tf (42 lines)
+   Would create: modules/helm/redis/variables.tf (28 lines)
+   Would create: modules/helm/redis/common.yaml (15 lines)
+   Would create: modules/helm/redis/configs-dev.yaml (8 lines)
+   ```
+3. For Steps 4-6, show the exact additions that **would be made** to existing files as diffs
+4. Ask user to confirm before creating/modifying any files
+
+## Rollback Strategy
+
+Since this skill creates new files and modifies existing ones:
+
+1. **New files**: Record all created file paths. To rollback, delete them: `rm -rf <module-directory>`
+2. **Modified files** (orchestrator, version doc, identity file): Record the original content of each modified section before editing
+3. **Provide rollback command**: After generation, include a rollback snippet:
+   ```bash
+   # To undo this scaffold:
+   rm -rf <module-directory>
+   git checkout -- <orchestrator-file> <version-doc> <identity-file>
+   ```
+4. If validation (Step 7) fails, offer automatic rollback of all changes
+
 ## Dependencies
 
 - MODULE_PATTERNS.md — Reference implementations for each pattern

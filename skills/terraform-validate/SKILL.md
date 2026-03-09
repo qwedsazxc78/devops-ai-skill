@@ -220,6 +220,52 @@ The skill CANNOT auto-fix:
 - Missing config files (require domain knowledge for values)
 - Naming convention violations (may have intentional exceptions)
 
+## Step 4f: Unused Variable Detection
+
+Scan all `.tf` files in the Terraform root for variables that are declared but never referenced:
+
+1. Collect all `variable "<name>"` declarations across all `.tf` files
+2. For each variable, search for `var.<name>` references across all `.tf` files in the same directory
+3. Exclude variables that are passed through to modules (check `module` blocks for `<name> = var.<name>`)
+4. Report unused variables as **WARN** — they may be intentionally declared for future use or for documentation
+
+**Source of Truth for Mismatches**: When cross-file consistency checks (Step 4a) find version mismatches:
+- The **orchestrator file** (the file containing `module` blocks) is the source of truth
+- Variable file defaults should match the orchestrator
+- Documentation should match the orchestrator
+- If the orchestrator value looks wrong (e.g., clearly older than the variable file), flag it for user review rather than auto-aligning
+
+## Error Handling
+
+### Discovery Failures
+- **0 Terraform files found**: Report "No Terraform files found in this repository." and stop. Do not proceed with validation.
+- **Multiple Terraform roots found**: List all discovered roots, ask user which one to validate, or validate all sequentially.
+- **Permission denied on files**: Skip the inaccessible file, warn the user, continue with remaining files.
+
+### Tool Failures
+- **`terraform` not installed**: Report as FAIL with install command (`brew install terraform`). This is a required tool — cannot proceed without it.
+- **`terraform fmt` fails**: Report the error, skip to Step 2. Formatting check is non-blocking.
+- **`terraform init -backend=false` fails**: Report the error. Try `terraform validate` anyway (it may still work for syntax checks). If validate also fails, report both errors.
+- **`terraform validate` fails with provider errors**: This is expected without `terraform init`. Report as INFO, not FAIL. Note that full validation requires init.
+- **`tflint` not installed**: Skip Steps 6. Report as INFO with install command.
+
+### Unexpected States
+- **Broken `.tf` file (syntax error so bad it can't be parsed)**: Report the file and error, skip cross-file checks that depend on parsing that file.
+- **Empty Terraform root (directory exists but no `.tf` files with resources)**: Report as INFO — may be a module directory, not a root.
+
+## Dry-Run Support
+
+This skill is read-only by default — validation doesn't modify files. The only modification is `terraform fmt` auto-fix:
+
+- When suggesting `terraform fmt`, always ask first: "N files need formatting. Run `terraform fmt -recursive` to fix? (y/n)"
+- For version mismatch auto-fix (Step 4a), show the diff preview before applying
+
+## Rollback Strategy
+
+- **Formatting changes**: `git checkout -- <file>` to restore original formatting
+- **Version alignment**: The original values are displayed in the mismatch report — user can manually restore or use `git checkout`
+- Validation itself is non-destructive — no rollback needed for read-only checks
+
 ## Dependencies
 
 - TFLINT_RULES.md — Recommended TFLint rules

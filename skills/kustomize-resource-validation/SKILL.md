@@ -119,3 +119,41 @@ Warnings:
 ```
 
 If all checks pass with no warnings, end with: "All checks passed. No issues found."
+
+## Check 2a: Patch-Resource Match Validation
+
+For each entry in the `patches:` list, verify that the patch targets a resource that actually exists in the build:
+
+1. Read the patch file and extract its `apiVersion`, `kind`, and `metadata.name`
+2. Read all resources in the `resources:` list and extract their `apiVersion`, `kind`, and `metadata.name`
+3. If the patch targets a resource not found in the resources list, report as **WARN**:
+   > WARNING: Patch `<patch-file>` targets `<kind>/<name>` but no matching resource found in `resources:`. The patch may apply to a resource from a base directory.
+4. For strategic merge patches (no `op` field), verify the patch structure matches the target resource's structure
+5. For JSON patches (contains `op: add/remove/replace`), verify the path exists in the target resource
+
+This check reduces the risk of patches silently doing nothing because their target was renamed or removed.
+
+## Error Handling
+
+### Discovery Failures
+- **kustomization.yaml is empty or invalid YAML**: Report as FAIL with the parse error. Skip all subsequent checks.
+- **Base directory referenced but doesn't exist**: Report as FAIL in Check 1 and skip Check 5 (build will fail anyway).
+- **Overlay directory with no sibling environments**: Skip Check 4 (cross-env consistency). Only one environment exists.
+
+### Tool Failures
+- **`kustomize` not installed**: Skip Check 5 (build validation). Report as SKIP with install command: `brew install kustomize`. All other checks (1-4, 6) work with file reading only.
+- **`kustomize build` fails**: Report the error output as FAIL in Check 5. Continue with Check 6.
+- **`kustomize build` times out (> 30s)**: Kill the process, report as FAIL with timeout message.
+
+### Edge Cases
+- **Deeply nested base references** (base referencing another base): Follow the chain up to 3 levels deep. Beyond that, warn about complexity.
+- **Remote resources** (`resources: [https://...]`): Skip existence check, note as INFO that remote resources can't be validated offline.
+- **Helm chart generators**: If `helmCharts:` section exists, note it as INFO — these are validated by Helm, not Kustomize.
+
+## Dry-Run Support
+
+This skill is **read-only by default** — validation doesn't modify files. All checks use Glob/Read to verify references. The only command that has side effects is `kustomize build`, which writes to stdout only.
+
+## Rollback Strategy
+
+No rollback needed — this skill only reads and reports. It never modifies files.

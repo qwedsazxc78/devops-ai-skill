@@ -110,3 +110,28 @@ Suggested fix: pre-commit run yamlfmt --files <file>
 ```
 
 If all checks pass, do not produce any output.
+
+## Error Handling
+
+### Discovery Failures
+- **No kustomization.yaml in the same directory**: Skip Check 3 (reference check). The file might be a standalone YAML, not part of a Kustomize module.
+- **No overlays/ directory found**: Skip Check 4 (build validation). The file might be in a flat Kustomize structure.
+- **No .yamllint.yml found**: Use built-in defaults (defined in Check 1). Don't report the absence as an error.
+
+### Tool Failures
+- **`yamllint` not installed**: Perform basic formatting checks using file reading only (indentation, trailing whitespace, duplicate keys). Suggest installing yamllint for comprehensive checking.
+- **`pre-commit` not installed**: Suggest `yamllint <file>` directly as the fix command instead.
+- **`kustomize` not installed**: Skip Check 4 (build validation). Report as INFO with install command.
+
+### Edge Cases
+- **CRD YAML files**: Files containing `kind: CustomResourceDefinition` may not need standard Kubernetes labels (Check 2). Skip label compliance for CRDs.
+- **Helm template files**: Files containing `{{ }}` Helm template syntax are not valid YAML. Skip formatting check and note this is a Helm template.
+- **Very large YAML files (> 1000 lines)**: Run checks but note that line-by-line formatting review may be slow. Suggest using `yamllint` CLI for better performance.
+
+## Dry-Run Support
+
+This skill is **read-only by default** — it only reports suggestions, never modifies files. All suggested fixes are presented as commands for the user to run manually.
+
+## Rollback Strategy
+
+No rollback needed — this skill only reads and suggests. It never modifies files directly.
