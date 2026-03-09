@@ -1,0 +1,59 @@
+{
+  "name": "devops-ai-skill",
+  "version": "1.0.0",
+  "description": "DevOps AI Skill Pack — Horus (IaC) + Zeus (GitOps) agents",
+  "agents": [
+    {
+      "name": "horus",
+      "description": "IaC Operations Engineer for Terraform + Helm + GKE",
+      "definition": "../../agents/horus.md"
+    },
+    {
+      "name": "zeus",
+      "description": "GitOps Engineer for Kustomize + ArgoCD",
+      "definition": "../../agents/zeus.md"
+    }
+  ],
+  "skills": [
+    {
+      "name": "terraform-validate",
+      "description": "Comprehensive validation and linting of Terraform configurations",
+      "path": "../../../skills/terraform-validate/SKILL.md"
+    },
+    {
+      "name": "terraform-security",
+      "description": "Security scanning for Terraform and Helm configurations",
+      "path": "../../../skills/terraform-security/SKILL.md"
+    },
+    {
+      "name": "helm-version-upgrade",
+      "description": "Helm chart version management with atomic updates",
+      "path": "../../../skills/helm-version-upgrade/SKILL.md"
+    },
+    {
+      "name": "helm-scaffold",
+      "description": "New Helm module generation from templates",
+      "path": "../../../skills/helm-scaffold/SKILL.md"
+    },
+    {
+      "name": "cicd-enhancer",
+      "description": "CI/CD pipeline analysis and improvement",
+      "path": "../../../skills/cicd-enhancer/SKILL.md"
+    },
+    {
+      "name": "kustomize-resource-validation",
+      "description": "Kustomize resource validation and build checks",
+      "path": "../../../skills/kustomize-resource-validation/SKILL.md"
+    },
+    {
+      "name": "repo-detect",
+      "description": "Repository type detection (IaC vs GitOps)",
+      "path": "../../../skills/repo-detect/SKILL.md"
+    },
+    {
+      "name": "yaml-fix-suggestions",
+      "description": "YAML formatting and validation suggestions",
+      "path": "../../../skills/yaml-fix-suggestions/SKILL.md"
+    }
+  ]
+}

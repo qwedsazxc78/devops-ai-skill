@@ -1,0 +1,48 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate tag matches VERSION
+        run: |
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          FILE_VERSION=$(cat VERSION | tr -d '[:space:]')
+          if [ "$TAG_VERSION" != "$FILE_VERSION" ]; then
+            echo "ERROR: Tag $TAG_VERSION does not match VERSION file $FILE_VERSION"
+            exit 1
+          fi
+
+      - name: Run structure tests
+        run: bash tests/test-structure.sh
+
+      - name: Extract changelog for this version
+        id: changelog
+        run: |
+          VERSION=$(cat VERSION | tr -d '[:space:]')
+          # Extract section for this version from CHANGELOG.md
+          awk "/## \[$VERSION\]/{found=1; next} /## \[/{found=0} found" CHANGELOG.md > /tmp/release-notes.md
+          echo "Release notes:"
+          cat /tmp/release-notes.md
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          body_path: /tmp/release-notes.md
+          generate_release_notes: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

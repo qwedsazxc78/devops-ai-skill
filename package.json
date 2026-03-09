@@ -1,0 +1,42 @@
+{
+  "name": "@awoo/devops-ai-skill",
+  "version": "1.0.0",
+  "description": "Cross-platform DevOps AI Skill Pack — Horus (IaC) + Zeus (GitOps) agents for Claude Code, OpenAI Codex CLI, and Google Gemini CLI",
+  "keywords": [
+    "devops",
+    "ai-skills",
+    "terraform",
+    "helm",
+    "kustomize",
+    "argocd",
+    "claude-code",
+    "codex-cli",
+    "gemini-cli",
+    "agent-skills"
+  ],
+  "homepage": "https://github.com/qwedsazxc78/devops-ai-skill",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/qwedsazxc78/devops-ai-skill.git"
+  },
+  "license": "MIT",
+  "author": "Awoo Platform Team",
+  "files": [
+    "skills/",
+    "prompts/",
+    "scripts/",
+    "CLAUDE.md",
+    "AGENTS.md",
+    "GEMINI.md",
+    "VERSION",
+    "README.md"
+  ],
+  "scripts": {
+    "test": "bash tests/test-structure.sh",
+    "setup:claude": "bash scripts/setup/setup-claude.sh",
+    "setup:codex": "bash scripts/setup/setup-codex.sh",
+    "setup:gemini": "bash scripts/setup/setup-gemini.sh",
+    "version:check": "bash scripts/version-check.sh",
+    "postinstall": "node scripts/postinstall.js 2>/dev/null || true"
+  }
+}

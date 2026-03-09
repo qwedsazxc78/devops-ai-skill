@@ -1,0 +1,5 @@
+# OpenAI Codex CLI configuration
+# Skills are loaded from .codex/skills/ (symlinked to skills/)
+
+[agent]
+default = "detect"

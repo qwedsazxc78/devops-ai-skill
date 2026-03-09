@@ -1,0 +1,78 @@
+name: CI — Structure Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  structure-tests:
+    name: Structure & Cross-Platform Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run structure tests
+        run: bash tests/test-structure.sh
+
+  version-consistency:
+    name: Version Consistency
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check VERSION file exists
+        run: test -f VERSION
+
+      - name: Verify version consistency
+        run: |
+          VERSION=$(cat VERSION | tr -d '[:space:]')
+          echo "VERSION: $VERSION"
+
+          # Check plugin.json
+          PLUGIN_V=$(python3 -c "import json; print(json.load(open('.claude-plugin/plugin.json'))['version'])")
+          echo "plugin.json: $PLUGIN_V"
+          [ "$VERSION" = "$PLUGIN_V" ] || { echo "FAIL: plugin.json version mismatch"; exit 1; }
+
+          # Check marketplace.json
+          MP_V=$(python3 -c "import json; print(json.load(open('.claude-plugin/marketplace.json'))['metadata']['version'])")
+          echo "marketplace.json: $MP_V"
+          [ "$VERSION" = "$MP_V" ] || { echo "FAIL: marketplace.json version mismatch"; exit 1; }
+
+          # Check gemini-extension.json
+          GEM_V=$(python3 -c "import json; print(json.load(open('.gemini/extensions/devops/gemini-extension.json'))['version'])")
+          echo "gemini-extension.json: $GEM_V"
+          [ "$VERSION" = "$GEM_V" ] || { echo "FAIL: gemini-extension.json version mismatch"; exit 1; }
+
+          echo "All versions consistent: $VERSION"
+
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Scan for hardcoded secrets
+        run: |
+          PATTERNS=(
+            'password\s*=\s*['"'"'"]'
+            'api_key\s*=\s*['"'"'"]'
+            'AKIA[0-9A-Z]{16}'
+          )
+          FOUND=0
+          for pattern in "${PATTERNS[@]}"; do
+            if grep -rn "$pattern" . \
+              --include="*.md" --include="*.json" --include="*.yaml" --include="*.sh" \
+              --exclude-dir=tests --exclude-dir=.git --exclude="CHANGELOG.md" \
+              2>/dev/null | grep -v "example\|template\|placeholder\|<\|command\|install\|brew\|apt\|snap\|uv\|pip"; then
+              FOUND=1
+            fi
+          done
+          [ $FOUND -eq 0 ] && echo "No secrets found" || { echo "Potential secrets detected!"; exit 1; }

@@ -1,0 +1,23 @@
+{
+  "name": "devops",
+  "description": "Cross-platform DevOps AI Skill Pack — two agents (Horus IaC + Zeus GitOps) with automated pipelines for Terraform, Helm, Kustomize, and ArgoCD workflows.",
+  "version": "1.0.0",
+  "author": {
+    "name": "Awoo Platform Team"
+  },
+  "homepage": "https://github.com/qwedsazxc78/devops-ai-skill",
+  "repository": "https://github.com/qwedsazxc78/devops-ai-skill",
+  "license": "MIT",
+  "keywords": [
+    "devops",
+    "terraform",
+    "helm",
+    "kustomize",
+    "argocd",
+    "gitops",
+    "iac",
+    "gke",
+    "security",
+    "pipeline"
+  ]
+}

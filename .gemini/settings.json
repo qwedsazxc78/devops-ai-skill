@@ -1,0 +1,8 @@
+{
+  "agent": "detect",
+  "extensions": {
+    "devops": {
+      "path": ".gemini/extensions/devops"
+    }
+  }
+}
