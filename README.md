@@ -82,6 +82,8 @@ npx skills add qwedsazxc78/devops-ai-skill
 npx skills update
 ```
 
+> **注意**：`npx skills add` 僅安裝 8 個 Skills（SKILL.md）。如需完整體驗（Horus/Zeus Agent + 14 條流水線），請使用 **Git Clone** 或 **Marketplace** 方式安裝。
+
 </details>
 
 ## 平台支援
@@ -347,6 +349,8 @@ npx skills add qwedsazxc78/devops-ai-skill
 npx skills update
 ```
 
+> **Note**: `npx skills add` installs the 8 skills (SKILL.md) only. For the full experience (Horus/Zeus agents + 14 pipelines), use **Git Clone** or **Marketplace** install.
+
 </details>
 
 ### Platform Support
@@ -533,6 +537,8 @@ npx skills add qwedsazxc78/devops-ai-skill
 # 更新
 npx skills update
 ```
+
+> **注意**：`npx skills add` 仅安装 8 个 Skills（SKILL.md）。如需完整体验（Horus/Zeus Agent + 14 条流水线），请使用 **Git Clone** 或 **Marketplace** 方式安装。
 
 </details>
 
