@@ -20,6 +20,10 @@ Thumbs.db
 node_modules/
 package-lock.json
 
+# Environment secrets
+.env
+.env.*
+
 # Reports (generated)
 docs/reports/
 
