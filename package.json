@@ -37,6 +37,9 @@
     "setup:codex": "bash scripts/setup/setup-codex.sh",
     "setup:gemini": "bash scripts/setup/setup-gemini.sh",
     "version:check": "bash scripts/version-check.sh",
+    "version:consistency": "bash scripts/version-consistency.sh",
+    "version:bump": "bash scripts/version-bump.sh",
+    "release": "bash scripts/release.sh",
     "postinstall": "node scripts/postinstall.js 2>/dev/null || true"
   }
 }

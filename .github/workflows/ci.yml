@@ -27,30 +27,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Check VERSION file exists
-        run: test -f VERSION
-
-      - name: Verify version consistency
-        run: |
-          VERSION=$(cat VERSION | tr -d '[:space:]')
-          echo "VERSION: $VERSION"
-
-          # Check plugin.json
-          PLUGIN_V=$(python3 -c "import json; print(json.load(open('.claude-plugin/plugin.json'))['version'])")
-          echo "plugin.json: $PLUGIN_V"
-          [ "$VERSION" = "$PLUGIN_V" ] || { echo "FAIL: plugin.json version mismatch"; exit 1; }
-
-          # Check marketplace.json
-          MP_V=$(python3 -c "import json; print(json.load(open('.claude-plugin/marketplace.json'))['metadata']['version'])")
-          echo "marketplace.json: $MP_V"
-          [ "$VERSION" = "$MP_V" ] || { echo "FAIL: marketplace.json version mismatch"; exit 1; }
-
-          # Check gemini-extension.json
-          GEM_V=$(python3 -c "import json; print(json.load(open('.gemini/extensions/devops/gemini-extension.json'))['version'])")
-          echo "gemini-extension.json: $GEM_V"
-          [ "$VERSION" = "$GEM_V" ] || { echo "FAIL: gemini-extension.json version mismatch"; exit 1; }
-
-          echo "All versions consistent: $VERSION"
+      - name: Check version consistency
+        run: bash scripts/version-consistency.sh
 
   security-scan:
     name: Security Scan
