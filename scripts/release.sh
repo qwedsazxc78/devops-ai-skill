@@ -4,10 +4,10 @@
 # =============================================================================
 # Usage:
 #   bash scripts/release.sh          # Use version from VERSION file
-#   npm run release                   # Same via npm script
+#   pnpm release                      # Same via pnpm script
 #
 # Prerequisites:
-#   1. Run 'npm run version:bump <version>' first
+#   1. Run 'pnpm version:bump <version>' first
 #   2. Ensure all changes are committed or staged
 # =============================================================================
 

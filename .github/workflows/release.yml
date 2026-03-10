@@ -42,7 +42,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # --- npm publish ---
+      # --- npm publish via pnpm ---
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -54,9 +57,9 @@ jobs:
           TAG_REF: ${{ github.ref_name }}
         run: |
           TAG_VERSION="${TAG_REF#v}"
-          npm version "$TAG_VERSION" --no-git-tag-version --allow-same-version
+          pnpm version "$TAG_VERSION" --no-git-tag-version --allow-same-version
 
       - name: Publish to npm
-        run: npm publish --access public --provenance
+        run: pnpm publish --access public --provenance --no-git-checks
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

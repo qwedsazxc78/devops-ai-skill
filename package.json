@@ -21,6 +21,7 @@
   },
   "license": "MIT",
   "author": "Awoo Platform Team",
+  "packageManager": "pnpm@10.27.0",
   "files": [
     "skills/",
     "prompts/",
