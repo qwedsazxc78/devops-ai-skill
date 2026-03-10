@@ -260,7 +260,7 @@ bash scripts/version-check.sh
 git pull origin main
 
 # 或指定版本
-git checkout v1.0.0
+git checkout v<version>
 
 # 或 npx skills
 npx skills update

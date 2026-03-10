@@ -63,6 +63,13 @@ function copyFileSafe(src, dest, label) {
   }
 }
 
+// --- Copy skills ---
+copyDirSafe(
+  path.join(PKG_ROOT, 'skills'),
+  path.join(PROJECT_ROOT, 'skills'),
+  'skills'
+);
+
 // --- Copy agents ---
 copyDirSafe(
   path.join(PKG_ROOT, '.claude', 'agents'),
@@ -109,12 +116,15 @@ copyFileSafe(
   '.codex/config.toml'
 );
 
-// --- Copy docs ---
-copyDirSafe(
-  path.join(PKG_ROOT, 'docs'),
-  path.join(PROJECT_ROOT, 'docs'),
-  'docs'
-);
+// --- Copy selected docs (skip internal files) ---
+const docFiles = ['PROJECT.md', 'setup.md'];
+for (const file of docFiles) {
+  copyFileSafe(
+    path.join(PKG_ROOT, 'docs', file),
+    path.join(PROJECT_ROOT, 'docs', file),
+    `docs/${file}`
+  );
+}
 
 // --- Print summary ---
 console.log('\n⚡ DevOps AI Skill Pack — postinstall');
@@ -145,8 +155,8 @@ if (skipped.length > 0) {
 console.log('\n🤖 Agents: Horus (IaC) + Zeus (GitOps)');
 console.log('📋 Prompts: 14 pipeline workflows');
 console.log('🔧 Skills: 8 shared skills in skills/');
-console.log('\nRun platform setup:');
-console.log('  pnpm setup:claude   # Claude Code');
-console.log('  pnpm setup:codex    # OpenAI Codex CLI');
-console.log('  pnpm setup:gemini   # Google Gemini CLI');
+console.log('\nSetup symlinks for your platform:');
+console.log('  bash node_modules/devops-ai-skill/scripts/setup/setup-claude.sh');
+console.log('  bash node_modules/devops-ai-skill/scripts/setup/setup-codex.sh');
+console.log('  bash node_modules/devops-ai-skill/scripts/setup/setup-gemini.sh');
 console.log('');
