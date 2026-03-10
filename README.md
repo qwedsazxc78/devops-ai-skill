@@ -34,7 +34,7 @@
 
 ```bash
 /plugin marketplace add qwedsazxc78/devops-ai-skill
-/plugin install devops@devops-go
+/plugin install devops@devops-ai-skill
 ```
 
 ### 方式 B：Git Clone
@@ -299,7 +299,7 @@ MIT
 
 ```bash
 /plugin marketplace add qwedsazxc78/devops-ai-skill
-/plugin install devops@devops-go
+/plugin install devops@devops-ai-skill
 ```
 
 #### Option B: Git Clone
@@ -486,7 +486,7 @@ MIT
 
 ```bash
 /plugin marketplace add qwedsazxc78/devops-ai-skill
-/plugin install devops@devops-go
+/plugin install devops@devops-ai-skill
 ```
 
 #### 方式 B：Git Clone
