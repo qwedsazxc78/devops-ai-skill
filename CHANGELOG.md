@@ -23,3 +23,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Cross-platform version check (`scripts/version-check.sh`)
 - Tool installer (`scripts/install-tools.sh`)
 - Bilingual documentation (EN + 繁體中文)
+
+<!-- Links -->
+[1.0.0]: https://github.com/qwedsazxc78/devops-ai-skill/releases/tag/v1.0.0

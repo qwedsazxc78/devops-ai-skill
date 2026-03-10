@@ -30,3 +30,4 @@ docs/reports/
 
 # Symlink targets (platform-specific)
 # .claude/skills/ and .codex/skills/ may be symlinks
+.npmrc

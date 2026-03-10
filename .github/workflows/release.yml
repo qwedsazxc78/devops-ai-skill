@@ -27,10 +27,23 @@ jobs:
       - name: Run structure tests
         run: bash tests/test-structure.sh
 
-      - name: Extract changelog for this version
+      - name: Extract changelog and append links
+        env:
+          TAG_REF: ${{ github.ref_name }}
         run: |
           VERSION=$(cat VERSION | tr -d '[:space:]')
+          # Extract changelog section for this version
           awk "/## \[$VERSION\]/{found=1; next} /## \[/{found=0} found" CHANGELOG.md > /tmp/release-notes.md
+          # Append cross-reference links
+          {
+            echo ""
+            echo "### Links"
+            echo ""
+            echo "- 📦 **npm**: [devops-ai-skill@${VERSION}](https://www.npmjs.com/package/devops-ai-skill/v/${VERSION})"
+            echo "- 🏷️ **Tag**: [${TAG_REF}](https://github.com/qwedsazxc78/devops-ai-skill/tree/${TAG_REF})"
+            echo "- 📋 **Changelog**: [CHANGELOG.md](https://github.com/qwedsazxc78/devops-ai-skill/blob/${TAG_REF}/CHANGELOG.md)"
+            echo "- 📖 **GitHub Repo**: [qwedsazxc78/devops-ai-skill](https://github.com/qwedsazxc78/devops-ai-skill)"
+          } >> /tmp/release-notes.md
           echo "Release notes:"
           cat /tmp/release-notes.md
 

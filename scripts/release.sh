@@ -27,11 +27,20 @@ if git rev-parse "$TAG" &>/dev/null; then
   exit 1
 fi
 
+# Validate CHANGELOG.md has entry for this version
+if ! grep -q "## \[$VERSION\]" CHANGELOG.md; then
+  echo "ERROR: No CHANGELOG.md entry found for version $VERSION"
+  echo "Add an entry: ## [$VERSION] - $(date +%Y-%m-%d)"
+  echo ""
+  echo "Tip: 'pnpm version:bump $VERSION' auto-scaffolds the entry."
+  exit 1
+fi
+
 # Check for uncommitted changes
 if [[ -n "$(git status --porcelain)" ]]; then
   echo ""
   echo "Staging and committing version bump..."
-  git add VERSION package.json .claude-plugin/ .gemini/extensions/
+  git add VERSION CHANGELOG.md package.json .claude-plugin/ .gemini/extensions/
   git commit -m "chore(release): bump version to $VERSION"
   echo "  ✓ Committed"
 fi

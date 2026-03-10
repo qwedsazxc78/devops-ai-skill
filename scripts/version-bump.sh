@@ -48,7 +48,44 @@ echo "  ✓ .claude-plugin/marketplace.json"
 sed -i.bak "s/\"version\": \"$OLD_VERSION\"/\"version\": \"$NEW_VERSION\"/" .gemini/extensions/devops/gemini-extension.json && rm -f .gemini/extensions/devops/gemini-extension.json.bak
 echo "  ✓ .gemini/extensions/devops/gemini-extension.json"
 
+# 6. CHANGELOG.md — scaffold new entry if not present
+if ! grep -q "## \[$NEW_VERSION\]" CHANGELOG.md; then
+  TODAY=$(date +%Y-%m-%d)
+  REPO_URL="https://github.com/qwedsazxc78/devops-ai-skill"
+
+  # Insert new entry before the first existing version heading (awk for portability)
+  awk -v ver="$NEW_VERSION" -v date="$TODAY" '
+    /^## \[/ && !inserted {
+      print "## [" ver "] - " date
+      print ""
+      print "### Added"
+      print ""
+      print "- (describe changes here)"
+      print ""
+      inserted=1
+    }
+    { print }
+  ' CHANGELOG.md > CHANGELOG.md.tmp && mv CHANGELOG.md.tmp CHANGELOG.md
+
+  # Update comparison links at bottom
+  # Insert new version compare link before existing links, keep old links intact
+  if grep -q "^\[${OLD_VERSION}\]: " CHANGELOG.md; then
+    sed -i.bak "/^\[${OLD_VERSION}\]: /i\\
+[${NEW_VERSION}]: ${REPO_URL}/compare/v${OLD_VERSION}...v${NEW_VERSION}
+" CHANGELOG.md && rm -f CHANGELOG.md.bak
+  else
+    # First release has no links yet — append both
+    echo "[${NEW_VERSION}]: ${REPO_URL}/compare/v${OLD_VERSION}...v${NEW_VERSION}" >> CHANGELOG.md
+    echo "[${OLD_VERSION}]: ${REPO_URL}/releases/tag/v${OLD_VERSION}" >> CHANGELOG.md
+  fi
+  echo "  ✓ CHANGELOG.md (scaffolded entry for $NEW_VERSION)"
+else
+  echo "  ✓ CHANGELOG.md (entry already exists)"
+fi
+
 echo ""
 echo "Done! All files updated to $NEW_VERSION"
 echo ""
-echo "Next: run 'pnpm release' to commit, tag, and push."
+echo "Next steps:"
+echo "  1. Edit CHANGELOG.md — fill in the changes for $NEW_VERSION"
+echo "  2. Run 'pnpm release' to commit, tag, and push"
