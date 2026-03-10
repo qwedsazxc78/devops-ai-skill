@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-03-10
+
+### Added
+
+- npm 套件包含完整 agent 定義檔（`.claude/agents/`、`.gemini/agents/`）
+- npm 套件包含平台設定檔（`.claude-plugin/`、`.codex/`、`.gemini/extensions/`）
+- npm 套件包含 `docs/`、`CHANGELOG.md`
+- postinstall 自動複製 agents、prompts、entry files 至專案根目錄
+- README 新增 npm version 與 GitHub Release 動態徽章
+- CHANGELOG 底部加入 Keep a Changelog 標準比較連結
+- `version-bump.sh` 自動建立 CHANGELOG 條目與版本比較連結
+- `release.sh` 發版前驗證 CHANGELOG 條目存在
+- `release.yml` 自動附加 npm/tag/changelog 交叉連結至 GitHub Release
+
 ## [1.0.0] - 2026-03-09
 
 ### Added
@@ -25,4 +39,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Bilingual documentation (EN + 繁體中文)
 
 <!-- Links -->
+[1.1.0]: https://github.com/qwedsazxc78/devops-ai-skill/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/qwedsazxc78/devops-ai-skill/releases/tag/v1.0.0
