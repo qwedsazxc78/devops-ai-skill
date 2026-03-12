@@ -21,6 +21,19 @@ if (path.resolve(PROJECT_ROOT) === path.resolve(PKG_ROOT)) {
   process.exit(0);
 }
 
+// --- Validate required source structure before copying ---
+const requiredDirs = ['prompts', 'skills', '.claude-plugin'];
+const missingDirs = requiredDirs.filter(d => !fs.existsSync(path.join(PKG_ROOT, d)));
+
+if (missingDirs.length > 0) {
+  console.warn(
+    `\n⚠ DevOps AI Skill Pack — postinstall skipped\n` +
+    `  Missing required directories in package: ${missingDirs.join(', ')}\n` +
+    `  Package may be incomplete. Try reinstalling.\n`
+  );
+  process.exit(0);
+}
+
 const installed = [];
 const skipped = [];
 
@@ -116,6 +129,23 @@ copyFileSafe(
   '.codex/config.toml'
 );
 
+// --- Antigravity: agent-as-skill wrappers + rules ---
+copyDirSafe(
+  path.join(PKG_ROOT, '.agents', 'skills', 'horus'),
+  path.join(PROJECT_ROOT, '.agents', 'skills', 'horus'),
+  '.agents/skills/horus'
+);
+copyDirSafe(
+  path.join(PKG_ROOT, '.agents', 'skills', 'zeus'),
+  path.join(PROJECT_ROOT, '.agents', 'skills', 'zeus'),
+  '.agents/skills/zeus'
+);
+copyDirSafe(
+  path.join(PKG_ROOT, '.agents', 'rules'),
+  path.join(PROJECT_ROOT, '.agents', 'rules'),
+  '.agents/rules'
+);
+
 // --- Copy selected docs (skip internal files) ---
 const docFiles = ['PROJECT.md', 'setup.md'];
 for (const file of docFiles) {
@@ -159,4 +189,5 @@ console.log('\nSetup symlinks for your platform:');
 console.log('  bash node_modules/devops-ai-skill/scripts/setup/setup-claude.sh');
 console.log('  bash node_modules/devops-ai-skill/scripts/setup/setup-codex.sh');
 console.log('  bash node_modules/devops-ai-skill/scripts/setup/setup-gemini.sh');
+console.log('  bash node_modules/devops-ai-skill/scripts/setup/setup-antigravity.sh');
 console.log('');

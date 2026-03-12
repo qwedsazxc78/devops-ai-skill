@@ -1,8 +1,16 @@
 #!/usr/bin/env bash
-set -euo pipefail
+# =============================================================================
+# Setup Claude Code — Create skill symlinks for Claude Code
+# =============================================================================
+# Usage:
+#   bash scripts/setup/setup-claude.sh
+#   bash node_modules/devops-ai-skill/scripts/setup/setup-claude.sh
+#
+# Creates .claude/skills/ symlinks pointing to shared skills/ directory.
+# Safe: skips existing symlinks.
+# =============================================================================
 
-# Setup Claude Code skill symlinks
-# Creates .claude/skills/ symlinks pointing to shared skills/
+set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"

@@ -15,6 +15,11 @@ A **cross-platform DevOps AI Skill Pack** providing two AI-powered DevOps agents
 .claude/agents/              # Agent definitions (YAML frontmatter + markdown)
   horus.md                   # IaC agent
   zeus.md                    # GitOps agent
+.agents/                     # Google Antigravity workspace config
+  skills/horus/SKILL.md      # Horus agent-as-skill
+  skills/zeus/SKILL.md       # Zeus agent-as-skill
+  rules/devops.md            # Project rules
+  workflows/                 # Symlinks to prompts/ (created by setup script)
 skills/                      # Shared skills (Open Agent Skills standard)
   <skill-name>/SKILL.md      # Skill definition
   <skill-name>/*.md          # Supporting reference data
@@ -23,10 +28,15 @@ prompts/                     # Platform-neutral pipeline definitions
   zeus/*.md                  # Zeus pipeline workflows
   shared/*.md                # Shared utilities (repo-detect, report-format, tool-check)
 scripts/                     # Shared scripts
-  install-tools.sh           # Tool installer
+  install-tools.sh           # Tool installer (macOS/Linux/Windows)
   version-bump.sh            # Version sync across config files
   version-consistency.sh     # Version consistency check
   release.sh                 # Release automation (commit + tag + push)
+  setup/                     # Platform setup scripts
+    setup-claude.sh          # Claude Code symlinks
+    setup-codex.sh           # Codex CLI symlinks
+    setup-gemini.sh          # Gemini CLI setup
+    setup-antigravity.sh     # Antigravity skills + workflows
 ```
 
 ## Agent Selection
@@ -158,6 +168,33 @@ pnpm release                   # commit → tag → push (triggers CI auto-publi
 - `.claude-plugin/plugin.json`
 - `.claude-plugin/marketplace.json`
 - `.gemini/extensions/devops/gemini-extension.json`
+
+## Google Antigravity Platform
+
+Antigravity uses the `.agents/` directory for workspace-scoped configuration:
+
+- **Skills**: `.agents/skills/` — Horus and Zeus are agent-as-skill wrappers; shared skills from `skills/` are symlinked by setup script
+- **Rules**: `.agents/rules/devops.md` — project-level rules (always active)
+- **Workflows**: `.agents/workflows/` — symlinks to `prompts/` pipelines, triggered via `/workflow-name`
+
+### Antigravity Workflows
+
+| Workflow | Maps to |
+|----------|---------|
+| `/horus-full` | `prompts/horus/full-pipeline.md` |
+| `/horus-upgrade` | `prompts/horus/upgrade.md` |
+| `/horus-security` | `prompts/horus/security.md` |
+| `/horus-validate` | `prompts/horus/validate.md` |
+| `/horus-new-module` | `prompts/horus/new-module.md` |
+| `/horus-cicd` | `prompts/horus/cicd.md` |
+| `/horus-health` | `prompts/horus/health.md` |
+| `/zeus-full` | `prompts/zeus/full-pipeline.md` |
+| `/zeus-pre-merge` | `prompts/zeus/pre-merge.md` |
+| `/zeus-health-check` | `prompts/zeus/health-check.md` |
+| `/zeus-review` | `prompts/zeus/review.md` |
+| `/zeus-onboard` | `prompts/zeus/onboard.md` |
+| `/zeus-diagram` | `prompts/zeus/diagram.md` |
+| `/zeus-status` | `prompts/zeus/status.md` |
 
 ## Report Format
 

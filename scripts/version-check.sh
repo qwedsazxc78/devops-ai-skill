@@ -1,8 +1,20 @@
 #!/usr/bin/env bash
-set -euo pipefail
+# =============================================================================
+# Version Check — Compare local version against GitHub release
+# =============================================================================
+# Usage:
+#   bash scripts/version-check.sh
+#   pnpm version:check
+#
+# Compares local VERSION file against the latest GitHub release tag.
+# Useful for checking if a new version has been published.
+#
+# Exit codes:
+#   0 = check completed (regardless of match)
+#   1 = VERSION file not found or network error
+# =============================================================================
 
-# Cross-platform version check
-# Compares local VERSION against latest GitHub release tag
+set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"

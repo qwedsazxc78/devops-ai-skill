@@ -77,6 +77,6 @@ if [[ $ERRORS -eq 0 ]]; then
   exit 0
 else
   echo "FAIL: $ERRORS version mismatch(es) found"
-  echo "Run: npm run version:bump $VERSION"
+  echo "Run: pnpm version:bump $VERSION"
   exit 1
 fi

@@ -1,8 +1,16 @@
 #!/usr/bin/env bash
-set -euo pipefail
+# =============================================================================
+# Setup Codex CLI — Create skill symlinks for OpenAI Codex
+# =============================================================================
+# Usage:
+#   bash scripts/setup/setup-codex.sh
+#   bash node_modules/devops-ai-skill/scripts/setup/setup-codex.sh
+#
+# Creates .codex/skills/ symlinks pointing to shared skills/ directory.
+# Safe: skips existing symlinks.
+# =============================================================================
 
-# Setup OpenAI Codex CLI skill symlinks
-# Creates .codex/skills/ symlinks pointing to shared skills/
+set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"

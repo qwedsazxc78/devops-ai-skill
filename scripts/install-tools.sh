@@ -24,20 +24,41 @@ fi
 
 # --- Platform detection ----------------------------------------------------
 detect_platform() {
-  OS="$(uname -s)"
   ARCH="$(uname -m)"
   PKG_MANAGER=""
 
+  # Detect OS (including Windows environments)
+  case "$(uname -s)" in
+    MINGW*|MSYS*|CYGWIN*) OS="Windows" ;;
+    Linux)
+      if grep -qi microsoft /proc/version 2>/dev/null; then
+        OS="WSL"  # treat as Linux with Windows fallback
+      else
+        OS="Linux"
+      fi ;;
+    Darwin) OS="Darwin" ;;
+    *) OS="$(uname -s)" ;;
+  esac
+
+  # Detect package manager
   if command -v brew &>/dev/null; then
     PKG_MANAGER="brew"
   elif command -v apt-get &>/dev/null; then
     PKG_MANAGER="apt"
   elif command -v yum &>/dev/null; then
     PKG_MANAGER="yum"
+  elif command -v winget &>/dev/null; then
+    PKG_MANAGER="winget"
+  elif command -v choco &>/dev/null; then
+    PKG_MANAGER="choco"
+  elif command -v scoop &>/dev/null; then
+    PKG_MANAGER="scoop"
   fi
 
-  # Python / pip
-  if command -v pip3 &>/dev/null; then
+  # Python package installer: prefer uv > pip3 > pip
+  if command -v uv &>/dev/null; then
+    PIP="uv"
+  elif command -v pip3 &>/dev/null; then
     PIP="pip3"
   elif command -v pip &>/dev/null; then
     PIP="pip"
@@ -45,49 +66,53 @@ detect_platform() {
     PIP=""
   fi
 
-  printf "${BLUE}Platform:${NC} %s (%s) | Package manager: %s | Python pip: %s\n\n" \
+  printf "${BLUE}Platform:${NC} %s (%s) | Package manager: %s | Python installer: %s\n\n" \
     "$OS" "$ARCH" "${PKG_MANAGER:-none}" "${PIP:-none}"
 }
 
 # --- Tool registry ---------------------------------------------------------
-# Format: "binary_name|category|tier|brew_cmd|apt_cmd|pip_cmd"
+# Format: "binary_name|category|tier|brew_cmd|apt_cmd|pip_cmd|winget_cmd"
 # category: shared, zeus, horus
 # tier: required, recommended
 TOOLS=(
   # Shared
-  "git|shared|required|brew install git|apt-get install -y git|"
-  "kubectl|shared|required|brew install kubectl|snap install kubectl --classic|"
-  "jq|shared|required|brew install jq|apt-get install -y jq|"
-  "yq|shared|recommended|brew install yq|snap install yq|"
+  "node|shared|required|brew install node|apt-get install -y nodejs||winget install OpenJS.NodeJS.LTS"
+  "git|shared|required|brew install git|apt-get install -y git||winget install Git.Git"
+  "kubectl|shared|required|brew install kubectl|snap install kubectl --classic||winget install Kubernetes.kubectl"
+  "jq|shared|required|brew install jq|apt-get install -y jq||winget install jqlang.jq"
+  "yq|shared|recommended|brew install yq|snap install yq||winget install MikeFarah.yq"
+  "python3|shared|recommended|brew install python3|apt-get install -y python3||winget install Python.Python.3.12"
+  "curl|shared|recommended|brew install curl|apt-get install -y curl||winget install cURL.cURL"
 
   # Zeus (GitOps) — Required
-  "kustomize|zeus|required|brew install kustomize|snap install kustomize|"
+  "kustomize|zeus|required|brew install kustomize|snap install kustomize||scoop install kustomize"
 
   # Zeus (GitOps) — Recommended
-  "yamllint|zeus|recommended|||pip install yamllint"
-  "kubeconform|zeus|recommended|brew install kubeconform||"
-  "kube-score|zeus|recommended|brew install kube-score||"
-  "kube-linter|zeus|recommended|brew install kube-linter||"
-  "polaris|zeus|recommended|brew install FairwindsOps/tap/polaris||"
-  "pluto|zeus|recommended|brew install FairwindsOps/tap/pluto||"
-  "conftest|zeus|recommended|brew install conftest||"
-  "checkov|zeus|recommended|||pip install checkov"
-  "trivy|zeus|recommended|brew install trivy||"
-  "gitleaks|zeus|recommended|brew install gitleaks||"
+  "yamllint|zeus|recommended|||pip install yamllint|"
+  "kubeconform|zeus|recommended|brew install kubeconform|||scoop install kubeconform"
+  "kube-score|zeus|recommended|brew install kube-score|||"
+  "kube-linter|zeus|recommended|brew install kube-linter|||"
+  "polaris|zeus|recommended|brew install FairwindsOps/tap/polaris|||"
+  "pluto|zeus|recommended|brew install FairwindsOps/tap/pluto|||"
+  "conftest|zeus|recommended|brew install conftest|||"
+  "checkov|zeus|recommended|||pip install checkov|"
+  "trivy|zeus|recommended|brew install trivy|||choco install trivy"
+  "gitleaks|zeus|recommended|brew install gitleaks|||choco install gitleaks"
+  "d2|zeus|recommended|brew install d2|||scoop install d2"
 
   # Horus (IaC) — Required
-  "terraform|horus|required|brew install terraform||"
+  "terraform|horus|required|brew install terraform|||winget install Hashicorp.Terraform"
+  "helm|horus|required|brew install helm|snap install helm --classic||winget install Helm.Helm"
 
   # Horus (IaC) — Recommended
-  "tflint|horus|recommended|brew install tflint||"
-  "tfsec|horus|recommended|brew install tfsec||"
-  "pre-commit|horus|recommended|||pip install pre-commit"
+  "tflint|horus|recommended|brew install tflint|||choco install tflint"
+  "tfsec|horus|recommended|brew install tfsec|||choco install tfsec"
+  "pre-commit|horus|recommended|||pip install pre-commit|"
 )
 
 # --- Helpers ---------------------------------------------------------------
 total_ok=0
 total_missing=0
-missing_tools=()
 
 check_tool() {
   local name="$1"
@@ -109,45 +134,45 @@ check_tool() {
 
 get_install_cmd() {
   local entry="$1"
-  IFS='|' read -r name category tier brew_cmd apt_cmd pip_cmd <<< "$entry"
+  IFS='|' read -r name category tier brew_cmd apt_cmd pip_cmd winget_cmd <<< "$entry"
 
-  # pip tools first (cross-platform)
+  # Python tools first (cross-platform): uv > pip3 > pip
+  # uv tool install → ~/.local/bin/ (globally accessible)
+  # pip install --user → ~/.local/bin/ (user-level, avoids sudo)
   if [[ -n "$pip_cmd" && -n "$PIP" ]]; then
-    echo "$PIP install ${pip_cmd##pip install }"
+    local pkg="${pip_cmd##pip install }"
+    if [[ "$PIP" == "uv" ]]; then
+      echo "uv tool install $pkg"
+    else
+      echo "$PIP install --user $pkg"
+    fi
     return
   fi
 
   # Platform package manager
   case "$PKG_MANAGER" in
-    brew) [[ -n "$brew_cmd" ]] && echo "$brew_cmd" && return ;;
-    apt)  [[ -n "$apt_cmd" ]] && echo "$apt_cmd" && return ;;
+    brew)   [[ -n "$brew_cmd" ]]   && echo "$brew_cmd" && return ;;
+    apt)    [[ -n "$apt_cmd" ]]    && echo "$apt_cmd" && return ;;
+    winget) [[ -n "$winget_cmd" ]] && echo "$winget_cmd" && return ;;
+    choco)
+      echo "choco install ${name}" && return ;;
+    scoop)
+      echo "scoop install ${name}" && return ;;
   esac
 
-  # Fallback: try brew command as hint
-  [[ -n "$brew_cmd" ]] && echo "$brew_cmd (may need Homebrew)" && return
-  [[ -n "$pip_cmd" ]] && echo "$pip_cmd (needs pip)" && return
-  echo "(manual install required)"
+  # No valid install command available — return empty
+  echo ""
 }
 
-install_tool() {
+# Returns a human-readable hint when no install command is available
+get_install_hint() {
   local entry="$1"
-  IFS='|' read -r name category tier brew_cmd apt_cmd pip_cmd <<< "$entry"
+  IFS='|' read -r name category tier brew_cmd apt_cmd pip_cmd winget_cmd <<< "$entry"
 
-  if command -v "$name" &>/dev/null; then
-    return 0
-  fi
-
-  local cmd
-  cmd=$(get_install_cmd "$entry")
-
-  printf "  Installing ${BOLD}%s${NC} ... " "$name"
-
-  if eval "$cmd" &>/dev/null; then
-    printf "${GREEN}OK${NC}\n"
-  else
-    printf "${RED}FAILED${NC}\n"
-    printf "    Manual install: %s\n" "$cmd"
-  fi
+  [[ -n "$brew_cmd" ]] && echo "$brew_cmd (needs Homebrew)" && return
+  [[ -n "$winget_cmd" ]] && echo "$winget_cmd (needs winget)" && return
+  [[ -n "$pip_cmd" ]] && echo "uv tool install ${pip_cmd##pip install } (needs uv or pip)" && return
+  echo "see https://github.com/search?q=${name} for install instructions"
 }
 
 # --- Commands ---------------------------------------------------------------
@@ -160,7 +185,7 @@ do_check() {
 
   local current_section=""
   for entry in "${TOOLS[@]}"; do
-    IFS='|' read -r name category tier _ _ _ <<< "$entry"
+    IFS='|' read -r name category tier _ _ _ _ <<< "$entry"
 
     # Filter by agent
     if [[ "$filter" != "all" && "$category" != "shared" && "$category" != "$filter" ]]; then
@@ -183,7 +208,10 @@ do_check() {
     check_tool "$name" || {
       local cmd
       cmd=$(get_install_cmd "$entry")
-      printf "         install: ${YELLOW}%s${NC}\n" "$cmd"
+      if [[ -z "$cmd" ]]; then
+        cmd=$(get_install_hint "$entry")
+      fi
+      printf "         recommendation: ${YELLOW}%s${NC}\n" "$cmd"
     }
   done
 
@@ -208,20 +236,32 @@ do_install() {
   # Pre-flight checks
   if [[ -z "$PKG_MANAGER" && -z "$PIP" ]]; then
     printf "${RED}No package manager found.${NC}\n"
-    printf "Install Homebrew: /bin/bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\"\n"
+    if [[ "$OS" == "Windows" ]]; then
+      printf "Install winget: https://aka.ms/getwinget\n"
+      printf "Or install Chocolatey: https://chocolatey.org/install\n"
+      printf "Or install Scoop: https://scoop.sh\n"
+    else
+      printf "Install Homebrew: /bin/bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\"\n"
+    fi
+    printf "Or install uv: curl -LsSf https://astral.sh/uv/install.sh | sh\n"
     printf "Or install pip: python3 -m ensurepip --upgrade\n"
     exit 1
   fi
 
   if [[ -z "$PKG_MANAGER" ]]; then
-    printf "${YELLOW}Warning: No system package manager (brew/apt) found.${NC}\n"
-    printf "Only pip-based tools will be installed.\n"
-    printf "Install Homebrew: /bin/bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\"\n\n"
+    printf "${YELLOW}Warning: No system package manager (brew/apt/winget) found.${NC}\n"
+    printf "Only Python-based tools (via uv/pip) will be installed.\n"
+    if [[ "$OS" == "Windows" ]]; then
+      printf "Install winget: https://aka.ms/getwinget\n\n"
+    else
+      printf "Install Homebrew: /bin/bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\"\n\n"
+    fi
   fi
 
   if [[ -z "$PIP" ]]; then
-    printf "${YELLOW}Warning: pip not found. Python-based tools will be skipped.${NC}\n"
-    printf "Install pip: python3 -m ensurepip --upgrade\n\n"
+    printf "${YELLOW}Warning: No Python installer (uv/pip) found. Python-based tools will be skipped.${NC}\n"
+    printf "Install uv (recommended): curl -LsSf https://astral.sh/uv/install.sh | sh\n"
+    printf "Or install pip: python3 -m ensurepip --upgrade\n\n"
   fi
 
   local current_section=""
@@ -230,7 +270,7 @@ do_install() {
   local failed=0
 
   for entry in "${TOOLS[@]}"; do
-    IFS='|' read -r name category tier _ _ _ <<< "$entry"
+    IFS='|' read -r name category tier _ _ _ _ <<< "$entry"
 
     # Filter by agent
     if [[ "$filter" != "all" && "$category" != "shared" && "$category" != "$filter" ]]; then
@@ -258,13 +298,35 @@ do_install() {
     local cmd
     cmd=$(get_install_cmd "$entry")
 
+    # No valid install command — show hint and skip
+    if [[ -z "$cmd" ]]; then
+      local hint
+      hint=$(get_install_hint "$entry")
+      printf "  ${YELLOW}[SKIP]${NC}  %s — no installer available\n" "$name"
+      printf "          hint: %s\n" "$hint"
+      ((failed++))
+      continue
+    fi
+
     printf "  Installing ${BOLD}%s${NC} via: %s ... " "$name" "$cmd"
 
-    if eval "$cmd" &>/dev/null 2>&1; then
+    local success=false
+    for attempt in 1 2 3; do
+      if eval "$cmd" &>/dev/null 2>&1; then
+        success=true
+        break
+      fi
+      if [[ $attempt -lt 3 ]]; then
+        printf "retry %d/3 ... " "$((attempt + 1))"
+        sleep 1
+      fi
+    done
+
+    if $success; then
       printf "${GREEN}OK${NC}\n"
       ((installed++))
     else
-      printf "${RED}FAILED${NC}\n"
+      printf "${RED}FAILED${NC} (3 attempts)\n"
       ((failed++))
     fi
   done

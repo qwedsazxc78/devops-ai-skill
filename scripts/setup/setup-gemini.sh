@@ -1,8 +1,15 @@
 #!/usr/bin/env bash
-set -euo pipefail
+# =============================================================================
+# Setup Gemini CLI — Verify Gemini agent and extension configs
+# =============================================================================
+# Usage:
+#   bash scripts/setup/setup-gemini.sh
+#   bash node_modules/devops-ai-skill/scripts/setup/setup-gemini.sh
+#
+# Verifies GEMINI.md, agent definitions, and extension config exist.
+# =============================================================================
 
-# Setup Google Gemini CLI
-# Generates gemini-extension.json from shared skills/
+set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"

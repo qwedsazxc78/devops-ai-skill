@@ -28,6 +28,17 @@ pnpm-lock.yaml
 # Reports (generated)
 docs/reports/
 
-# Symlink targets (platform-specific)
+# Symlink targets (platform-specific, created by setup scripts)
 # .claude/skills/ and .codex/skills/ may be symlinks
+# .agents/workflows/ and skill symlinks are created by setup-antigravity.sh
+.agents/workflows/
+# Ignore skill symlinks but keep real directories (horus, zeus, rules)
+.agents/skills/cicd-enhancer
+.agents/skills/helm-scaffold
+.agents/skills/helm-version-upgrade
+.agents/skills/kustomize-resource-validation
+.agents/skills/repo-detect
+.agents/skills/terraform-security
+.agents/skills/terraform-validate
+.agents/skills/yaml-fix-suggestions
 .npmrc

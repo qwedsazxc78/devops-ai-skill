@@ -1,7 +1,7 @@
 {
   "name": "devops-ai-skill",
   "version": "1.1.0",
-  "description": "Cross-platform DevOps AI Skill Pack — Horus (IaC) + Zeus (GitOps) agents for Claude Code, OpenAI Codex CLI, and Google Gemini CLI",
+  "description": "Cross-platform DevOps AI Skill Pack — Horus (IaC) + Zeus (GitOps) agents for Claude Code, OpenAI Codex CLI, Google Gemini CLI, and Google Antigravity",
   "keywords": [
     "devops",
     "ai-skills",
@@ -12,6 +12,7 @@
     "claude-code",
     "codex-cli",
     "gemini-cli",
+    "antigravity",
     "agent-skills"
   ],
   "homepage": "https://github.com/qwedsazxc78/devops-ai-skill",
@@ -31,6 +32,7 @@
     ".claude-plugin/",
     ".codex/",
     ".gemini/",
+    ".agents/",
     "CLAUDE.md",
     "AGENTS.md",
     "GEMINI.md",
@@ -43,6 +45,7 @@
     "setup:claude": "bash scripts/setup/setup-claude.sh",
     "setup:codex": "bash scripts/setup/setup-codex.sh",
     "setup:gemini": "bash scripts/setup/setup-gemini.sh",
+    "setup:antigravity": "bash scripts/setup/setup-antigravity.sh",
     "version:check": "bash scripts/version-check.sh",
     "version:consistency": "bash scripts/version-consistency.sh",
     "version:bump": "bash scripts/version-bump.sh",

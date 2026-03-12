@@ -8,9 +8,9 @@
 [![SKILLS](https://img.shields.io/badge/SKILLS-8-blueviolet?style=flat-square)](#技能模組)
 [![PIPELINES](https://img.shields.io/badge/PIPELINES-14-ff6f61?style=flat-square)](#horus-流水線iac)
 [![AGENTS](https://img.shields.io/badge/AGENTS-2-critical?style=flat-square)](#agent-代理)
-[![PLATFORMS](https://img.shields.io/badge/PLATFORMS-3-teal?style=flat-square)](#平台支援)
+[![PLATFORMS](https://img.shields.io/badge/PLATFORMS-4-teal?style=flat-square)](#平台支援)
 
-> 跨平台 DevOps AI 技能包 — 兩個 AI 驅動的 DevOps Agent 與共用流水線工作流，支援 **Claude Code**、**OpenAI Codex CLI** 和 **Google Gemini CLI**。
+> 跨平台 DevOps AI 技能包 — 兩個 AI 驅動的 DevOps Agent 與共用流水線工作流，支援 **Claude Code**、**OpenAI Codex CLI**、**Google Gemini CLI** 和 **Google Antigravity**。
 
 🚀 [快速開始](#快速開始) · 🤖 [Agent](#agent-代理) · 🔧 [工具安裝](#工具安裝) · 🛠️ [技能模組](#技能模組) · 📖 [安裝指南](docs/setup.md) · 🌐 [GitHub Repo](https://github.com/qwedsazxc78/devops-ai-skill)
 
@@ -32,7 +32,7 @@
 <details>
 <summary><strong>Claude Code</strong>（推薦）</summary>
 
-### 方式 A：Marketplace
+### 方式 A：Marketplace（目前僅支援 Claude Code）
 
 ```bash
 /plugin marketplace add qwedsazxc78/devops-ai-skill
@@ -72,6 +72,17 @@ cd devops-ai-skill && bash scripts/setup/setup-gemini.sh
 </details>
 
 <details>
+<summary><strong>Google Antigravity</strong></summary>
+
+```bash
+git clone https://github.com/qwedsazxc78/devops-ai-skill.git
+cd devops-ai-skill && bash scripts/setup/setup-antigravity.sh
+# .agents/ 目錄會被 Antigravity 自動載入
+```
+
+</details>
+
+<details>
 <summary><strong>跨平台（npx skills）</strong></summary>
 
 ```bash
@@ -88,17 +99,18 @@ npx skills update
 
 ## 平台支援
 
-| 功能 | Claude Code | OpenAI Codex | Gemini CLI |
-|------|-------------|--------------|------------|
-| 入口檔 | `CLAUDE.md` | `AGENTS.md` | `GEMINI.md` |
-| Skills 目錄 | `.claude/skills/` | `.codex/skills/` | extensions |
-| Skills 格式 | SKILL.md（原生） | SKILL.md（原生） | gemini-extension.json |
-| Agent 定義 | `.claude/agents/*.md` | 透過 AGENTS.md | `.gemini/agents/*.md` |
-| Bash 執行 | Yes | Yes (`!cmd`) | Yes (`run_shell_command`) |
+| 功能 | Claude Code | OpenAI Codex | Gemini CLI | Antigravity |
+|------|-------------|--------------|------------|-------------|
+| 入口檔 | `CLAUDE.md` | `AGENTS.md` | `GEMINI.md` | `.agents/rules/` |
+| Skills 目錄 | `.claude/skills/` | `.codex/skills/` | extensions | `.agents/skills/` |
+| Skills 格式 | SKILL.md（原生） | SKILL.md（原生） | gemini-extension.json | SKILL.md（原生） |
+| Agent 定義 | `.claude/agents/*.md` | 透過 AGENTS.md | `.gemini/agents/*.md` | `.agents/skills/{h,z}/` |
+| 流水線觸發 | `*cmd` | `*cmd` | `*cmd` | `/workflow-name` |
+| Bash 執行 | Yes | Yes (`!cmd`) | Yes (`run_shell_command`) | Yes |
 
 ## 工具安裝
 
-一鍵安裝所有必要工具，支援 macOS (Homebrew)、Linux (apt/snap)、Python (pip)：
+一鍵安裝所有必要工具，支援 macOS (Homebrew)、Linux (apt/snap)、Windows (winget/choco/scoop)、Python (uv/pip)：
 
 ```bash
 # 互動模式：檢查 + 提示安裝
@@ -117,37 +129,42 @@ npx skills update
 
 ### 共用工具
 
-| 工具 | 等級 | macOS (brew) | Linux (apt/snap) | 說明 |
-|------|------|-------------|-------------------|------|
-| git | 必要 | `brew install git` | `apt-get install git` | 版本控制 |
-| kubectl | 必要 | `brew install kubectl` | `snap install kubectl` | K8s CLI |
-| jq | 必要 | `brew install jq` | `apt-get install jq` | JSON 處理 |
-| yq | 建議 | `brew install yq` | `snap install yq` | YAML 處理 |
+| 工具 | 等級 | macOS (brew) | Linux (apt/snap) | Windows (winget) | 說明 |
+|------|------|-------------|-------------------|------------------|------|
+| node | 必要 | `brew install node` | `apt-get install nodejs` | `winget install OpenJS.NodeJS.LTS` | postinstall 執行環境 |
+| git | 必要 | `brew install git` | `apt-get install git` | `winget install Git.Git` | 版本控制 |
+| kubectl | 必要 | `brew install kubectl` | `snap install kubectl` | `winget install Kubernetes.kubectl` | K8s CLI |
+| jq | 必要 | `brew install jq` | `apt-get install jq` | `winget install jqlang.jq` | JSON 處理 |
+| yq | 建議 | `brew install yq` | `snap install yq` | `winget install MikeFarah.yq` | YAML 處理 |
+| python3 | 建議 | `brew install python3` | `apt-get install python3` | `winget install Python.Python.3.12` | 版本驗證腳本 |
+| curl | 建議 | `brew install curl` | `apt-get install curl` | `winget install cURL.cURL` | 遠端版本檢查 |
 
 ### Horus 工具（IaC）
 
-| 工具 | 等級 | macOS (brew) | pip | 說明 |
-|------|------|-------------|-----|------|
-| terraform | 必要 | `brew install terraform` | — | IaC 引擎 |
-| tflint | 建議 | `brew install tflint` | — | Terraform Lint |
-| tfsec | 建議 | `brew install tfsec` | — | Terraform 安全掃描 |
-| pre-commit | 建議 | — | `pip install pre-commit` | Git Hook 管理 |
+| 工具 | 等級 | macOS (brew) | Windows (winget/choco) | pip | 說明 |
+|------|------|-------------|------------------------|-----|------|
+| terraform | 必要 | `brew install terraform` | `winget install Hashicorp.Terraform` | — | IaC 引擎 |
+| helm | 必要 | `brew install helm` | `winget install Helm.Helm` | — | Helm Chart 管理 |
+| tflint | 建議 | `brew install tflint` | `choco install tflint` | — | Terraform Lint |
+| tfsec | 建議 | `brew install tfsec` | `choco install tfsec` | — | Terraform 安全掃描 |
+| pre-commit | 建議 | — | — | `pip install pre-commit` | Git Hook 管理 |
 
 ### Zeus 工具（GitOps）
 
-| 工具 | 等級 | macOS (brew) | pip | 說明 |
-|------|------|-------------|-----|------|
-| kustomize | 必要 | `brew install kustomize` | — | Kustomize 建置 |
-| yamllint | 建議 | — | `pip install yamllint` | YAML Lint |
-| kubeconform | 建議 | `brew install kubeconform` | — | K8s 資源驗證 |
-| kube-score | 建議 | `brew install kube-score` | — | K8s 最佳實踐 |
-| kube-linter | 建議 | `brew install kube-linter` | — | K8s Lint |
-| polaris | 建議 | `brew install FairwindsOps/tap/polaris` | — | K8s 政策檢查 |
-| pluto | 建議 | `brew install FairwindsOps/tap/pluto` | — | 廢棄 API 偵測 |
-| conftest | 建議 | `brew install conftest` | — | 政策測試 |
-| checkov | 建議 | — | `pip install checkov` | IaC 安全掃描 |
-| trivy | 建議 | `brew install trivy` | — | 漏洞掃描 |
-| gitleaks | 建議 | `brew install gitleaks` | — | 機密偵測 |
+| 工具 | 等級 | macOS (brew) | Windows (choco/scoop) | pip | 說明 |
+|------|------|-------------|------------------------|-----|------|
+| kustomize | 必要 | `brew install kustomize` | `scoop install kustomize` | — | Kustomize 建置 |
+| yamllint | 建議 | — | — | `pip install yamllint` | YAML Lint |
+| kubeconform | 建議 | `brew install kubeconform` | `scoop install kubeconform` | — | K8s 資源驗證 |
+| kube-score | 建議 | `brew install kube-score` | — | — | K8s 最佳實踐 |
+| kube-linter | 建議 | `brew install kube-linter` | — | — | K8s Lint |
+| polaris | 建議 | `brew install FairwindsOps/tap/polaris` | — | — | K8s 政策檢查 |
+| pluto | 建議 | `brew install FairwindsOps/tap/pluto` | — | — | 廢棄 API 偵測 |
+| conftest | 建議 | `brew install conftest` | — | — | 政策測試 |
+| checkov | 建議 | — | — | `pip install checkov` | IaC 安全掃描 |
+| trivy | 建議 | `brew install trivy` | `choco install trivy` | — | 漏洞掃描 |
+| gitleaks | 建議 | `brew install gitleaks` | `choco install gitleaks` | — | 機密偵測 |
+| d2 | 建議 | `brew install d2` | `scoop install d2` | — | 架構圖生成 |
 
 ## Horus 流水線（IaC）
 
@@ -216,6 +233,14 @@ devops-ai-skill/
 │   └── extensions/devops/
 │       └── gemini-extension.json
 │
+├── .agents/                     # Google Antigravity 平台
+│   ├── rules/devops.md
+│   ├── skills/
+│   │   ├── horus/SKILL.md
+│   │   ├── zeus/SKILL.md
+│   │   └── (8 skill symlinks)
+│   └── workflows/               # symlinks → prompts/
+│
 ├── skills/                      # 共用技能（Open Agent Skills 標準）
 │   ├── terraform-validate/
 │   ├── terraform-security/
@@ -237,7 +262,8 @@ devops-ai-skill/
 │   └── setup/
 │       ├── setup-claude.sh
 │       ├── setup-codex.sh
-│       └── setup-gemini.sh
+│       ├── setup-gemini.sh
+│       └── setup-antigravity.sh
 │
 ├── .claude-plugin/              # Claude Code marketplace
 │   ├── plugin.json
@@ -283,7 +309,7 @@ MIT
 
 ## English
 
-> Cross-platform DevOps AI Skill Pack — two AI-powered agents and shared pipeline workflows for **Claude Code**, **OpenAI Codex CLI**, and **Google Gemini CLI**.
+> Cross-platform DevOps AI Skill Pack — two AI-powered agents and shared pipeline workflows for **Claude Code**, **OpenAI Codex CLI**, **Google Gemini CLI**, and **Google Antigravity**.
 
 🚀 [Quick Start](#quick-start) · 🤖 [Agents](#agents) · 🔧 [Tool Installation](#tool-installation) · 🛠️ [Skills](#skills) · 📖 [Setup Guide](docs/setup.md) · 🌐 [GitHub Repo](https://github.com/qwedsazxc78/devops-ai-skill)
 
@@ -299,7 +325,7 @@ MIT
 <details>
 <summary><strong>Claude Code</strong> (recommended)</summary>
 
-#### Option A: Marketplace
+#### Option A: Marketplace (Claude Code only)
 
 ```bash
 /plugin marketplace add qwedsazxc78/devops-ai-skill
@@ -339,6 +365,17 @@ cd devops-ai-skill && bash scripts/setup/setup-gemini.sh
 </details>
 
 <details>
+<summary><strong>Google Antigravity</strong></summary>
+
+```bash
+git clone https://github.com/qwedsazxc78/devops-ai-skill.git
+cd devops-ai-skill && bash scripts/setup/setup-antigravity.sh
+# .agents/ directory is auto-loaded by Antigravity
+```
+
+</details>
+
+<details>
 <summary><strong>Cross-Platform (npx skills)</strong></summary>
 
 ```bash
@@ -355,17 +392,18 @@ npx skills update
 
 ### Platform Support
 
-| Feature | Claude Code | OpenAI Codex | Gemini CLI |
-|---------|-------------|--------------|------------|
-| Entry file | `CLAUDE.md` | `AGENTS.md` | `GEMINI.md` |
-| Skills directory | `.claude/skills/` | `.codex/skills/` | via extensions |
-| Skills format | SKILL.md (native) | SKILL.md (native) | gemini-extension.json |
-| Agent definitions | `.claude/agents/*.md` | via AGENTS.md | `.gemini/agents/*.md` |
-| Bash execution | Yes | Yes (`!cmd`) | Yes (`run_shell_command`) |
+| Feature | Claude Code | OpenAI Codex | Gemini CLI | Antigravity |
+|---------|-------------|--------------|------------|-------------|
+| Entry file | `CLAUDE.md` | `AGENTS.md` | `GEMINI.md` | `.agents/rules/` |
+| Skills directory | `.claude/skills/` | `.codex/skills/` | via extensions | `.agents/skills/` |
+| Skills format | SKILL.md (native) | SKILL.md (native) | gemini-extension.json | SKILL.md (native) |
+| Agent definitions | `.claude/agents/*.md` | via AGENTS.md | `.gemini/agents/*.md` | `.agents/skills/{h,z}/` |
+| Pipeline trigger | `*cmd` | `*cmd` | `*cmd` | `/workflow-name` |
+| Bash execution | Yes | Yes (`!cmd`) | Yes (`run_shell_command`) | Yes |
 
 ### Tool Installation
 
-One-command installer supporting macOS (Homebrew), Linux (apt/snap), and Python (pip):
+One-command installer supporting macOS (Homebrew), Linux (apt/snap), Windows (winget/choco/scoop), and Python (uv/pip):
 
 ```bash
 # Interactive: check + prompt install
@@ -382,39 +420,54 @@ One-command installer supporting macOS (Homebrew), Linux (apt/snap), and Python 
 ./scripts/install-tools.sh install zeus    # GitOps tools
 ```
 
+> **Windows users**: Run via Git Bash, WSL, or MSYS2. The script auto-detects your package manager (winget / Chocolatey / Scoop):
+>
+> ```powershell
+> # Git Bash (recommended)
+> bash scripts/install-tools.sh
+>
+> # WSL
+> wsl bash scripts/install-tools.sh
+> ```
+
 #### Shared Tools
 
-| Tool | Tier | macOS (brew) | Linux (apt/snap) | Purpose |
-|------|------|-------------|-------------------|---------|
-| git | Required | `brew install git` | `apt-get install git` | Version control |
-| kubectl | Required | `brew install kubectl` | `snap install kubectl` | K8s CLI |
-| jq | Required | `brew install jq` | `apt-get install jq` | JSON processor |
-| yq | Recommended | `brew install yq` | `snap install yq` | YAML processor |
+| Tool | Tier | macOS (brew) | Linux (apt/snap) | Windows (winget) | Purpose |
+|------|------|-------------|-------------------|------------------|---------|
+| node | Required | `brew install node` | `apt-get install nodejs` | `winget install OpenJS.NodeJS.LTS` | postinstall runtime |
+| git | Required | `brew install git` | `apt-get install git` | `winget install Git.Git` | Version control |
+| kubectl | Required | `brew install kubectl` | `snap install kubectl` | `winget install Kubernetes.kubectl` | K8s CLI |
+| jq | Required | `brew install jq` | `apt-get install jq` | `winget install jqlang.jq` | JSON processor |
+| yq | Recommended | `brew install yq` | `snap install yq` | `winget install MikeFarah.yq` | YAML processor |
+| python3 | Recommended | `brew install python3` | `apt-get install python3` | `winget install Python.Python.3.12` | Version check scripts |
+| curl | Recommended | `brew install curl` | `apt-get install curl` | `winget install cURL.cURL` | Remote version check |
 
 #### Horus Tools (IaC)
 
-| Tool | Tier | macOS (brew) | pip | Purpose |
-|------|------|-------------|-----|---------|
-| terraform | Required | `brew install terraform` | — | IaC engine |
-| tflint | Recommended | `brew install tflint` | — | Terraform linter |
-| tfsec | Recommended | `brew install tfsec` | — | Terraform security scanner |
-| pre-commit | Recommended | — | `pip install pre-commit` | Git hook manager |
+| Tool | Tier | macOS (brew) | Windows (winget/choco) | pip | Purpose |
+|------|------|-------------|------------------------|-----|---------|
+| terraform | Required | `brew install terraform` | `winget install Hashicorp.Terraform` | — | IaC engine |
+| helm | Required | `brew install helm` | `winget install Helm.Helm` | — | Helm chart management |
+| tflint | Recommended | `brew install tflint` | `choco install tflint` | — | Terraform linter |
+| tfsec | Recommended | `brew install tfsec` | `choco install tfsec` | — | Terraform security scanner |
+| pre-commit | Recommended | — | — | `pip install pre-commit` | Git hook manager |
 
 #### Zeus Tools (GitOps)
 
-| Tool | Tier | macOS (brew) | pip | Purpose |
-|------|------|-------------|-----|---------|
-| kustomize | Required | `brew install kustomize` | — | Kustomize build |
-| yamllint | Recommended | — | `pip install yamllint` | YAML linter |
-| kubeconform | Recommended | `brew install kubeconform` | — | K8s resource validation |
-| kube-score | Recommended | `brew install kube-score` | — | K8s best practices |
-| kube-linter | Recommended | `brew install kube-linter` | — | K8s linter |
-| polaris | Recommended | `brew install FairwindsOps/tap/polaris` | — | K8s policy check |
-| pluto | Recommended | `brew install FairwindsOps/tap/pluto` | — | Deprecated API detection |
-| conftest | Recommended | `brew install conftest` | — | Policy testing |
-| checkov | Recommended | — | `pip install checkov` | IaC security scanner |
-| trivy | Recommended | `brew install trivy` | — | Vulnerability scanner |
-| gitleaks | Recommended | `brew install gitleaks` | — | Secret detection |
+| Tool | Tier | macOS (brew) | Windows (choco/scoop) | pip | Purpose |
+|------|------|-------------|------------------------|-----|---------|
+| kustomize | Required | `brew install kustomize` | `scoop install kustomize` | — | Kustomize build |
+| yamllint | Recommended | — | — | `pip install yamllint` | YAML linter |
+| kubeconform | Recommended | `brew install kubeconform` | `scoop install kubeconform` | — | K8s resource validation |
+| kube-score | Recommended | `brew install kube-score` | — | — | K8s best practices |
+| kube-linter | Recommended | `brew install kube-linter` | — | — | K8s linter |
+| polaris | Recommended | `brew install FairwindsOps/tap/polaris` | — | — | K8s policy check |
+| pluto | Recommended | `brew install FairwindsOps/tap/pluto` | — | — | Deprecated API detection |
+| conftest | Recommended | `brew install conftest` | — | — | Policy testing |
+| checkov | Recommended | — | — | `pip install checkov` | IaC security scanner |
+| trivy | Recommended | `brew install trivy` | `choco install trivy` | — | Vulnerability scanner |
+| gitleaks | Recommended | `brew install gitleaks` | `choco install gitleaks` | — | Secret detection |
+| d2 | Recommended | `brew install d2` | `scoop install d2` | — | Architecture diagrams |
 
 ### Horus Pipelines (IaC)
 
@@ -472,7 +525,7 @@ MIT
 
 ## 简体中文
 
-> 跨平台 DevOps AI 技能包 — 两个 AI 驱动的 DevOps Agent 与共用流水线工作流，支持 **Claude Code**、**OpenAI Codex CLI** 和 **Google Gemini CLI**。
+> 跨平台 DevOps AI 技能包 — 两个 AI 驱动的 DevOps Agent 与共用流水线工作流，支持 **Claude Code**、**OpenAI Codex CLI**、**Google Gemini CLI** 和 **Google Antigravity**。
 
 🚀 [快速开始](#快速开始-1) · 🤖 [Agent](#agent-代理-1) · 🔧 [工具安装](#工具安装) · 🛠️ [技能模块](#技能模块) · 📖 [安装指南](docs/setup.md) · 🌐 [GitHub Repo](https://github.com/qwedsazxc78/devops-ai-skill)
 
@@ -488,7 +541,7 @@ MIT
 <details>
 <summary><strong>Claude Code</strong>（推荐）</summary>
 
-#### 方式 A：Marketplace
+#### 方式 A：Marketplace（目前仅支持 Claude Code）
 
 ```bash
 /plugin marketplace add qwedsazxc78/devops-ai-skill
@@ -528,6 +581,17 @@ cd devops-ai-skill && bash scripts/setup/setup-gemini.sh
 </details>
 
 <details>
+<summary><strong>Google Antigravity</strong></summary>
+
+```bash
+git clone https://github.com/qwedsazxc78/devops-ai-skill.git
+cd devops-ai-skill && bash scripts/setup/setup-antigravity.sh
+# .agents/ 目录会被 Antigravity 自动加载
+```
+
+</details>
+
+<details>
 <summary><strong>跨平台（npx skills）</strong></summary>
 
 ```bash
@@ -544,17 +608,18 @@ npx skills update
 
 ### 平台支持
 
-| 功能 | Claude Code | OpenAI Codex | Gemini CLI |
-|------|-------------|--------------|------------|
-| 入口文件 | `CLAUDE.md` | `AGENTS.md` | `GEMINI.md` |
-| Skills 目录 | `.claude/skills/` | `.codex/skills/` | extensions |
-| Skills 格式 | SKILL.md（原生） | SKILL.md（原生） | gemini-extension.json |
-| Agent 定义 | `.claude/agents/*.md` | 通过 AGENTS.md | `.gemini/agents/*.md` |
-| Bash 执行 | Yes | Yes (`!cmd`) | Yes (`run_shell_command`) |
+| 功能 | Claude Code | OpenAI Codex | Gemini CLI | Antigravity |
+|------|-------------|--------------|------------|-------------|
+| 入口文件 | `CLAUDE.md` | `AGENTS.md` | `GEMINI.md` | `.agents/rules/` |
+| Skills 目录 | `.claude/skills/` | `.codex/skills/` | extensions | `.agents/skills/` |
+| Skills 格式 | SKILL.md（原生） | SKILL.md（原生） | gemini-extension.json | SKILL.md（原生） |
+| Agent 定义 | `.claude/agents/*.md` | 通过 AGENTS.md | `.gemini/agents/*.md` | `.agents/skills/{h,z}/` |
+| 流水线触发 | `*cmd` | `*cmd` | `*cmd` | `/workflow-name` |
+| Bash 执行 | Yes | Yes (`!cmd`) | Yes (`run_shell_command`) | Yes |
 
 ### 工具安装
 
-一键安装所有必要工具，支持 macOS (Homebrew)、Linux (apt/snap)、Python (pip)：
+一键安装所有必要工具，支持 macOS (Homebrew)、Linux (apt/snap)、Windows (winget/choco/scoop)、Python (uv/pip)：
 
 ```bash
 # 交互模式：检查 + 提示安装
@@ -573,37 +638,42 @@ npx skills update
 
 #### 共用工具
 
-| 工具 | 等级 | macOS (brew) | Linux (apt/snap) | 说明 |
-|------|------|-------------|-------------------|------|
-| git | 必要 | `brew install git` | `apt-get install git` | 版本控制 |
-| kubectl | 必要 | `brew install kubectl` | `snap install kubectl` | K8s CLI |
-| jq | 必要 | `brew install jq` | `apt-get install jq` | JSON 处理 |
-| yq | 建议 | `brew install yq` | `snap install yq` | YAML 处理 |
+| 工具 | 等级 | macOS (brew) | Linux (apt/snap) | Windows (winget) | 说明 |
+|------|------|-------------|-------------------|------------------|------|
+| node | 必要 | `brew install node` | `apt-get install nodejs` | `winget install OpenJS.NodeJS.LTS` | postinstall 运行环境 |
+| git | 必要 | `brew install git` | `apt-get install git` | `winget install Git.Git` | 版本控制 |
+| kubectl | 必要 | `brew install kubectl` | `snap install kubectl` | `winget install Kubernetes.kubectl` | K8s CLI |
+| jq | 必要 | `brew install jq` | `apt-get install jq` | `winget install jqlang.jq` | JSON 处理 |
+| yq | 建议 | `brew install yq` | `snap install yq` | `winget install MikeFarah.yq` | YAML 处理 |
+| python3 | 建议 | `brew install python3` | `apt-get install python3` | `winget install Python.Python.3.12` | 版本验证脚本 |
+| curl | 建议 | `brew install curl` | `apt-get install curl` | `winget install cURL.cURL` | 远程版本检查 |
 
 #### Horus 工具（IaC）
 
-| 工具 | 等级 | macOS (brew) | pip | 说明 |
-|------|------|-------------|-----|------|
-| terraform | 必要 | `brew install terraform` | — | IaC 引擎 |
-| tflint | 建议 | `brew install tflint` | — | Terraform Lint |
-| tfsec | 建议 | `brew install tfsec` | — | Terraform 安全扫描 |
-| pre-commit | 建议 | — | `pip install pre-commit` | Git Hook 管理 |
+| 工具 | 等级 | macOS (brew) | Windows (winget/choco) | pip | 说明 |
+|------|------|-------------|------------------------|-----|------|
+| terraform | 必要 | `brew install terraform` | `winget install Hashicorp.Terraform` | — | IaC 引擎 |
+| helm | 必要 | `brew install helm` | `winget install Helm.Helm` | — | Helm Chart 管理 |
+| tflint | 建议 | `brew install tflint` | `choco install tflint` | — | Terraform Lint |
+| tfsec | 建议 | `brew install tfsec` | `choco install tfsec` | — | Terraform 安全扫描 |
+| pre-commit | 建议 | — | — | `pip install pre-commit` | Git Hook 管理 |
 
 #### Zeus 工具（GitOps）
 
-| 工具 | 等级 | macOS (brew) | pip | 说明 |
-|------|------|-------------|-----|------|
-| kustomize | 必要 | `brew install kustomize` | — | Kustomize 构建 |
-| yamllint | 建议 | — | `pip install yamllint` | YAML Lint |
-| kubeconform | 建议 | `brew install kubeconform` | — | K8s 资源验证 |
-| kube-score | 建议 | `brew install kube-score` | — | K8s 最佳实践 |
-| kube-linter | 建议 | `brew install kube-linter` | — | K8s Lint |
-| polaris | 建议 | `brew install FairwindsOps/tap/polaris` | — | K8s 策略检查 |
-| pluto | 建议 | `brew install FairwindsOps/tap/pluto` | — | 废弃 API 检测 |
-| conftest | 建议 | `brew install conftest` | — | 策略测试 |
-| checkov | 建议 | — | `pip install checkov` | IaC 安全扫描 |
-| trivy | 建议 | `brew install trivy` | — | 漏洞扫描 |
-| gitleaks | 建议 | `brew install gitleaks` | — | 机密检测 |
+| 工具 | 等级 | macOS (brew) | Windows (choco/scoop) | pip | 说明 |
+|------|------|-------------|------------------------|-----|------|
+| kustomize | 必要 | `brew install kustomize` | `scoop install kustomize` | — | Kustomize 构建 |
+| yamllint | 建议 | — | — | `pip install yamllint` | YAML Lint |
+| kubeconform | 建议 | `brew install kubeconform` | `scoop install kubeconform` | — | K8s 资源验证 |
+| kube-score | 建议 | `brew install kube-score` | — | — | K8s 最佳实践 |
+| kube-linter | 建议 | `brew install kube-linter` | — | — | K8s Lint |
+| polaris | 建议 | `brew install FairwindsOps/tap/polaris` | — | — | K8s 策略检查 |
+| pluto | 建议 | `brew install FairwindsOps/tap/pluto` | — | — | 废弃 API 检测 |
+| conftest | 建议 | `brew install conftest` | — | — | 策略测试 |
+| checkov | 建议 | — | — | `pip install checkov` | IaC 安全扫描 |
+| trivy | 建议 | `brew install trivy` | `choco install trivy` | — | 漏洞扫描 |
+| gitleaks | 建议 | `brew install gitleaks` | `choco install gitleaks` | — | 机密检测 |
+| d2 | 建议 | `brew install d2` | `scoop install d2` | — | 架构图生成 |
 
 ### Horus 流水线（IaC）
 

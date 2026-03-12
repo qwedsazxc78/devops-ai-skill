@@ -256,11 +256,67 @@ if [ -f "$gemini_ext" ]; then
 fi
 
 # ============================================
+# SECTION 6b: Google Antigravity Platform
+# ============================================
+section "Google Antigravity Platform"
+
+# Agent-as-skill wrappers
+for agent in horus zeus; do
+    skill_file="$ROOT_DIR/.agents/skills/$agent/SKILL.md"
+    if [ -f "$skill_file" ]; then
+        pass ".agents/skills/$agent/SKILL.md exists"
+
+        # Check YAML frontmatter
+        if head -1 "$skill_file" | grep -q "^---$"; then
+            pass ".agents/skills/$agent/SKILL.md has YAML frontmatter"
+        else
+            fail ".agents/skills/$agent/SKILL.md missing YAML frontmatter"
+        fi
+
+        # Check name: field
+        if grep -q "^name:" "$skill_file"; then
+            pass ".agents/skills/$agent/SKILL.md has name: field"
+        else
+            fail ".agents/skills/$agent/SKILL.md missing name: field"
+        fi
+
+        # Check description: field (mandatory for Antigravity)
+        if grep -q "^description:" "$skill_file"; then
+            pass ".agents/skills/$agent/SKILL.md has description: field"
+        else
+            fail ".agents/skills/$agent/SKILL.md missing description: field"
+        fi
+
+        # Check version: field
+        if grep -q "^version:" "$skill_file"; then
+            pass ".agents/skills/$agent/SKILL.md has version: field"
+        else
+            fail ".agents/skills/$agent/SKILL.md missing version: field"
+        fi
+    else
+        fail ".agents/skills/$agent/SKILL.md missing"
+    fi
+done
+
+# Rules file
+if [ -f "$ROOT_DIR/.agents/rules/devops.md" ]; then
+    pass ".agents/rules/devops.md exists"
+    # Verify rules file references docs/PROJECT.md
+    if grep -q "docs/PROJECT.md" "$ROOT_DIR/.agents/rules/devops.md" 2>/dev/null; then
+        pass ".agents/rules/devops.md references docs/PROJECT.md"
+    else
+        fail ".agents/rules/devops.md does not reference docs/PROJECT.md"
+    fi
+else
+    fail ".agents/rules/devops.md missing"
+fi
+
+# ============================================
 # SECTION 7: Scripts
 # ============================================
 section "Scripts"
 
-for script in scripts/install-tools.sh scripts/version-check.sh scripts/postinstall.js scripts/setup/setup-claude.sh scripts/setup/setup-codex.sh scripts/setup/setup-gemini.sh; do
+for script in scripts/install-tools.sh scripts/version-check.sh scripts/postinstall.js scripts/setup/setup-claude.sh scripts/setup/setup-codex.sh scripts/setup/setup-gemini.sh scripts/setup/setup-antigravity.sh; do
     if [ -f "$ROOT_DIR/$script" ]; then
         pass "$script exists"
         if [ -x "$ROOT_DIR/$script" ] || head -1 "$ROOT_DIR/$script" | grep -q "^#!/"; then
@@ -331,6 +387,30 @@ if grep -q "prompts/" "$ROOT_DIR/GEMINI.md" 2>/dev/null; then
     pass "GEMINI.md references prompts/"
 else
     fail "GEMINI.md does not reference prompts/"
+fi
+
+# .agents/skills/horus should reference prompts/ and docs/PROJECT.md
+if grep -q "prompts/" "$ROOT_DIR/.agents/skills/horus/SKILL.md" 2>/dev/null; then
+    pass ".agents/skills/horus/SKILL.md references prompts/"
+else
+    fail ".agents/skills/horus/SKILL.md does not reference prompts/"
+fi
+if grep -q "docs/PROJECT.md" "$ROOT_DIR/.agents/skills/horus/SKILL.md" 2>/dev/null; then
+    pass ".agents/skills/horus/SKILL.md references docs/PROJECT.md"
+else
+    fail ".agents/skills/horus/SKILL.md does not reference docs/PROJECT.md"
+fi
+
+# .agents/skills/zeus should reference prompts/ and docs/PROJECT.md
+if grep -q "prompts/" "$ROOT_DIR/.agents/skills/zeus/SKILL.md" 2>/dev/null; then
+    pass ".agents/skills/zeus/SKILL.md references prompts/"
+else
+    fail ".agents/skills/zeus/SKILL.md does not reference prompts/"
+fi
+if grep -q "docs/PROJECT.md" "$ROOT_DIR/.agents/skills/zeus/SKILL.md" 2>/dev/null; then
+    pass ".agents/skills/zeus/SKILL.md references docs/PROJECT.md"
+else
+    fail ".agents/skills/zeus/SKILL.md does not reference docs/PROJECT.md"
 fi
 
 # ============================================
@@ -439,6 +519,125 @@ for pattern in "${SECRET_PATTERNS[@]}"; do
         echo "    $matches" | head -3
     fi
 done
+
+# ============================================
+# SECTION 13: Setup Script Validation
+# ============================================
+section "Setup Script Validation"
+
+SETUP_SCRIPTS=("setup-claude.sh" "setup-codex.sh" "setup-gemini.sh" "setup-antigravity.sh")
+for script in "${SETUP_SCRIPTS[@]}"; do
+    script_path="$ROOT_DIR/scripts/setup/$script"
+    if [ -f "$script_path" ]; then
+        pass "scripts/setup/$script exists"
+        # Check shebang
+        if head -1 "$script_path" | grep -q "^#!/"; then
+            pass "scripts/setup/$script has shebang"
+        else
+            fail "scripts/setup/$script missing shebang"
+        fi
+        # Check executable or has shebang
+        if [ -x "$script_path" ] || head -1 "$script_path" | grep -q "^#!/usr/bin/env bash"; then
+            pass "scripts/setup/$script is executable or has env bash shebang"
+        else
+            warn "scripts/setup/$script may not be executable"
+        fi
+    else
+        fail "scripts/setup/$script missing"
+    fi
+done
+
+# setup-antigravity.sh should reference all workflow names
+antigravity_script="$ROOT_DIR/scripts/setup/setup-antigravity.sh"
+if [ -f "$antigravity_script" ]; then
+    EXPECTED_WORKFLOWS=("horus-full" "horus-upgrade" "horus-security" "horus-validate" "horus-new-module" "horus-cicd" "horus-health" "zeus-full" "zeus-pre-merge" "zeus-health-check" "zeus-review" "zeus-onboard" "zeus-diagram" "zeus-status" "shared-repo-detect" "shared-report-format" "shared-tool-check")
+    workflow_count=0
+    for wf in "${EXPECTED_WORKFLOWS[@]}"; do
+        if grep -q "$wf" "$antigravity_script" 2>/dev/null; then
+            ((workflow_count++))
+        fi
+    done
+    if [ "$workflow_count" -eq "${#EXPECTED_WORKFLOWS[@]}" ]; then
+        pass "setup-antigravity.sh references all ${#EXPECTED_WORKFLOWS[@]} expected workflows"
+    else
+        fail "setup-antigravity.sh references only $workflow_count/${#EXPECTED_WORKFLOWS[@]} expected workflows"
+    fi
+fi
+
+# ============================================
+# SECTION 14: Cross-Platform Parity
+# ============================================
+section "Cross-Platform Parity"
+
+# All platform entry files exist
+for entry_file in CLAUDE.md AGENTS.md GEMINI.md .agents/rules/devops.md; do
+    if [ -f "$ROOT_DIR/$entry_file" ]; then
+        pass "Platform entry file $entry_file exists"
+    else
+        fail "Platform entry file $entry_file missing"
+    fi
+done
+
+# README mentions all 4 platforms
+if [ -f "$ROOT_DIR/README.md" ]; then
+    for platform in "Claude Code" "OpenAI Codex" "Gemini CLI" "Antigravity"; do
+        if grep -q "$platform" "$ROOT_DIR/README.md" 2>/dev/null; then
+            pass "README.md mentions $platform"
+        else
+            fail "README.md does not mention $platform"
+        fi
+    done
+fi
+
+# docs/PROJECT.md has Antigravity section
+if grep -q "Antigravity" "$ROOT_DIR/docs/PROJECT.md" 2>/dev/null; then
+    pass "docs/PROJECT.md mentions Antigravity"
+else
+    fail "docs/PROJECT.md does not mention Antigravity"
+fi
+
+# ============================================
+# SECTION 15: Tool Installation Script
+# ============================================
+section "Tool Installation Script"
+
+install_script="$ROOT_DIR/scripts/install-tools.sh"
+if [ -f "$install_script" ]; then
+    pass "install-tools.sh exists"
+
+    if [ -x "$install_script" ] || head -1 "$install_script" | grep -q "^#!/"; then
+        pass "install-tools.sh is executable"
+    else
+        fail "install-tools.sh is not executable"
+    fi
+
+    # Windows detection
+    if grep -q "MINGW\|MSYS\|CYGWIN" "$install_script" 2>/dev/null; then
+        pass "install-tools.sh contains Windows detection (MINGW/MSYS/CYGWIN)"
+    else
+        fail "install-tools.sh missing Windows detection"
+    fi
+
+    # All 3 package manager families
+    for mgr in "brew" "apt" "winget"; do
+        if grep -q "$mgr" "$install_script" 2>/dev/null; then
+            pass "install-tools.sh supports $mgr package manager"
+        else
+            fail "install-tools.sh missing $mgr package manager support"
+        fi
+    done
+
+    # Tool registry includes key tools
+    for tool in "git" "kubectl" "terraform" "kustomize" "trivy" "gitleaks"; do
+        if grep -q "\"$tool|" "$install_script" 2>/dev/null; then
+            pass "install-tools.sh includes $tool in registry"
+        else
+            fail "install-tools.sh missing $tool from registry"
+        fi
+    done
+else
+    fail "install-tools.sh missing"
+fi
 
 # ============================================
 # SUMMARY
