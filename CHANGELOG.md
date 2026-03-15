@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-03-16
+
+### Added
+
+- 全域安裝腳本 `install-global.sh`：一次安裝至 `~/.claude/`、`~/.codex/`、`~/.gemini/`、`~/.agents/`
+- 統一安裝腳本 `setup.sh`：支援一鍵安裝至目標專案（per-repo symlinks）
+- Gemini CLI 命令面板支援：18 個 TOML 檔（`.gemini/commands/devops/`）
+- Antigravity 工作流全域安裝：17 個 pipeline 檔案複製至 `~/.agents/workflows/`
+- Gemini extensions 全域安裝（`~/.gemini/extensions/devops/`）
+- 新增 22 項 Gemini commands TOML 結構測試
+
+### Fixed
+
+- 修正 Gemini 全域安裝 skills 缺失（移除不存在的 `gemini skills link` 指令）
+- 修正 `|| true` 導致 fallback 永遠不觸發的 bash bug
+- 修正 `$DO_VAR && func || true` 隱藏錯誤，改用 `if/then`
+- 修正 Gemini/Antigravity skills 衝突：Antigravity 自動清除與 `~/.gemini/skills/` 重複的 skill
+- 修正 docs 中所有 `devops-go` 錯字為 `devops-ai-skill`
+- 移除所有文件中不存在的 `gemini skills link` 引用
+
+### Changed
+
+- README 三語平台支援表重構：新增命令面板、工作流、全域路徑欄位
+- README 安裝方式改為全域安裝優先（per-repo 改為 legacy）
+- 專案結構樹新增 `.gemini/commands/devops/` 目錄
+
 ## [1.1.0] - 2026-03-10
 
 ### Added
@@ -39,5 +65,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Bilingual documentation (EN + 繁體中文)
 
 <!-- Links -->
+[1.2.0]: https://github.com/qwedsazxc78/devops-ai-skill/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/qwedsazxc78/devops-ai-skill/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/qwedsazxc78/devops-ai-skill/releases/tag/v1.0.0

@@ -1,6 +1,6 @@
 {
   "name": "devops-ai-skill",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "DevOps AI Skill Pack — Horus (IaC) + Zeus (GitOps) agents",
   "agents": [
     {

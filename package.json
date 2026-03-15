@@ -1,6 +1,6 @@
 {
   "name": "devops-ai-skill",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Cross-platform DevOps AI Skill Pack — Horus (IaC) + Zeus (GitOps) agents for Claude Code, OpenAI Codex CLI, Google Gemini CLI, and Google Antigravity",
   "keywords": [
     "devops",

@@ -5,14 +5,14 @@
   },
   "metadata": {
     "description": "Cross-platform DevOps AI Skill Pack with Horus (IaC) and Zeus (GitOps) agents",
-    "version": "1.1.0"
+    "version": "1.2.0"
   },
   "plugins": [
     {
       "name": "devops",
       "source": "./",
       "description": "DevOps operations agents for IaC and GitOps workflows",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "logo": "docs/images/logo.png",
       "category": "devops",
       "tags": [
