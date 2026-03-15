@@ -101,6 +101,49 @@ List available versions:
 git tag -l "v*" --sort=-version:refname
 ```
 
+### Global Install (recommended for multi-repo teams)
+
+Instead of per-repo symlinks, install skills and agents **globally** so they are available across ALL projects.
+
+```bash
+# Auto-detect installed CLIs and install
+bash scripts/install-global.sh
+
+# Or target specific platforms
+bash scripts/install-global.sh --claude
+bash scripts/install-global.sh --gemini
+bash scripts/install-global.sh --all
+```
+
+#### Global paths per platform
+
+| Platform | Agents | Skills |
+|----------|--------|--------|
+| Claude Code | `~/.claude/agents/` | `~/.claude/skills/` |
+| Codex CLI | `~/.codex/instructions.md` | `~/.codex/skills/` |
+| Gemini CLI | `~/.gemini/agents/` | `~/.gemini/skills/` (via `gemini skills link`) |
+| Antigravity | `~/.agents/skills/` | `~/.agents/skills/` |
+
+#### Updating after changes
+
+```bash
+# 1. Update source (edit files or pull latest)
+cd devops-ai-skill
+git pull origin main
+
+# 2. Re-run global install (auto-detects platforms, skips unchanged files)
+bash scripts/install-global.sh
+```
+
+> **Note**: Gemini CLI uses `gemini skills link` (symlinks) — source changes take effect immediately without re-running the installer.
+
+#### Status & Uninstall
+
+```bash
+bash scripts/install-global.sh --status     # Check what's installed where
+bash scripts/install-global.sh --uninstall   # Remove all global installations
+```
+
 ### As Git Submodule
 
 ```bash
@@ -182,6 +225,49 @@ git checkout v1.0.0
 
 # 列出所有版本
 git tag -l "v*" --sort=-version:refname
+```
+
+### 全域安裝（推薦多 repo 團隊使用）
+
+將 skills 和 agents 安裝至**全域**，所有專案共用，無需 per-repo symlinks。
+
+```bash
+# 自動偵測已安裝的 CLI 並安裝
+bash scripts/install-global.sh
+
+# 指定平台
+bash scripts/install-global.sh --claude
+bash scripts/install-global.sh --gemini
+bash scripts/install-global.sh --all
+```
+
+#### 各平台全域路徑
+
+| 平台 | Agents | Skills |
+|------|--------|--------|
+| Claude Code | `~/.claude/agents/` | `~/.claude/skills/` |
+| Codex CLI | `~/.codex/instructions.md` | `~/.codex/skills/` |
+| Gemini CLI | `~/.gemini/agents/` | `~/.gemini/skills/`（透過 `gemini skills link`） |
+| Antigravity | `~/.agents/skills/` | `~/.agents/skills/` |
+
+#### 更新流程
+
+```bash
+# 1. 更新原始碼（修改或 pull 最新版本）
+cd devops-ai-skill
+git pull origin main
+
+# 2. 重跑全域安裝（自動偵測平台，跳過未變動檔案）
+bash scripts/install-global.sh
+```
+
+> **注意**：Gemini CLI 使用 `gemini skills link`（symlink），source 更新後立即生效，不需重跑安裝。
+
+#### 狀態查詢與移除
+
+```bash
+bash scripts/install-global.sh --status     # 查看各平台安裝狀態
+bash scripts/install-global.sh --uninstall   # 移除所有全域安裝
 ```
 
 ### 作為 Git Submodule
