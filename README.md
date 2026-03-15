@@ -121,10 +121,12 @@ npx skills update
 | 功能 | Claude Code | OpenAI Codex | Gemini CLI | Antigravity |
 |------|-------------|--------------|------------|-------------|
 | 全域 Agents | `~/.claude/agents/` | `~/.codex/instructions.md` | `~/.gemini/agents/` | `~/.agents/skills/` |
-| 全域 Skills | `~/.claude/skills/` | `~/.codex/skills/` | `~/.gemini/skills/` | `~/.agents/skills/` |
+| 全域 Skills | `~/.claude/skills/` | `~/.codex/skills/` | `~/.gemini/skills/` | 共用 `~/.gemini/skills/` |
+| 命令面板 | — | — | `~/.gemini/commands/devops/` | — |
+| 工作流 | — | — | — | `~/.agents/workflows/` |
 | 入口檔 | `CLAUDE.md` | `AGENTS.md` | `GEMINI.md` | `.agents/rules/` |
 | Skills 格式 | SKILL.md（原生） | SKILL.md（原生） | SKILL.md（原生） | SKILL.md（原生） |
-| 流水線觸發 | `*cmd` | `*cmd` | `*cmd` | `/workflow-name` |
+| 流水線觸發 | `*cmd` | `*cmd` | 命令面板 `devops:` | `/workflow-name` |
 | Bash 執行 | Yes | Yes (`!cmd`) | Yes (`run_shell_command`) | Yes |
 
 ## 工具安裝
@@ -249,6 +251,9 @@ devops-ai-skill/
 │   ├── agents/
 │   │   ├── horus.md
 │   │   └── zeus.md
+│   ├── commands/devops/          # 命令面板 TOML 檔
+│   │   ├── agents/               # 2 agent 啟動命令
+│   │   └── pipelines/            # 16 pipeline 命令
 │   └── extensions/devops/
 │       └── gemini-extension.json
 │
@@ -430,11 +435,13 @@ npx skills update
 
 | Feature | Claude Code | OpenAI Codex | Gemini CLI | Antigravity |
 |---------|-------------|--------------|------------|-------------|
+| Global Agents | `~/.claude/agents/` | `~/.codex/instructions.md` | `~/.gemini/agents/` | `~/.agents/skills/` |
+| Global Skills | `~/.claude/skills/` | `~/.codex/skills/` | `~/.gemini/skills/` | shared `~/.gemini/skills/` |
+| Command palette | — | — | `~/.gemini/commands/devops/` | — |
+| Workflows | — | — | — | `~/.agents/workflows/` |
 | Entry file | `CLAUDE.md` | `AGENTS.md` | `GEMINI.md` | `.agents/rules/` |
-| Skills directory | `.claude/skills/` | `.codex/skills/` | via extensions | `.agents/skills/` |
-| Skills format | SKILL.md (native) | SKILL.md (native) | gemini-extension.json | SKILL.md (native) |
-| Agent definitions | `.claude/agents/*.md` | via AGENTS.md | `.gemini/agents/*.md` | `.agents/skills/{h,z}/` |
-| Pipeline trigger | `*cmd` | `*cmd` | `*cmd` | `/workflow-name` |
+| Skills format | SKILL.md (native) | SKILL.md (native) | SKILL.md (native) | SKILL.md (native) |
+| Pipeline trigger | `*cmd` | `*cmd` | command palette `devops:` | `/workflow-name` |
 | Bash execution | Yes | Yes (`!cmd`) | Yes (`run_shell_command`) | Yes |
 
 ### Tool Installation
@@ -634,11 +641,13 @@ npx skills update
 
 | 功能 | Claude Code | OpenAI Codex | Gemini CLI | Antigravity |
 |------|-------------|--------------|------------|-------------|
+| 全局 Agents | `~/.claude/agents/` | `~/.codex/instructions.md` | `~/.gemini/agents/` | `~/.agents/skills/` |
+| 全局 Skills | `~/.claude/skills/` | `~/.codex/skills/` | `~/.gemini/skills/` | 共用 `~/.gemini/skills/` |
+| 命令面板 | — | — | `~/.gemini/commands/devops/` | — |
+| 工作流 | — | — | — | `~/.agents/workflows/` |
 | 入口文件 | `CLAUDE.md` | `AGENTS.md` | `GEMINI.md` | `.agents/rules/` |
-| Skills 目录 | `.claude/skills/` | `.codex/skills/` | extensions | `.agents/skills/` |
-| Skills 格式 | SKILL.md（原生） | SKILL.md（原生） | gemini-extension.json | SKILL.md（原生） |
-| Agent 定义 | `.claude/agents/*.md` | 通过 AGENTS.md | `.gemini/agents/*.md` | `.agents/skills/{h,z}/` |
-| 流水线触发 | `*cmd` | `*cmd` | `*cmd` | `/workflow-name` |
+| Skills 格式 | SKILL.md（原生） | SKILL.md（原生） | SKILL.md（原生） | SKILL.md（原生） |
+| 流水线触发 | `*cmd` | `*cmd` | 命令面板 `devops:` | `/workflow-name` |
 | Bash 执行 | Yes | Yes (`!cmd`) | Yes (`run_shell_command`) | Yes |
 
 ### 工具安装
