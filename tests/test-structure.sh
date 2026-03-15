@@ -255,6 +255,48 @@ if [ -f "$gemini_ext" ]; then
     fi
 fi
 
+# Gemini Commands (TOML files for command palette)
+gemini_cmds_dir="$ROOT_DIR/.gemini/commands/devops"
+if [ -d "$gemini_cmds_dir" ]; then
+    pass ".gemini/commands/devops/ directory exists"
+else
+    fail ".gemini/commands/devops/ directory missing"
+fi
+
+# Agent command TOMLs
+for agent in horus zeus; do
+    toml_file="$gemini_cmds_dir/agents/$agent.toml"
+    if [ -f "$toml_file" ]; then
+        pass ".gemini/commands/devops/agents/$agent.toml exists"
+        if grep -q 'description' "$toml_file" && grep -q 'prompt' "$toml_file"; then
+            pass "$agent.toml has description and prompt fields"
+        else
+            fail "$agent.toml missing description or prompt fields"
+        fi
+    else
+        fail ".gemini/commands/devops/agents/$agent.toml missing"
+    fi
+done
+
+# Pipeline command TOMLs
+gemini_pipelines=("horus-full" "horus-upgrade" "horus-security" "horus-validate" "horus-new-module" "horus-cicd" "horus-health" "zeus-full" "zeus-pre-merge" "zeus-health-check" "zeus-review" "zeus-onboard" "zeus-diagram" "zeus-status" "repo-detect" "tool-check")
+for pipeline in "${gemini_pipelines[@]}"; do
+    toml_file="$gemini_cmds_dir/pipelines/$pipeline.toml"
+    if [ -f "$toml_file" ]; then
+        pass "pipeline $pipeline.toml exists"
+    else
+        fail "pipeline $pipeline.toml missing"
+    fi
+done
+
+# Count total TOML files
+toml_count=$(find "$gemini_cmds_dir" -name "*.toml" 2>/dev/null | wc -l | tr -d ' ')
+if [ "$toml_count" -eq 18 ]; then
+    pass "Correct TOML command count: $toml_count"
+else
+    fail "Expected 18 TOML commands, found $toml_count"
+fi
+
 # ============================================
 # SECTION 6b: Google Antigravity Platform
 # ============================================

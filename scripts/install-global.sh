@@ -223,14 +223,22 @@ install_antigravity() {
     copy_dir "$agent_dir" "$base/skills/$name" "agent-skill: $name"
   done
 
-  # 3. Skills — skip if already in ~/.gemini/skills/ (Gemini scans ~/.agents/ too)
+  # 3. Skills — Gemini CLI scans BOTH ~/.gemini/skills/ AND ~/.agents/skills/.
+  #    If a skill exists in ~/.gemini/skills/, remove it from ~/.agents/skills/
+  #    to avoid "Skill conflict" warnings, then skip the copy.
   mkdir -p "$base/skills"
   for skill_dir in "$SKILL_PACK_DIR"/skills/*/; do
     [[ -d "$skill_dir" ]] || continue
     local name
     name=$(basename "$skill_dir")
     if [[ -d "$HOME/.gemini/skills/$name" ]]; then
-      log_skip "skill: $name (in ~/.gemini/skills/, shared with Gemini)"
+      # Remove old copy from ~/.agents/skills/ if it exists (cleanup)
+      if [[ -d "$base/skills/$name" ]]; then
+        rm -rf "$base/skills/$name"
+        log_ok "skill: $name (removed from ~/.agents/, using ~/.gemini/)"
+      else
+        log_skip "skill: $name (in ~/.gemini/skills/)"
+      fi
     else
       copy_dir "$skill_dir" "$base/skills/$name" "skill: $name"
     fi
