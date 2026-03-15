@@ -166,24 +166,8 @@ install_gemini() {
   echo ""
   echo -e "${BOLD}═══ Google Gemini CLI (~/.gemini/) ═══${NC}"
 
-  # Gemini CLI supports User Skills at ~/.gemini/skills/ and ~/.agents/skills/
-  # Discovery tiers: Workspace > User > Extension
-  # Skills use SKILL.md format with automatic activation via activate_skill tool.
-
-  # Prefer native `gemini skills link` if CLI available
-  if cli_exists "gemini"; then
-    echo -e "  ${DIM}Using 'gemini skills link' for native integration...${NC}"
-    local link_output
-    link_output=$(gemini skills link "$SKILL_PACK_DIR/skills" --scope user 2>&1) || true
-    if [[ $? -eq 0 ]] || echo "$link_output" | grep -q "linked\|already"; then
-      log_ok "Skills linked via 'gemini skills link' (user scope)"
-    else
-      echo -e "  ${YELLOW}[fallback]${NC} gemini skills link failed, using manual copy"
-      _gemini_manual_install "$base"
-    fi
-  else
-    _gemini_manual_install "$base"
-  fi
+  # Skills — copy to ~/.gemini/skills/ (User Skills tier)
+  _gemini_manual_install "$base"
 
   # Agent definitions (Gemini agents are in .gemini/agents/)
   mkdir -p "$base/agents"
@@ -193,6 +177,12 @@ install_gemini() {
     name=$(basename "$agent_file")
     copy_file "$agent_file" "$base/agents/$name" "agent: $name"
   done
+
+  # Extension manifest (.gemini/extensions/devops/)
+  local ext_src="$SKILL_PACK_DIR/.gemini/extensions/devops"
+  if [[ -d "$ext_src" ]]; then
+    copy_dir "$ext_src" "$base/extensions/devops" "extension: devops"
+  fi
 }
 
 _gemini_manual_install() {
@@ -271,13 +261,14 @@ do_uninstall() {
     _rm_if_exists "$HOME/.codex/skills/$skill" "~/.codex/skills/$skill" && ((removed++)) || true
   done
 
-  # Gemini: ~/.gemini/agents/ + ~/.gemini/skills/
+  # Gemini: ~/.gemini/agents/ + ~/.gemini/skills/ + ~/.gemini/extensions/devops/
   for agent in horus zeus; do
     _rm_if_exists "$HOME/.gemini/agents/$agent.md" "~/.gemini/agents/$agent.md" && ((removed++)) || true
   done
   for skill in "${skills[@]}"; do
     _rm_if_exists "$HOME/.gemini/skills/$skill" "~/.gemini/skills/$skill" && ((removed++)) || true
   done
+  _rm_if_exists "$HOME/.gemini/extensions/devops" "~/.gemini/extensions/devops" && ((removed++)) || true
 
   # Antigravity / shared ~/.agents/: rules + skills
   _rm_if_exists "$HOME/.agents/rules/devops.md" "~/.agents/rules/devops.md" && ((removed++)) || true
@@ -349,6 +340,12 @@ _status_section() {
   # Rules
   if [[ -f "$base/rules/devops.md" ]]; then
     echo -e "  ${GREEN}[ok]${NC} rules: devops.md"
+    ((found++)) || true
+  fi
+
+  # Extensions (Gemini)
+  if [[ -d "$base/extensions/devops" ]]; then
+    echo -e "  ${GREEN}[ok]${NC} extension: devops"
     ((found++)) || true
   fi
 
@@ -440,10 +437,10 @@ main() {
   fi
 
   # Run installers
-  $DO_CLAUDE      && install_claude      || true
-  $DO_CODEX       && install_codex       || true
-  $DO_GEMINI      && install_gemini      || true
-  $DO_ANTIGRAVITY && install_antigravity || true
+  if $DO_CLAUDE;      then install_claude;      fi
+  if $DO_CODEX;       then install_codex;       fi
+  if $DO_GEMINI;      then install_gemini;      fi
+  if $DO_ANTIGRAVITY; then install_antigravity; fi
 
   # Summary
   echo ""

@@ -29,7 +29,46 @@
 
 ## 快速開始
 
-### 一鍵安裝（推薦）
+### 全域安裝（推薦）
+
+一次安裝，所有專案共用，無需 per-repo 設定：
+
+```bash
+git clone https://github.com/qwedsazxc78/devops-ai-skill.git
+cd devops-ai-skill
+bash scripts/install-global.sh          # 自動偵測已安裝的 CLI
+```
+
+自動偵測 Claude Code / Codex CLI / Gemini CLI / Antigravity，安裝至對應全域路徑。
+
+<details>
+<summary><strong>全域安裝選項</strong></summary>
+
+```bash
+bash scripts/install-global.sh --all          # 強制安裝全部平台
+bash scripts/install-global.sh --claude       # 僅 Claude Code
+bash scripts/install-global.sh --gemini       # 僅 Gemini CLI
+bash scripts/install-global.sh --status       # 查看安裝狀態
+bash scripts/install-global.sh --uninstall    # 移除全域安裝
+```
+
+</details>
+
+<details>
+<summary><strong>更新已安裝的 Skills</strong></summary>
+
+```bash
+cd devops-ai-skill
+git pull origin main                          # 拉取最新版本
+bash scripts/install-global.sh                # 重跑安裝（自動跳過未變動檔案）
+```
+
+> 更新 source 後需重跑 `install-global.sh`，以同步變更至所有平台。
+
+</details>
+
+<details>
+<summary><strong>Per-repo 安裝（傳統方式）</strong></summary>
 
 在你的專案根目錄執行：
 
@@ -39,20 +78,12 @@ bash devops-ai-skill/scripts/setup.sh --all    # 安裝全部平台
 bash devops-ai-skill/scripts/setup.sh          # 或互動選擇平台
 ```
 
-安裝完成後，所有 Skills、Agents、流水線會自動生效於你的專案。
-
-<details>
-<summary><strong>進階安裝選項</strong></summary>
-
 ```bash
 # 僅安裝特定平台
 bash devops-ai-skill/scripts/setup.sh --claude
 bash devops-ai-skill/scripts/setup.sh --codex
 bash devops-ai-skill/scripts/setup.sh --gemini
 bash devops-ai-skill/scripts/setup.sh --antigravity
-
-# 組合多個平台
-bash devops-ai-skill/scripts/setup.sh --claude --gemini
 
 # 移除所有安裝
 bash devops-ai-skill/scripts/setup.sh --uninstall
@@ -89,10 +120,10 @@ npx skills update
 
 | 功能 | Claude Code | OpenAI Codex | Gemini CLI | Antigravity |
 |------|-------------|--------------|------------|-------------|
+| 全域 Agents | `~/.claude/agents/` | `~/.codex/instructions.md` | `~/.gemini/agents/` | `~/.agents/skills/` |
+| 全域 Skills | `~/.claude/skills/` | `~/.codex/skills/` | `~/.gemini/skills/` | `~/.agents/skills/` |
 | 入口檔 | `CLAUDE.md` | `AGENTS.md` | `GEMINI.md` | `.agents/rules/` |
-| Skills 目錄 | `.claude/skills/` | `.codex/skills/` | extensions | `.agents/skills/` |
-| Skills 格式 | SKILL.md（原生） | SKILL.md（原生） | gemini-extension.json | SKILL.md（原生） |
-| Agent 定義 | `.claude/agents/*.md` | 透過 AGENTS.md | `.gemini/agents/*.md` | `.agents/skills/{h,z}/` |
+| Skills 格式 | SKILL.md（原生） | SKILL.md（原生） | SKILL.md（原生） | SKILL.md（原生） |
 | 流水線觸發 | `*cmd` | `*cmd` | `*cmd` | `/workflow-name` |
 | Bash 執行 | Yes | Yes (`!cmd`) | Yes (`run_shell_command`) | Yes |
 
@@ -311,7 +342,46 @@ MIT
 
 ### Quick Start
 
-#### One-Click Install (recommended)
+#### Global Install (recommended)
+
+Install once, available across ALL projects:
+
+```bash
+git clone https://github.com/qwedsazxc78/devops-ai-skill.git
+cd devops-ai-skill
+bash scripts/install-global.sh          # Auto-detect installed CLIs
+```
+
+Auto-detects Claude Code / Codex CLI / Gemini CLI / Antigravity and installs to their global config paths.
+
+<details>
+<summary><strong>Global Install Options</strong></summary>
+
+```bash
+bash scripts/install-global.sh --all          # Force all platforms
+bash scripts/install-global.sh --claude       # Claude Code only
+bash scripts/install-global.sh --gemini       # Gemini CLI only
+bash scripts/install-global.sh --status       # Check install status
+bash scripts/install-global.sh --uninstall    # Remove global installs
+```
+
+</details>
+
+<details>
+<summary><strong>Updating Installed Skills</strong></summary>
+
+```bash
+cd devops-ai-skill
+git pull origin main                          # Pull latest
+bash scripts/install-global.sh                # Re-run (skips unchanged files)
+```
+
+> Re-run `install-global.sh` after updating source files to sync changes to all platforms.
+
+</details>
+
+<details>
+<summary><strong>Per-repo Install (legacy)</strong></summary>
 
 Run from your project root:
 
@@ -321,22 +391,11 @@ bash devops-ai-skill/scripts/setup.sh --all    # Install all platforms
 bash devops-ai-skill/scripts/setup.sh          # Or interactive selection
 ```
 
-Skills, agents, and pipelines are automatically linked into your project.
-
-<details>
-<summary><strong>Advanced Install Options</strong></summary>
-
 ```bash
-# Install for specific platforms only
 bash devops-ai-skill/scripts/setup.sh --claude
 bash devops-ai-skill/scripts/setup.sh --codex
 bash devops-ai-skill/scripts/setup.sh --gemini
 bash devops-ai-skill/scripts/setup.sh --antigravity
-
-# Combine multiple platforms
-bash devops-ai-skill/scripts/setup.sh --claude --gemini
-
-# Uninstall all symlinks
 bash devops-ai-skill/scripts/setup.sh --uninstall
 ```
 

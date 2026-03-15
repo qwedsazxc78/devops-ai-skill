@@ -121,7 +121,7 @@ bash scripts/install-global.sh --all
 |----------|--------|--------|
 | Claude Code | `~/.claude/agents/` | `~/.claude/skills/` |
 | Codex CLI | `~/.codex/instructions.md` | `~/.codex/skills/` |
-| Gemini CLI | `~/.gemini/agents/` | `~/.gemini/skills/` (via `gemini skills link`) |
+| Gemini CLI | `~/.gemini/agents/` | `~/.gemini/skills/` |
 | Antigravity | `~/.agents/skills/` | `~/.agents/skills/` |
 
 #### Updating after changes
@@ -135,7 +135,7 @@ git pull origin main
 bash scripts/install-global.sh
 ```
 
-> **Note**: Gemini CLI uses `gemini skills link` (symlinks) — source changes take effect immediately without re-running the installer.
+> **Note**: Re-run the installer after updating source files to sync changes to all platforms.
 
 #### Status & Uninstall
 
@@ -247,7 +247,7 @@ bash scripts/install-global.sh --all
 |------|--------|--------|
 | Claude Code | `~/.claude/agents/` | `~/.claude/skills/` |
 | Codex CLI | `~/.codex/instructions.md` | `~/.codex/skills/` |
-| Gemini CLI | `~/.gemini/agents/` | `~/.gemini/skills/`（透過 `gemini skills link`） |
+| Gemini CLI | `~/.gemini/agents/` | `~/.gemini/skills/` |
 | Antigravity | `~/.agents/skills/` | `~/.agents/skills/` |
 
 #### 更新流程
@@ -261,7 +261,7 @@ git pull origin main
 bash scripts/install-global.sh
 ```
 
-> **注意**：Gemini CLI 使用 `gemini skills link`（symlink），source 更新後立即生效，不需重跑安裝。
+> **注意**：更新 source 後需重跑安裝腳本，以同步變更至所有平台。
 
 #### 狀態查詢與移除
 
