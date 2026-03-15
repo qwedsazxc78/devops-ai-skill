@@ -44,6 +44,8 @@
     "test": "bash tests/test-structure.sh && bash tests/test-setup-scripts.sh",
     "test:structure": "bash tests/test-structure.sh",
     "test:setup": "bash tests/test-setup-scripts.sh",
+    "setup": "bash scripts/setup.sh",
+    "setup:all": "bash scripts/setup.sh --all",
     "setup:claude": "bash scripts/setup/setup-claude.sh",
     "setup:codex": "bash scripts/setup/setup-codex.sh",
     "setup:gemini": "bash scripts/setup/setup-gemini.sh",

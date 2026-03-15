@@ -11,68 +11,51 @@
 ### Prerequisites
 
 - Git
-- One of: Claude Code, OpenAI Codex CLI, or Google Gemini CLI
+- One of: Claude Code, OpenAI Codex CLI, Google Gemini CLI, or Google Antigravity
 - DevOps tools (see Tool Check section below)
 
-### Claude Code Setup
+### One-Click Install (recommended)
 
-#### Marketplace Install (recommended)
+Run from your project root:
+
+```bash
+git clone https://github.com/qwedsazxc78/devops-ai-skill.git
+bash devops-ai-skill/scripts/setup.sh --all
+```
+
+This creates symlinks from your project's platform directories (`.claude/skills/`, `.claude/agents/`, `.codex/skills/`, `.gemini/agents/`, `.agents/`) into the `devops-ai-skill/` subdirectory. It also appends a DevOps section to your existing entry files (`CLAUDE.md`, `AGENTS.md`, `GEMINI.md`).
+
+#### Interactive Mode
+
+```bash
+bash devops-ai-skill/scripts/setup.sh
+```
+
+Prompts you to select which platforms to install.
+
+#### Platform-Specific
+
+```bash
+bash devops-ai-skill/scripts/setup.sh --claude
+bash devops-ai-skill/scripts/setup.sh --codex
+bash devops-ai-skill/scripts/setup.sh --gemini
+bash devops-ai-skill/scripts/setup.sh --antigravity
+```
+
+#### Uninstall
+
+```bash
+bash devops-ai-skill/scripts/setup.sh --uninstall
+```
+
+Removes all symlinks. Entry file sections (marked with `<!-- devops-ai-skill -->`) must be removed manually.
+
+### Marketplace (Claude Code only)
 
 ```bash
 /plugin marketplace add qwedsazxc78/devops-ai-skill
-/plugin install devops@devops-go
+/plugin install devops@devops-ai-skill
 ```
-
-The plugin is auto-loaded. Skills are available immediately.
-
-#### Git Install
-
-```bash
-git clone https://github.com/qwedsazxc78/devops-ai-skill.git
-cd devops-ai-skill
-bash scripts/setup/setup-claude.sh
-```
-
-The setup script creates symlinks from `.claude/skills/` to the shared `skills/` directory.
-
-To use: `claude --plugin-dir ./devops-ai-skill`
-
-#### Global Install
-
-```bash
-cp devops-ai-skill/CLAUDE.md ~/.claude/CLAUDE.md
-```
-
-### OpenAI Codex CLI Setup
-
-```bash
-git clone https://github.com/qwedsazxc78/devops-ai-skill.git
-cd devops-ai-skill
-bash scripts/setup/setup-codex.sh
-```
-
-The setup script:
-1. Creates `.codex/skills/` symlinks to shared `skills/`
-2. `AGENTS.md` at project root is auto-loaded by Codex CLI
-
-Skill scoping:
-- Workspace: `.codex/skills/` (this project)
-- User: `~/.codex/skills/` (all projects)
-
-### Google Gemini CLI Setup
-
-```bash
-git clone https://github.com/qwedsazxc78/devops-ai-skill.git
-cd devops-ai-skill
-bash scripts/setup/setup-gemini.sh
-```
-
-The setup script verifies:
-1. `GEMINI.md` entry point exists
-2. `.gemini/agents/*.md` subagent definitions exist
-3. `.gemini/extensions/devops/gemini-extension.json` exists
-
-`GEMINI.md` is auto-loaded by Gemini CLI.
 
 ### Cross-Platform (npx skills)
 
@@ -81,6 +64,8 @@ npx skills add qwedsazxc78/devops-ai-skill
 ```
 
 Auto-detects installed AI agents and copies skills to the appropriate directories.
+
+> **Note**: `npx skills add` installs 8 skills only. For the full experience (agents + 14 pipelines), use the **One-Click Install**.
 
 ### Tool Check
 
@@ -132,44 +117,46 @@ git submodule update --remote    # Update to latest
 ### 先決條件
 
 - Git
-- 以下其一：Claude Code、OpenAI Codex CLI 或 Google Gemini CLI
+- 以下其一：Claude Code、OpenAI Codex CLI、Google Gemini CLI 或 Google Antigravity
 - DevOps 工具（見下方工具檢查區段）
 
-### Claude Code 安裝
+### 一鍵安裝（推薦）
 
-#### Marketplace 安裝（推薦）
+在你的專案根目錄執行：
+
+```bash
+git clone https://github.com/qwedsazxc78/devops-ai-skill.git
+bash devops-ai-skill/scripts/setup.sh --all
+```
+
+此腳本會建立 symlink 從你專案的平台目錄指向 `devops-ai-skill/`，並在入口檔（`CLAUDE.md`、`AGENTS.md`、`GEMINI.md`）附加 DevOps 區段。
+
+#### 互動模式
+
+```bash
+bash devops-ai-skill/scripts/setup.sh
+```
+
+#### 特定平台
+
+```bash
+bash devops-ai-skill/scripts/setup.sh --claude
+bash devops-ai-skill/scripts/setup.sh --codex
+bash devops-ai-skill/scripts/setup.sh --gemini
+bash devops-ai-skill/scripts/setup.sh --antigravity
+```
+
+#### 移除安裝
+
+```bash
+bash devops-ai-skill/scripts/setup.sh --uninstall
+```
+
+### Marketplace（僅 Claude Code）
 
 ```bash
 /plugin marketplace add qwedsazxc78/devops-ai-skill
-/plugin install devops@devops-go
-```
-
-外掛自動載入，skills 立即可用。
-
-#### Git 安裝
-
-```bash
-git clone https://github.com/qwedsazxc78/devops-ai-skill.git
-cd devops-ai-skill
-bash scripts/setup/setup-claude.sh
-```
-
-使用方式：`claude --plugin-dir ./devops-ai-skill`
-
-### OpenAI Codex CLI 安裝
-
-```bash
-git clone https://github.com/qwedsazxc78/devops-ai-skill.git
-cd devops-ai-skill
-bash scripts/setup/setup-codex.sh
-```
-
-### Google Gemini CLI 安裝
-
-```bash
-git clone https://github.com/qwedsazxc78/devops-ai-skill.git
-cd devops-ai-skill
-bash scripts/setup/setup-gemini.sh
+/plugin install devops@devops-ai-skill
 ```
 
 ### 跨平台（npx skills）
@@ -178,6 +165,8 @@ bash scripts/setup/setup-gemini.sh
 npx skills add qwedsazxc78/devops-ai-skill
 npx skills update
 ```
+
+> **注意**：`npx skills add` 僅安裝 8 個 Skills。如需完整體驗（Agent + 14 條流水線），請使用**一鍵安裝**。
 
 ### 版本管理
 
