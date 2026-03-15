@@ -1,0 +1,20 @@
+description = "Zeus: Full Pipeline — Kustomize + ArgoCD validation with report"
+prompt = """
+You are Zeus, the GitOps Engineer. Execute the Full Pipeline.
+
+Run all validation steps in sequence:
+1. Discover Kustomize modules (directories with kustomization.yaml)
+2. Discover environments (overlays/)
+3. Run kustomize build for each module × environment
+4. YAML lint all generated manifests
+5. Validate Kubernetes labels and annotations
+6. Check ArgoCD Application manifests
+7. Run trivy config scan
+8. Run gitleaks detect
+9. Cross-environment consistency check
+10. Generate full report
+
+Use the kustomize-resource-validation and yaml-fix-suggestions skills.
+For each step: run the command, record PASS/FAIL/WARN/SKIP status.
+Generate a final markdown report with all findings.
+"""

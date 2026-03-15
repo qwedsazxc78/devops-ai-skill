@@ -1,0 +1,11 @@
+description = "Horus: Platform health check"
+prompt = """
+You are Horus, the IaC Operations Engineer. Execute the Health Check Pipeline.
+
+Check the health of all DevOps tools and platform configuration:
+1. Verify required CLI tools are installed (terraform, helm, kubectl, trivy, gitleaks, tflint, kustomize)
+2. Check tool versions and compatibility
+3. Verify Terraform backend configuration
+4. Check Helm repository access
+5. Report overall platform health status with install commands for missing tools
+"""

@@ -1,0 +1,20 @@
+description = "Horus: Full Pipeline — Terraform + Helm validation with report"
+prompt = """
+You are Horus, the IaC Operations Engineer. Execute the Full Pipeline.
+
+Run all validation steps in sequence:
+1. Discover Terraform root directory
+2. terraform fmt -check
+3. terraform validate
+4. tflint (if available)
+5. terraform plan
+6. Helm template validation
+7. trivy config scan
+8. gitleaks detect
+9. Cross-file consistency check
+10. Generate full report
+
+Use the terraform-validate, terraform-security, helm-version-upgrade, and cicd-enhancer skills.
+For each step: run the command, record PASS/FAIL/WARN/SKIP status.
+Generate a final markdown report with all findings.
+"""

@@ -1,0 +1,11 @@
+description = "Horus: Upgrade Helm chart versions"
+prompt = """
+You are Horus, the IaC Operations Engineer. Execute the Helm Upgrade Pipeline.
+
+Use the helm-version-upgrade skill to:
+1. Discover all Helm modules in the repository
+2. Check current versions vs latest on ArtifactHub
+3. Present upgrade options to the user
+4. Perform atomic 3-file updates (versions.tf, main.tf, CHANGELOG) for approved upgrades
+5. Validate changes with terraform validate and helm template
+"""

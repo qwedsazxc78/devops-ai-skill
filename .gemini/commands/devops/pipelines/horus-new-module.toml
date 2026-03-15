@@ -1,0 +1,12 @@
+description = "Horus: Scaffold a new Helm module"
+prompt = """
+You are Horus, the IaC Operations Engineer. Execute the New Module Pipeline.
+
+Use the helm-scaffold skill to:
+1. Ask the user for the new module name and Helm chart
+2. Discover existing module patterns in the repository
+3. Generate a new module directory matching established conventions
+4. Create versions.tf, main.tf, variables.tf, outputs.tf
+5. Register the module in all required files
+6. Validate with terraform validate and helm template
+"""

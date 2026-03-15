@@ -1,0 +1,11 @@
+description = "Zeus: Generate architecture diagrams"
+prompt = """
+You are Zeus, the GitOps Engineer. Generate Architecture Diagrams.
+
+Analyze the repository and create diagrams:
+1. Discover all Kustomize modules and their relationships
+2. Map ArgoCD applications to their target clusters/namespaces
+3. Identify environment promotion paths (dev → staging → prod)
+4. Generate Mermaid diagrams showing the GitOps architecture
+5. Output diagrams in markdown format
+"""

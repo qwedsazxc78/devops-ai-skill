@@ -166,10 +166,10 @@ install_gemini() {
   echo ""
   echo -e "${BOLD}═══ Google Gemini CLI (~/.gemini/) ═══${NC}"
 
-  # Skills — copy to ~/.gemini/skills/ (User Skills tier)
+  # 1. Skills — copy to ~/.gemini/skills/ (User Skills tier)
   _gemini_manual_install "$base"
 
-  # Agent definitions (Gemini agents are in .gemini/agents/)
+  # 2. Agents — copy agent definitions
   mkdir -p "$base/agents"
   for agent_file in "$SKILL_PACK_DIR"/.gemini/agents/*.md; do
     [[ -f "$agent_file" ]] || continue
@@ -177,6 +177,12 @@ install_gemini() {
     name=$(basename "$agent_file")
     copy_file "$agent_file" "$base/agents/$name" "agent: $name"
   done
+
+  # 3. Commands — copy TOML command files for Gemini command palette
+  local cmd_src="$SKILL_PACK_DIR/.gemini/commands/devops"
+  if [[ -d "$cmd_src" ]]; then
+    copy_dir "$cmd_src" "$base/commands/devops" "commands: devops"
+  fi
 
   # Extension manifest (.gemini/extensions/devops/)
   local ext_src="$SKILL_PACK_DIR/.gemini/extensions/devops"
@@ -187,7 +193,7 @@ install_gemini() {
 
 _gemini_manual_install() {
   local base="$1"
-  # Manual: copy skills to ~/.gemini/skills/ (User Skills tier)
+  # Copy skills to ~/.gemini/skills/ (the path gemini skills list discovers).
   mkdir -p "$base/skills"
   for skill_dir in "$SKILL_PACK_DIR"/skills/*/; do
     [[ -d "$skill_dir" ]] || continue
@@ -201,18 +207,15 @@ install_antigravity() {
   echo ""
   echo -e "${BOLD}═══ Antigravity (~/.agents/) ═══${NC}"
 
-  # Antigravity uses ~/.agents/skills/ as User Skills tier
-  # (same path convention as Gemini's ~/.agents/skills/ alias).
-  # Skills with SKILL.md are auto-discovered.
   local base="$HOME/.agents"
 
-  # Rules
+  # 1. Rules
   mkdir -p "$base/rules"
   if [[ -f "$SKILL_PACK_DIR/.agents/rules/devops.md" ]]; then
     copy_file "$SKILL_PACK_DIR/.agents/rules/devops.md" "$base/rules/devops.md" "rules: devops.md"
   fi
 
-  # Agent skill wrappers (horus/zeus SKILL.md)
+  # 2. Agent skill wrappers (horus/zeus SKILL.md)
   for agent_dir in "$SKILL_PACK_DIR"/.agents/skills/*/; do
     [[ -d "$agent_dir" ]] || continue
     local name
@@ -220,13 +223,36 @@ install_antigravity() {
     copy_dir "$agent_dir" "$base/skills/$name" "agent-skill: $name"
   done
 
-  # Skills
+  # 3. Skills — skip if already in ~/.gemini/skills/ (Gemini scans ~/.agents/ too)
   mkdir -p "$base/skills"
   for skill_dir in "$SKILL_PACK_DIR"/skills/*/; do
     [[ -d "$skill_dir" ]] || continue
     local name
     name=$(basename "$skill_dir")
-    copy_dir "$skill_dir" "$base/skills/$name" "skill: $name"
+    if [[ -d "$HOME/.gemini/skills/$name" ]]; then
+      log_skip "skill: $name (in ~/.gemini/skills/, shared with Gemini)"
+    else
+      copy_dir "$skill_dir" "$base/skills/$name" "skill: $name"
+    fi
+  done
+
+  # 4. Workflows — copy pipeline prompts to ~/.agents/workflows/
+  mkdir -p "$base/workflows"
+  for prompt_dir in horus zeus shared; do
+    local src_dir="$SKILL_PACK_DIR/prompts/$prompt_dir"
+    [[ -d "$src_dir" ]] || continue
+    for prompt_file in "$src_dir"/*.md; do
+      [[ -f "$prompt_file" ]] || continue
+      local fname
+      fname=$(basename "$prompt_file" .md)
+      # Prefix with agent name for horus/zeus, keep shared- prefix for shared
+      if [[ "$prompt_dir" == "shared" ]]; then
+        local wf_name="shared-${fname}"
+      else
+        local wf_name="${prompt_dir}-${fname}"
+      fi
+      copy_file "$prompt_file" "$base/workflows/${wf_name}.md" "workflow: $wf_name"
+    done
   done
 }
 
@@ -269,14 +295,20 @@ do_uninstall() {
     _rm_if_exists "$HOME/.gemini/skills/$skill" "~/.gemini/skills/$skill" && ((removed++)) || true
   done
   _rm_if_exists "$HOME/.gemini/extensions/devops" "~/.gemini/extensions/devops" && ((removed++)) || true
+  _rm_if_exists "$HOME/.gemini/commands/devops" "~/.gemini/commands/devops" && ((removed++)) || true
 
-  # Antigravity / shared ~/.agents/: rules + skills
+  # Antigravity / shared ~/.agents/: rules + skills + workflows
   _rm_if_exists "$HOME/.agents/rules/devops.md" "~/.agents/rules/devops.md" && ((removed++)) || true
   for agent in horus zeus; do
     _rm_if_exists "$HOME/.agents/skills/$agent" "~/.agents/skills/$agent" && ((removed++)) || true
   done
   for skill in "${skills[@]}"; do
     _rm_if_exists "$HOME/.agents/skills/$skill" "~/.agents/skills/$skill" && ((removed++)) || true
+  done
+  # Workflows
+  local workflows=("horus-full" "horus-upgrade" "horus-security" "horus-validate" "horus-new-module" "horus-cicd" "horus-health" "zeus-full" "zeus-pre-merge" "zeus-health-check" "zeus-review" "zeus-onboard" "zeus-diagram" "zeus-status" "shared-repo-detect" "shared-report-format" "shared-tool-check")
+  for wf in "${workflows[@]}"; do
+    _rm_if_exists "$HOME/.agents/workflows/${wf}.md" "~/.agents/workflows/${wf}.md" && ((removed++)) || true
   done
 
   echo ""
@@ -347,6 +379,24 @@ _status_section() {
   if [[ -d "$base/extensions/devops" ]]; then
     echo -e "  ${GREEN}[ok]${NC} extension: devops"
     ((found++)) || true
+  fi
+
+  # Commands (Gemini)
+  if [[ -d "$base/commands/devops" ]]; then
+    local cmd_count
+    cmd_count=$(find "$base/commands/devops" -name "*.toml" 2>/dev/null | wc -l | tr -d ' ')
+    echo -e "  ${GREEN}[ok]${NC} commands: $cmd_count toml files"
+    ((found++)) || true
+  fi
+
+  # Workflows (Antigravity)
+  if [[ -d "$base/workflows" ]]; then
+    local wf_count
+    wf_count=$(find "$base/workflows" -name "*.md" 2>/dev/null | wc -l | tr -d ' ')
+    if [[ $wf_count -gt 0 ]]; then
+      echo -e "  ${GREEN}[ok]${NC} workflows: $wf_count pipeline files"
+      ((found++)) || true
+    fi
   fi
 
   if [[ $found -eq 0 ]]; then

@@ -1,0 +1,12 @@
+description = "Horus: Security audit — Terraform + Helm + GKE hardening"
+prompt = """
+You are Horus, the IaC Operations Engineer. Execute the Security Audit Pipeline.
+
+Use the terraform-security skill to:
+1. Scan Terraform code for hardcoded secrets and misconfigurations
+2. Run trivy config scan on all .tf and Helm chart files
+3. Run gitleaks to detect leaked secrets
+4. Check GKE cluster hardening (private cluster, workload identity, network policy)
+5. Review Helm chart security (runAsNonRoot, readOnlyRootFilesystem, resource limits)
+6. Generate a security findings report with severity levels
+"""

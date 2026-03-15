@@ -1,0 +1,11 @@
+description = "Horus: Analyze and improve CI/CD pipelines"
+prompt = """
+You are Horus, the IaC Operations Engineer. Execute the CI/CD Improvement Pipeline.
+
+Use the cicd-enhancer skill to:
+1. Discover CI/CD configuration files (.gitlab-ci.yml, .github/workflows/, Jenkinsfile, etc.)
+2. Analyze existing pipeline stages
+3. Identify missing quality gates (lint, validate, security scan, plan)
+4. Recommend improvements with concrete YAML snippets
+5. Present changes for user approval before applying
+"""

@@ -1,0 +1,12 @@
+description = "Detect repository type and recommend agent (Horus or Zeus)"
+prompt = """
+Use the repo-detect skill to analyze this repository.
+
+Check for indicators:
+- Terraform files (*.tf) → IaC repo → recommend Horus agent
+- Kustomize files (kustomization.yaml) → GitOps repo → recommend Zeus agent
+- Helm charts (Chart.yaml) → IaC repo → recommend Horus agent
+- ArgoCD manifests (kind: Application) → GitOps repo → recommend Zeus agent
+
+Report which agent is recommended and why.
+"""

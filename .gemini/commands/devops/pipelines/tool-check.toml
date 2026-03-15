@@ -1,0 +1,19 @@
+description = "Check all DevOps tool installations and versions"
+prompt = """
+Check all required DevOps tools and report their status:
+
+1. Run each command to verify installation:
+   - git --version
+   - terraform --version
+   - helm version
+   - kubectl version --client
+   - kustomize version
+   - argocd version --client
+   - trivy --version
+   - gitleaks version
+   - tflint --version
+
+2. For each tool: report version if installed, or show install command if missing
+3. Show install commands for all platforms (brew for macOS, apt for Linux, winget for Windows)
+4. Report overall readiness status
+"""
