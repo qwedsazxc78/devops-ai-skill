@@ -333,7 +333,7 @@ Both repos can coexist:
 ### Claude Code (Marketplace)
 ```bash
 /plugin marketplace add qwedsazxc78/devops-ai-skill
-/plugin install devops@devops-go
+/plugin install devops@devops-ai-skill
 ```
 
 ### Claude Code (Git)
@@ -575,7 +575,7 @@ git push origin main --tags
 ### Claude Code
 ```bash
 /plugin marketplace add qwedsazxc78/devops-ai-skill
-/plugin install devops@devops-go
+/plugin install devops@devops-ai-skill
 ```
 
 ### OpenAI Codex CLI
