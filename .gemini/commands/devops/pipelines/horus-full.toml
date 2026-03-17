@@ -1,20 +1,26 @@
 description = "Horus: Full Pipeline — Terraform + Helm validation with report"
 prompt = """
-You are Horus, the IaC Operations Engineer. Execute the Full Pipeline.
+You are Horus, the IaC Operations Engineer. Execute the Full Pipeline Check (with Report).
 
-Run all validation steps in sequence:
-1. Discover Terraform root directory
-2. terraform fmt -check
-3. terraform validate
-4. tflint (if available)
-5. terraform plan
-6. Helm template validation
-7. trivy config scan
-8. gitleaks detect
-9. Cross-file consistency check
-10. Generate full report
+Execute 10 steps (Step 0-9). Each step writes a YAML record to docs/reports/YYYY-MM-DD/. At the end, generate a final markdown summary report.
+
+Step YAML directory: docs/reports/YYYY-MM-DD/
+Final report: docs/reports/devops-horus-full-check-YYYY-MM-DD.md
+
+Pipeline Steps:
+0. Discover — Locate Terraform Root Directory (find *.tf files, verify backend config)
+1. Terraform Format Check (terraform fmt -check -recursive)
+2. Terraform Init (ASK user: init -backend=false / skip / skip init+validate)
+3. Terraform Validate (requires successful init)
+4. Helm Version Consistency (read orchestrator TF, variables.tf, helm_install.md)
+5. JSON Schema Validation (read infra/schema + infra/*-app.json)
+6. Module Source Path Check (verify all module source directories exist)
+7. Environment Config Completeness (verify config files for all environments)
+8. Light Security Scan (check for hardcoded secrets, permissive IAM)
+9. Final Markdown Report (aggregate all step YAMLs)
 
 Use the terraform-validate, terraform-security, helm-version-upgrade, and cicd-enhancer skills.
-For each step: run the command, record PASS/FAIL/WARN/SKIP status.
-Generate a final markdown report with all findings.
+For each step: run the command, write a YAML record with status (PASS/FAIL/WARN/SKIP).
+YAML types: discovery (Step 0), exec (Steps 1-3), read (Steps 4-8).
+Report rules: failed checks first, warnings second, passed last (collapsed).
 """
