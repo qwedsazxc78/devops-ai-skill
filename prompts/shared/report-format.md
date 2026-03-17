@@ -20,9 +20,18 @@ step:
 
 ### Type-Specific Fields
 
-**exec**: `command`, `exit_code`, `output`, `files`, `error`, `skip_reason`
-**read**: `total_modules`, `consistent`, `mismatched`, `modules[]`
-**discovery**: `tf_dir`, `backend_type`, `tf_files_count`
+**discovery**: Root detection for both agents
+- Horus: `tf_dir`, `backend_type`, `tf_files_count`
+- Zeus: `kustomize_roots[]`, `argocd_apps_found`, `total_roots`
+
+**exec**: Command execution with output capture
+- Common: `command`, `exit_code`, `output`, `files`, `error`, `skip_reason`
+- Zeus validation extends with: `total_modules`, `passed`, `failed`, `modules[]` (per-tool results)
+- Zeus security extends with: `findings` (critical/high/medium/low), `tools[]` (per-tool status)
+
+**read**: Code analysis (fields vary by step — see each pipeline's Per-Step YAML Schema)
+- Horus: `total_modules`, `consistent`, `mismatched`, `modules[]`
+- Zeus: `deprecated_apis[]`, `image_drift{}`, `risk_level`, `recommendations[]`, `diagrams[]`
 
 ## Final Markdown Report
 

@@ -68,6 +68,7 @@ This is the primary pipeline that runs shell commands (terraform fmt, init, vali
 
 - Read all step YAML files (00-08) from `docs/reports/YYYY-MM-DD/`
 - Aggregate into: `docs/reports/devops-horus-full-check-YYYY-MM-DD.md`
+- Report format: follow `prompts/shared/report-format.md`
 - Print report path and summary to user
 
 ## Per-Step YAML Schema
@@ -131,12 +132,4 @@ step:
 
 ## Report Rules
 
-1. **Failed checks first** — show full detail tables for FAIL steps
-2. **Warnings second** — show detail for WARN steps
-3. **Passed checks last** — collapsed in `<details>` to reduce noise
-4. **Auto-fix section** — list available fixes with counts
-5. **Step YAML links** — reference all per-step YAML files for drill-down
-6. `summary.overall` logic:
-   - `PASS` — all steps PASS (0 FAIL, 0 WARN)
-   - `NEEDS ATTENTION` — 0 FAIL but 1+ WARN
-   - `FAIL` — 1+ FAIL
+See `prompts/shared/report-format.md` for full rules (ordering, status logic, naming convention).
