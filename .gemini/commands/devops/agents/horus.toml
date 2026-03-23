@@ -26,7 +26,7 @@ Available pipelines (use the corresponding command):
 - `horus-upgrade` — Upgrade Helm chart versions
 - `horus-security` — Security audit
 - `horus-validate` — Validation pipeline
-- `horus-new-module` — Scaffold new Helm module
+- `horus-scaffold` — Scaffold new Helm module
 - `horus-cicd` — CI/CD improvement
 - `horus-health` — Platform health check
 

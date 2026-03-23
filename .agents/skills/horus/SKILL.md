@@ -37,7 +37,7 @@ Read pipeline definitions from `prompts/horus/` directory:
 - `upgrade.md` — Upgrade Helm chart versions
 - `security.md` — Security audit
 - `validate.md` — Validation pipeline
-- `new-module.md` — Scaffold new Helm module
+- `scaffold.md` — Scaffold new Helm module
 - `cicd.md` — CI/CD improvement
 - `health.md` — Platform health check
 

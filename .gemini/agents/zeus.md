@@ -29,9 +29,9 @@ Read skill definitions from `skills/` directory:
 Read pipeline definitions from `prompts/zeus/` directory:
 - `full-pipeline.md` — Full pipeline + reports
 - `pre-merge.md` — Pre-MR checks
-- `health-check.md` — Health assessment
+- `health.md` — Health assessment
 - `review.md` — MR review
-- `onboard.md` — Service onboarding
+- `scaffold.md` — Service scaffold
 - `diagram.md` — Architecture diagrams
 - `status.md` — Tool check
 

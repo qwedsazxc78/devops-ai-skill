@@ -155,7 +155,7 @@ install_codex() {
 ## DevOps AI Skill Pack (Global)
 
 Skills at `~/.codex/skills/`. Agents: Horus (IaC) and Zeus (GitOps).
-Trigger: `*full`, `*upgrade`, `*security`, `*validate`, `*new-module`, `*cicd`, `*health`
+Trigger: `*full`, `*upgrade`, `*security`, `*validate`, `*scaffold`, `*cicd`, `*health`
 ENTRY
     log_ok "Appended agent info to instructions.md"
   fi
@@ -314,7 +314,7 @@ do_uninstall() {
     _rm_if_exists "$HOME/.agents/skills/$skill" "~/.agents/skills/$skill" && ((removed++)) || true
   done
   # Workflows
-  local workflows=("horus-full" "horus-upgrade" "horus-security" "horus-validate" "horus-new-module" "horus-cicd" "horus-health" "zeus-full" "zeus-pre-merge" "zeus-health-check" "zeus-review" "zeus-onboard" "zeus-diagram" "zeus-status" "shared-repo-detect" "shared-report-format" "shared-tool-check")
+  local workflows=("horus-full" "horus-upgrade" "horus-security" "horus-validate" "horus-scaffold" "horus-cicd" "horus-health" "zeus-full" "zeus-pre-merge" "zeus-health" "zeus-review" "zeus-scaffold" "zeus-diagram" "zeus-status" "shared-repo-detect" "shared-report-format" "shared-tool-check")
   for wf in "${workflows[@]}"; do
     _rm_if_exists "$HOME/.agents/workflows/${wf}.md" "~/.agents/workflows/${wf}.md" && ((removed++)) || true
   done

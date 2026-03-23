@@ -141,8 +141,8 @@ done
 # ============================================
 section "Prompts Directory"
 
-HORUS_PROMPTS=("full-pipeline.md" "upgrade.md" "security.md" "validate.md" "new-module.md" "cicd.md" "health.md")
-ZEUS_PROMPTS=("full-pipeline.md" "pre-merge.md" "health-check.md" "review.md" "onboard.md" "diagram.md" "status.md")
+HORUS_PROMPTS=("full-pipeline.md" "upgrade.md" "security.md" "validate.md" "scaffold.md" "cicd.md" "health.md")
+ZEUS_PROMPTS=("full-pipeline.md" "pre-merge.md" "health.md" "review.md" "scaffold.md" "diagram.md" "status.md")
 SHARED_PROMPTS=("repo-detect.md" "report-format.md" "tool-check.md")
 
 for prompt in "${HORUS_PROMPTS[@]}"; do
@@ -279,7 +279,7 @@ for agent in horus zeus; do
 done
 
 # Pipeline command TOMLs
-gemini_pipelines=("horus-full" "horus-upgrade" "horus-security" "horus-validate" "horus-new-module" "horus-cicd" "horus-health" "zeus-full" "zeus-pre-merge" "zeus-health-check" "zeus-review" "zeus-onboard" "zeus-diagram" "zeus-status" "repo-detect" "tool-check")
+gemini_pipelines=("horus-full" "horus-upgrade" "horus-security" "horus-validate" "horus-scaffold" "horus-cicd" "horus-health" "zeus-full" "zeus-pre-merge" "zeus-health" "zeus-review" "zeus-scaffold" "zeus-diagram" "zeus-status" "repo-detect" "tool-check")
 for pipeline in "${gemini_pipelines[@]}"; do
     toml_file="$gemini_cmds_dir/pipelines/$pipeline.toml"
     if [ -f "$toml_file" ]; then
@@ -592,7 +592,7 @@ done
 # setup-antigravity.sh should reference all workflow names
 antigravity_script="$ROOT_DIR/scripts/setup/setup-antigravity.sh"
 if [ -f "$antigravity_script" ]; then
-    EXPECTED_WORKFLOWS=("horus-full" "horus-upgrade" "horus-security" "horus-validate" "horus-new-module" "horus-cicd" "horus-health" "zeus-full" "zeus-pre-merge" "zeus-health-check" "zeus-review" "zeus-onboard" "zeus-diagram" "zeus-status" "shared-repo-detect" "shared-report-format" "shared-tool-check")
+    EXPECTED_WORKFLOWS=("horus-full" "horus-upgrade" "horus-security" "horus-validate" "horus-scaffold" "horus-cicd" "horus-health" "zeus-full" "zeus-pre-merge" "zeus-health" "zeus-review" "zeus-scaffold" "zeus-diagram" "zeus-status" "shared-repo-detect" "shared-report-format" "shared-tool-check")
     workflow_count=0
     for wf in "${EXPECTED_WORKFLOWS[@]}"; do
         if grep -q "$wf" "$antigravity_script" 2>/dev/null; then

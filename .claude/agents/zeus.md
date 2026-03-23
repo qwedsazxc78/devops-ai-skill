@@ -49,9 +49,9 @@ Defined in `prompts/zeus/`:
 |----------|-------------|
 | full-pipeline | Full pipeline + YAML/MD reports |
 | pre-merge | Pre-MR essential checks |
-| health-check | Repository health assessment |
+| health | Repository health assessment |
 | review | MR review pipeline |
-| onboard | Service onboarding (interactive) |
+| scaffold | Service scaffold (interactive) |
 | diagram | Generate architecture diagrams |
 | status | Tool installation check |
 

@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-03-23
+
+### Added
+
+- 5-minute quick start guide (`docs/quick-start.md`) — beginner-friendly 5-step onboarding
+- Multi-language quick start: `quick-start.zh-TW.md`, `quick-start.zh-CN.md`
+- `docs/guide/` directory for tutorial screenshots (placeholder)
+- `npx skills` comparison table showing Skills-only vs Global Install feature gap
+- CHANGELOG entry for v1.4.0
+
+### Changed
+
+- **BREAKING: Pipeline command alignment** — unified command names across Horus and Zeus:
+  - Horus `*new-module` → `*scaffold` (file: `prompts/horus/scaffold.md`)
+  - Zeus `*health-check` → `*health` (file: `prompts/zeus/health.md`)
+  - Zeus `*onboard` → `*scaffold` (file: `prompts/zeus/scaffold.md`)
+  - Gemini TOML commands renamed accordingly (`horus-scaffold`, `zeus-health`, `zeus-scaffold`)
+- README.md default language switched from 繁體中文 to English
+- README split into 3 separate language files: `README.md` (EN), `docs/README.zh-TW.md`, `docs/README.zh-CN.md`
+- Quick start split into 3 separate language files matching README structure
+- Updated all cross-references across 27+ files (agents, skills, scripts, tests, docs)
+- All 284 structure tests pass with renamed pipelines
+
 ## [1.3.0] - 2026-03-17
 
 ### Added

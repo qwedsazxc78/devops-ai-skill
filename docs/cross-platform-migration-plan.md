@@ -82,15 +82,15 @@ devops-ai-skill/
 │   │   ├── upgrade.md
 │   │   ├── validate.md
 │   │   ├── security.md
-│   │   ├── new-module.md
+│   │   ├── scaffold.md
 │   │   ├── cicd.md
 │   │   └── health.md
 │   ├── zeus/                            ← 7 Zeus pipelines
 │   │   ├── full-pipeline.md
 │   │   ├── pre-merge.md
-│   │   ├── health-check.md
+│   │   ├── health.md
 │   │   ├── review.md
-│   │   ├── onboard.md
+│   │   ├── scaffold.md
 │   │   ├── diagram.md
 │   │   └── status.md
 │   └── shared/                          ← 3 shared utilities

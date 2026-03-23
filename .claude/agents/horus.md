@@ -45,7 +45,7 @@ Defined in `prompts/horus/`:
 | upgrade | Upgrade Helm chart versions |
 | security | Security audit (file analysis) |
 | validate | Validation (fmt + file analysis) |
-| new-module | Scaffold new Helm module |
+| scaffold | Scaffold new Helm module |
 | cicd | Improve CI/CD pipeline |
 | health | Platform health check |
 

@@ -130,7 +130,7 @@ Read `devops-ai-skill/docs/PROJECT.md` for shared project context.
 | *upgrade | Upgrade Helm Chart versions |
 | *security | Security audit |
 | *validate | Validation (fmt + analysis) |
-| *new-module | Scaffold new Helm module |
+| *scaffold | Scaffold new Helm module |
 | *cicd | Improve CI/CD pipeline |
 | *health | Platform health check |
 ENTRY
@@ -175,8 +175,8 @@ Read `devops-ai-skill/docs/PROJECT.md` for shared project context.
 Skills are available at `.codex/skills/`. Pipelines at `devops-ai-skill/prompts/`.
 
 ### Agents
-- **Horus** — IaC Operations Engineer (Terraform + Helm + GKE): `*full`, `*upgrade`, `*security`, `*validate`, `*new-module`, `*cicd`, `*health`
-- **Zeus** — GitOps Engineer (Kustomize + ArgoCD): `*full`, `*pre-merge`, `*health-check`, `*review`, `*onboard`, `*diagram`, `*status`
+- **Horus** — IaC Operations Engineer (Terraform + Helm + GKE): `*full`, `*upgrade`, `*security`, `*validate`, `*scaffold`, `*cicd`, `*health`
+- **Zeus** — GitOps Engineer (Kustomize + ArgoCD): `*full`, `*pre-merge`, `*health`, `*review`, `*scaffold`, `*diagram`, `*status`
 ENTRY
 )
   if [ -f "$TARGET_DIR/AGENTS.md" ]; then
@@ -227,7 +227,7 @@ Read `devops-ai-skill/docs/PROJECT.md` for shared project context.
 - Extension: `.gemini/extensions/devops/gemini-extension.json`
 - Pipelines: `devops-ai-skill/prompts/` (14 pipelines)
 
-Trigger with `*full`, `*upgrade`, `*security`, `*validate`, `*new-module`, `*cicd`, `*health` (Horus) or `*full`, `*pre-merge`, `*health-check`, `*review`, `*onboard`, `*diagram`, `*status` (Zeus).
+Trigger with `*full`, `*upgrade`, `*security`, `*validate`, `*scaffold`, `*cicd`, `*health` (Horus) or `*full`, `*pre-merge`, `*health`, `*review`, `*scaffold`, `*diagram`, `*status` (Zeus).
 ENTRY
 )
   if [ -f "$TARGET_DIR/GEMINI.md" ]; then
@@ -279,14 +279,14 @@ setup_antigravity() {
     "horus-upgrade:horus/upgrade.md"
     "horus-security:horus/security.md"
     "horus-validate:horus/validate.md"
-    "horus-new-module:horus/new-module.md"
+    "horus-scaffold:horus/scaffold.md"
     "horus-cicd:horus/cicd.md"
     "horus-health:horus/health.md"
     "zeus-full:zeus/full-pipeline.md"
     "zeus-pre-merge:zeus/pre-merge.md"
-    "zeus-health-check:zeus/health-check.md"
+    "zeus-health:zeus/health.md"
     "zeus-review:zeus/review.md"
-    "zeus-onboard:zeus/onboard.md"
+    "zeus-scaffold:zeus/scaffold.md"
     "zeus-diagram:zeus/diagram.md"
     "zeus-status:zeus/status.md"
     "shared-repo-detect:shared/repo-detect.md"

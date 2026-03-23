@@ -78,13 +78,13 @@ EOF
     done
 
     # Prompts directory (horus + zeus + shared)
-    local horus_prompts=(full-pipeline upgrade security validate new-module cicd health)
+    local horus_prompts=(full-pipeline upgrade security validate scaffold cicd health)
     for p in "${horus_prompts[@]}"; do
         mkdir -p "$SANDBOX/prompts/horus"
         echo "# $p" > "$SANDBOX/prompts/horus/$p.md"
     done
 
-    local zeus_prompts=(full-pipeline pre-merge health-check review onboard diagram status)
+    local zeus_prompts=(full-pipeline pre-merge health review scaffold diagram status)
     for p in "${zeus_prompts[@]}"; do
         mkdir -p "$SANDBOX/prompts/zeus"
         echo "# $p" > "$SANDBOX/prompts/zeus/$p.md"
@@ -367,8 +367,8 @@ for skill in "${expected_skills[@]}"; do
 done
 
 # Workflow symlinks — 7 horus + 7 zeus + 3 shared = 17 total
-horus_workflows=(horus-full horus-upgrade horus-security horus-validate horus-new-module horus-cicd horus-health)
-zeus_workflows=(zeus-full zeus-pre-merge zeus-health-check zeus-review zeus-onboard zeus-diagram zeus-status)
+horus_workflows=(horus-full horus-upgrade horus-security horus-validate horus-scaffold horus-cicd horus-health)
+zeus_workflows=(zeus-full zeus-pre-merge zeus-health zeus-review zeus-scaffold zeus-diagram zeus-status)
 shared_workflows=(shared-repo-detect shared-report-format shared-tool-check)
 
 for wf in "${horus_workflows[@]}" "${zeus_workflows[@]}" "${shared_workflows[@]}"; do

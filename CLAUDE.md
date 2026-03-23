@@ -23,7 +23,7 @@ On session start:
 | *upgrade | `prompts/horus/upgrade.md` |
 | *security | `prompts/horus/security.md` |
 | *validate | `prompts/horus/validate.md` |
-| *new-module | `prompts/horus/new-module.md` |
+| *scaffold | `prompts/horus/scaffold.md` |
 | *cicd | `prompts/horus/cicd.md` |
 | *health | `prompts/horus/health.md` |
 
@@ -33,8 +33,8 @@ On session start:
 |---------|----------|
 | *full | `prompts/zeus/full-pipeline.md` |
 | *pre-merge | `prompts/zeus/pre-merge.md` |
-| *health-check | `prompts/zeus/health-check.md` |
+| *health | `prompts/zeus/health.md` |
 | *review | `prompts/zeus/review.md` |
-| *onboard | `prompts/zeus/onboard.md` |
+| *scaffold | `prompts/zeus/scaffold.md` |
 | *diagram | `prompts/zeus/diagram.md` |
 | *status | `prompts/zeus/status.md` |

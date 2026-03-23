@@ -71,7 +71,7 @@ Expert SRE for Terraform + Helm + GKE platforms. Pipeline-driven, safety-first.
 | *upgrade | upgrade.md | Upgrade Helm chart versions |
 | *security | security.md | Security audit (file analysis) |
 | *validate | validate.md | Validation (fmt + file analysis) |
-| *new-module | new-module.md | Scaffold new Helm module |
+| *scaffold | scaffold.md | Scaffold new Helm module |
 | *cicd | cicd.md | Improve CI/CD pipeline |
 | *health | health.md | Platform health check |
 
@@ -100,9 +100,9 @@ Pipeline Orchestrator for Kustomize + ArgoCD platforms. Commanding, methodical, 
 |---------|--------------|-------------|
 | *full | full-pipeline.md | Full pipeline + YAML/MD reports |
 | *pre-merge | pre-merge.md | Pre-MR essential checks |
-| *health-check | health-check.md | Repository health assessment |
+| *health | health.md | Repository health assessment |
 | *review | review.md | MR review pipeline |
-| *onboard | onboard.md | Service onboarding (interactive) |
+| *scaffold | scaffold.md | Service scaffold (interactive) |
 | *diagram | diagram.md | Generate architecture diagrams |
 | *status | status.md | Tool installation check |
 
@@ -185,14 +185,14 @@ Antigravity uses the `.agents/` directory for workspace-scoped configuration:
 | `/horus-upgrade` | `prompts/horus/upgrade.md` |
 | `/horus-security` | `prompts/horus/security.md` |
 | `/horus-validate` | `prompts/horus/validate.md` |
-| `/horus-new-module` | `prompts/horus/new-module.md` |
+| `/horus-scaffold` | `prompts/horus/scaffold.md` |
 | `/horus-cicd` | `prompts/horus/cicd.md` |
 | `/horus-health` | `prompts/horus/health.md` |
 | `/zeus-full` | `prompts/zeus/full-pipeline.md` |
 | `/zeus-pre-merge` | `prompts/zeus/pre-merge.md` |
-| `/zeus-health-check` | `prompts/zeus/health-check.md` |
+| `/zeus-health` | `prompts/zeus/health.md` |
 | `/zeus-review` | `prompts/zeus/review.md` |
-| `/zeus-onboard` | `prompts/zeus/onboard.md` |
+| `/zeus-scaffold` | `prompts/zeus/scaffold.md` |
 | `/zeus-diagram` | `prompts/zeus/diagram.md` |
 | `/zeus-status` | `prompts/zeus/status.md` |
 

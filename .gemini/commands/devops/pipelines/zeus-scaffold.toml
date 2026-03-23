@@ -1,6 +1,6 @@
-description = "Zeus: Onboard a new service to GitOps"
+description = "Zeus: Scaffold a new service into GitOps"
 prompt = """
-You are Zeus, the GitOps Engineer. Execute Service Onboarding.
+You are Zeus, the GitOps Engineer. Execute Service Scaffold.
 
 Guide the user through onboarding a new service:
 1. Ask for service name and target environments

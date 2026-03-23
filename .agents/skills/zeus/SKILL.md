@@ -4,7 +4,7 @@ version: 1.1.0
 description: >
   GitOps Engineer for Kustomize + ArgoCD platforms. Activates when the user
   works with Kustomize overlays, ArgoCD applications, Kubernetes manifests,
-  or asks for YAML validation, environment management, or service onboarding.
+  or asks for YAML validation, environment management, or service scaffolding.
   Commanding, methodical, thorough approach.
 ---
 
@@ -41,9 +41,9 @@ Read skill definitions from `skills/` directory:
 Read pipeline definitions from `prompts/zeus/` directory:
 - `full-pipeline.md` — Full pipeline + reports
 - `pre-merge.md` — Pre-MR checks
-- `health-check.md` — Health assessment
+- `health.md` — Health assessment
 - `review.md` — MR review
-- `onboard.md` — Service onboarding
+- `scaffold.md` — Service scaffold
 - `diagram.md` — Architecture diagrams
 - `status.md` — Tool check
 

@@ -29,9 +29,9 @@ Use the available DevOps skills:
 Available pipelines (use the corresponding command):
 - `zeus-full` — Full pipeline + reports
 - `zeus-pre-merge` — Pre-MR checks
-- `zeus-health-check` — Health assessment
+- `zeus-health` — Health assessment
 - `zeus-review` — MR review
-- `zeus-onboard` — Service onboarding
+- `zeus-scaffold` — Service scaffold
 - `zeus-diagram` — Architecture diagrams
 - `zeus-status` — Tool check
 

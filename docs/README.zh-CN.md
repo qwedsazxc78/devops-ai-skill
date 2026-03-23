@@ -14,7 +14,7 @@
 
 🚀 [快速开始](#快速开始) · 🤖 [Agent](#agent-代理) · 🔧 [工具安装](#工具安装) · 🛠️ [技能模块](#技能模块) · 📖 [安装指南](setup.md) · ⚡ [5 分钟上手](quick-start.md) · 🌐 [GitHub Repo](https://github.com/qwedsazxc78/devops-ai-skill)
 
-[繁體中文](../README.md) | [English](README.en.md) | [简体中文](README.zh-CN.md)
+[繁體中文](README.zh-TW.md) | [English](../README.md) | [简体中文](README.zh-CN.md)
 
 ---
 
@@ -39,7 +39,7 @@ bash scripts/install-global.sh          # 自动检测已安装的 CLI
 
 自动检测 Claude Code / Codex CLI / Gemini CLI / Antigravity，安装至对应全局路径。
 
-> 🆕 **新手？** 请看 [5 分钟快速上手指南](quick-start.md)，零基础也能立刻开始！
+> 🆕 **新手？** 请看 [5 分钟快速上手指南](quick-start.zh-CN.md)，零基础也能立刻开始！
 
 <details>
 <summary><strong>全局安装选项</strong></summary>
@@ -205,7 +205,7 @@ npx skills update
 | `*upgrade` | 升级 Helm Chart 版本 |
 | `*security` | 安全性审计（文件分析） |
 | `*validate` | 验证（fmt + 文件分析） |
-| `*new-module` | 创建新的 Helm 模块 |
+| `*scaffold` | 创建新的 Helm 模块 |
 | `*cicd` | 改善 CI/CD 流水线 |
 | `*health` | 平台健康检查 |
 
@@ -215,9 +215,9 @@ npx skills update
 |--------|------|
 | `*full` | 完整流水线 + YAML/MD 报告 |
 | `*pre-merge` | 合并前基本检查 |
-| `*health-check` | 仓库健康评估 |
+| `*health` | 仓库健康评估 |
 | `*review` | MR 审查流水线 |
-| `*onboard` | 服务上线（交互式） |
+| `*scaffold` | 服务构建（交互式） |
 | `*diagram` | 生成架构图 |
 | `*status` | 工具安装状态检查 |
 
