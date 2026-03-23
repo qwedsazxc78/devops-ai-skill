@@ -102,7 +102,7 @@ bash devops-ai-skill/scripts/setup.sh --uninstall
 </details>
 
 <details>
-<summary><strong>跨平台（npx skills）</strong></summary>
+<summary><strong>跨平台（npx skills）— 仅安装 Skills</strong></summary>
 
 ```bash
 # 自动检测已安装的 AI Agent 并路由 Skills
@@ -112,7 +112,17 @@ npx skills add qwedsazxc78/devops-ai-skill
 npx skills update
 ```
 
-> **注意**：`npx skills add` 仅安装 8 个 Skills（SKILL.md）。如需完整体验（Horus/Zeus Agent + 14 条流水线），请使用**一键安装**或 **Marketplace** 方式。
+> **⚠️ 注意：此方式仅安装 8 个 Skills（SKILL.md），不包含以下功能：**
+>
+> | 功能 | npx skills | 全局安装 |
+> |------|:----------:|:--------:|
+> | 8 个 Skills（SKILL.md） | ✅ | ✅ |
+> | 2 个 Agent（Horus / Zeus） | ❌ | ✅ |
+> | 14 条流水线（`*full`、`*security` 等） | ❌ | ✅ |
+> | 命令面板（Gemini CLI） | ❌ | ✅ |
+> | 工作流（Antigravity） | ❌ | ✅ |
+>
+> 如需完整体验，请使用上方的**全局安装**或 **Marketplace** 方式。
 
 </details>
 

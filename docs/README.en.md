@@ -99,7 +99,7 @@ bash devops-ai-skill/scripts/setup.sh --uninstall
 </details>
 
 <details>
-<summary><strong>Cross-Platform (npx skills)</strong></summary>
+<summary><strong>Cross-Platform (npx skills) — Skills only</strong></summary>
 
 ```bash
 # Auto-detects installed AI agents and routes skills accordingly
@@ -109,7 +109,17 @@ npx skills add qwedsazxc78/devops-ai-skill
 npx skills update
 ```
 
-> **Note**: `npx skills add` installs the 8 skills (SKILL.md) only. For the full experience (Horus/Zeus agents + 14 pipelines), use **One-Click Install** or **Marketplace**.
+> **⚠️ Note: This method installs only the 8 Skills (SKILL.md), not the full pack:**
+>
+> | Feature | npx skills | Global Install |
+> |---------|:----------:|:--------------:|
+> | 8 Skills (SKILL.md) | ✅ | ✅ |
+> | 2 Agents (Horus / Zeus) | ❌ | ✅ |
+> | 14 Pipelines (`*full`, `*security`, etc.) | ❌ | ✅ |
+> | Command palette (Gemini CLI) | ❌ | ✅ |
+> | Workflows (Antigravity) | ❌ | ✅ |
+>
+> For the full experience, use **Global Install** or **Marketplace** above.
 
 </details>
 
