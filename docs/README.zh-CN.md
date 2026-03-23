@@ -12,9 +12,9 @@
 
 > 跨平台 DevOps AI 技能包 — 两个 AI 驱动的 DevOps Agent 与共用流水线工作流，支持 **Claude Code**、**OpenAI Codex CLI**、**Google Gemini CLI** 和 **Google Antigravity**。
 
-🚀 [快速开始](#快速开始) · 🤖 [Agent](#agent-代理) · 🔧 [工具安装](#工具安装) · 🛠️ [技能模块](#技能模块) · 📖 [安装指南](setup.md) · ⚡ [5 分钟上手](quick-start.md) · 🌐 [GitHub Repo](https://github.com/qwedsazxc78/devops-ai-skill)
+🚀 [快速开始](#快速开始) · 🤖 [Agent](#agent-代理) · 🔧 [工具安装](#工具安装) · 🛠️ [技能模块](#技能模块) · 📖 [安装指南](setup.md) · ⚡ [5 分钟上手](quick-start.zh-CN.md) · 🌐 [GitHub Repo](https://github.com/qwedsazxc78/devops-ai-skill)
 
-[繁體中文](README.zh-TW.md) | [English](../README.md) | [简体中文](README.zh-CN.md)
+[繁體中文](README.zh-TW.md) | [English](../README.md) | 简体中文
 
 ---
 
