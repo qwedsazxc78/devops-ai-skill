@@ -1,0 +1,331 @@
+# ⚡ DevOps AI Skill Pack
+
+[![npm version](https://img.shields.io/npm/v/devops-ai-skill?style=flat-square&color=cb3837)](https://www.npmjs.com/package/devops-ai-skill)
+[![GitHub Release](https://img.shields.io/github/v/release/qwedsazxc78/devops-ai-skill?style=flat-square&color=2ea44f)](https://github.com/qwedsazxc78/devops-ai-skill/releases)
+[![DEVOPS](https://img.shields.io/badge/DEVOPS-SKILL-blue?style=flat-square)](https://github.com/qwedsazxc78/devops-ai-skill)
+[![LICENSE](https://img.shields.io/badge/LICENSE-MIT-green?style=flat-square)](https://github.com/qwedsazxc78/devops-ai-skill/blob/main/LICENSE)
+[![FILES](https://img.shields.io/badge/FILES-65+-orange?style=flat-square)](#项目结构)
+[![SKILLS](https://img.shields.io/badge/SKILLS-8-blueviolet?style=flat-square)](#技能模块)
+[![PIPELINES](https://img.shields.io/badge/PIPELINES-14-ff6f61?style=flat-square)](#horus-流水线iac)
+[![AGENTS](https://img.shields.io/badge/AGENTS-2-critical?style=flat-square)](#agent-代理)
+[![PLATFORMS](https://img.shields.io/badge/PLATFORMS-4-teal?style=flat-square)](#平台支持)
+
+> 跨平台 DevOps AI 技能包 — 两个 AI 驱动的 DevOps Agent 与共用流水线工作流，支持 **Claude Code**、**OpenAI Codex CLI**、**Google Gemini CLI** 和 **Google Antigravity**。
+
+🚀 [快速开始](#快速开始) · 🤖 [Agent](#agent-代理) · 🔧 [工具安装](#工具安装) · 🛠️ [技能模块](#技能模块) · 📖 [安装指南](setup.md) · ⚡ [5 分钟上手](quick-start.md) · 🌐 [GitHub Repo](https://github.com/qwedsazxc78/devops-ai-skill)
+
+[繁體中文](../README.md) | [English](README.en.md) | [简体中文](README.zh-CN.md)
+
+---
+
+## Agent 代理
+
+| Agent | 专注领域 | 平台 |
+|-------|---------|------|
+| **Horus** — IaC 运维工程师 | Terraform + Helm + GKE | 全平台 |
+| **Zeus** — GitOps 工程师 | Kustomize + ArgoCD | 全平台 |
+
+## 快速开始
+
+### 全局安装（推荐）
+
+一次安装，所有项目共用，无需 per-repo 设置：
+
+```bash
+git clone https://github.com/qwedsazxc78/devops-ai-skill.git
+cd devops-ai-skill
+bash scripts/install-global.sh          # 自动检测已安装的 CLI
+```
+
+自动检测 Claude Code / Codex CLI / Gemini CLI / Antigravity，安装至对应全局路径。
+
+> 🆕 **新手？** 请看 [5 分钟快速上手指南](quick-start.md)，零基础也能立刻开始！
+
+<details>
+<summary><strong>全局安装选项</strong></summary>
+
+```bash
+bash scripts/install-global.sh --all          # 强制安装全部平台
+bash scripts/install-global.sh --claude       # 仅 Claude Code
+bash scripts/install-global.sh --gemini       # 仅 Gemini CLI
+bash scripts/install-global.sh --status       # 查看安装状态
+bash scripts/install-global.sh --uninstall    # 移除全局安装
+```
+
+</details>
+
+<details>
+<summary><strong>更新已安装的 Skills</strong></summary>
+
+```bash
+cd devops-ai-skill
+git pull origin main                          # 拉取最新版本
+bash scripts/install-global.sh                # 重跑安装（自动跳过未变动文件）
+```
+
+> 更新 source 后需重跑 `install-global.sh`，以同步变更至所有平台。
+
+</details>
+
+<details>
+<summary><strong>Per-repo 安装（传统方式）</strong></summary>
+
+在你的项目根目录执行：
+
+```bash
+git clone https://github.com/qwedsazxc78/devops-ai-skill.git
+bash devops-ai-skill/scripts/setup.sh --all    # 安装全部平台
+bash devops-ai-skill/scripts/setup.sh          # 或交互选择平台
+```
+
+```bash
+# 仅安装特定平台
+bash devops-ai-skill/scripts/setup.sh --claude
+bash devops-ai-skill/scripts/setup.sh --codex
+bash devops-ai-skill/scripts/setup.sh --gemini
+bash devops-ai-skill/scripts/setup.sh --antigravity
+
+# 移除所有安装
+bash devops-ai-skill/scripts/setup.sh --uninstall
+```
+
+</details>
+
+<details>
+<summary><strong>Marketplace（仅 Claude Code）</strong></summary>
+
+```bash
+/plugin marketplace add qwedsazxc78/devops-ai-skill
+/plugin install devops@devops-ai-skill
+```
+
+</details>
+
+<details>
+<summary><strong>跨平台（npx skills）</strong></summary>
+
+```bash
+# 自动检测已安装的 AI Agent 并路由 Skills
+npx skills add qwedsazxc78/devops-ai-skill
+
+# 更新
+npx skills update
+```
+
+> **注意**：`npx skills add` 仅安装 8 个 Skills（SKILL.md）。如需完整体验（Horus/Zeus Agent + 14 条流水线），请使用**一键安装**或 **Marketplace** 方式。
+
+</details>
+
+## 平台支持
+
+| 功能 | Claude Code | OpenAI Codex | Gemini CLI | Antigravity |
+|------|-------------|--------------|------------|-------------|
+| 全局 Agents | `~/.claude/agents/` | `~/.codex/instructions.md` | `~/.gemini/agents/` | `~/.agents/skills/` |
+| 全局 Skills | `~/.claude/skills/` | `~/.codex/skills/` | `~/.gemini/skills/` | 共用 `~/.gemini/skills/` |
+| 命令面板 | — | — | `~/.gemini/commands/devops/` | — |
+| 工作流 | — | — | — | `~/.agents/workflows/` |
+| 入口文件 | `CLAUDE.md` | `AGENTS.md` | `GEMINI.md` | `.agents/rules/` |
+| Skills 格式 | SKILL.md（原生） | SKILL.md（原生） | SKILL.md（原生） | SKILL.md（原生） |
+| 流水线触发 | `*cmd` | `*cmd` | 命令面板 `devops:` | `/workflow-name` |
+| Bash 执行 | Yes | Yes (`!cmd`) | Yes (`run_shell_command`) | Yes |
+
+## 工具安装
+
+一键安装所有必要工具，支持 macOS (Homebrew)、Linux (apt/snap)、Windows (winget/choco/scoop)、Python (uv/pip)：
+
+```bash
+# 交互模式：检查 + 提示安装
+./scripts/install-tools.sh
+
+# 仅检查工具状态
+./scripts/install-tools.sh check
+
+# 安装全部缺少的工具
+./scripts/install-tools.sh install
+
+# 仅安装特定 Agent 的工具
+./scripts/install-tools.sh install horus   # IaC 工具
+./scripts/install-tools.sh install zeus    # GitOps 工具
+```
+
+### 共用工具
+
+| 工具 | 等级 | macOS (brew) | Linux (apt/snap) | Windows (winget) | 说明 |
+|------|------|-------------|-------------------|------------------|------|
+| node | 必要 | `brew install node` | `apt-get install nodejs` | `winget install OpenJS.NodeJS.LTS` | postinstall 运行环境 |
+| git | 必要 | `brew install git` | `apt-get install git` | `winget install Git.Git` | 版本控制 |
+| kubectl | 必要 | `brew install kubectl` | `snap install kubectl` | `winget install Kubernetes.kubectl` | K8s CLI |
+| jq | 必要 | `brew install jq` | `apt-get install jq` | `winget install jqlang.jq` | JSON 处理 |
+| yq | 建议 | `brew install yq` | `snap install yq` | `winget install MikeFarah.yq` | YAML 处理 |
+| python3 | 建议 | `brew install python3` | `apt-get install python3` | `winget install Python.Python.3.12` | 版本验证脚本 |
+| curl | 建议 | `brew install curl` | `apt-get install curl` | `winget install cURL.cURL` | 远程版本检查 |
+
+### Horus 工具（IaC）
+
+| 工具 | 等级 | macOS (brew) | Windows (winget/choco) | pip | 说明 |
+|------|------|-------------|------------------------|-----|------|
+| terraform | 必要 | `brew install terraform` | `winget install Hashicorp.Terraform` | — | IaC 引擎 |
+| helm | 必要 | `brew install helm` | `winget install Helm.Helm` | — | Helm Chart 管理 |
+| tflint | 建议 | `brew install tflint` | `choco install tflint` | — | Terraform Lint |
+| tfsec | 建议 | `brew install tfsec` | `choco install tfsec` | — | Terraform 安全扫描 |
+| pre-commit | 建议 | — | — | `pip install pre-commit` | Git Hook 管理 |
+
+### Zeus 工具（GitOps）
+
+| 工具 | 等级 | macOS (brew) | Windows (choco/scoop) | pip | 说明 |
+|------|------|-------------|------------------------|-----|------|
+| kustomize | 必要 | `brew install kustomize` | `scoop install kustomize` | — | Kustomize 构建 |
+| yamllint | 建议 | — | — | `pip install yamllint` | YAML Lint |
+| kubeconform | 建议 | `brew install kubeconform` | `scoop install kubeconform` | — | K8s 资源验证 |
+| kube-score | 建议 | `brew install kube-score` | — | — | K8s 最佳实践 |
+| kube-linter | 建议 | `brew install kube-linter` | — | — | K8s Lint |
+| polaris | 建议 | `brew install FairwindsOps/tap/polaris` | — | — | K8s 策略检查 |
+| pluto | 建议 | `brew install FairwindsOps/tap/pluto` | — | — | 废弃 API 检测 |
+| conftest | 建议 | `brew install conftest` | — | — | 策略测试 |
+| checkov | 建议 | — | — | `pip install checkov` | IaC 安全扫描 |
+| trivy | 建议 | `brew install trivy` | `choco install trivy` | — | 漏洞扫描 |
+| gitleaks | 建议 | `brew install gitleaks` | `choco install gitleaks` | — | 机密检测 |
+| d2 | 建议 | `brew install d2` | `scoop install d2` | — | 架构图生成 |
+
+## Horus 流水线（IaC）
+
+| 流水线 | 说明 |
+|--------|------|
+| `*full` | 完整检查（执行 CLI 工具）+ 报告 |
+| `*upgrade` | 升级 Helm Chart 版本 |
+| `*security` | 安全性审计（文件分析） |
+| `*validate` | 验证（fmt + 文件分析） |
+| `*new-module` | 创建新的 Helm 模块 |
+| `*cicd` | 改善 CI/CD 流水线 |
+| `*health` | 平台健康检查 |
+
+## Zeus 流水线（GitOps）
+
+| 流水线 | 说明 |
+|--------|------|
+| `*full` | 完整流水线 + YAML/MD 报告 |
+| `*pre-merge` | 合并前基本检查 |
+| `*health-check` | 仓库健康评估 |
+| `*review` | MR 审查流水线 |
+| `*onboard` | 服务上线（交互式） |
+| `*diagram` | 生成架构图 |
+| `*status` | 工具安装状态检查 |
+
+## 技能模块
+
+所有技能遵循 [Open Agent Skills](https://agentskills.io/specification) 标准（SKILL.md + YAML frontmatter）：
+
+| 技能 | 使用者 | 用途 |
+|------|--------|------|
+| terraform-validate | Horus | 验证与 Lint |
+| terraform-security | Horus | 安全性扫描 |
+| helm-version-upgrade | Horus | Helm Chart 版本管理 |
+| helm-scaffold | Horus | 新模块生成 |
+| cicd-enhancer | Horus | CI/CD 流水线改善 |
+| kustomize-resource-validation | Zeus | Kustomize 构建 + 验证 |
+| yaml-fix-suggestions | Zeus | YAML 格式修正 |
+| repo-detect | 共用 | 仓库类型检测 |
+
+## 项目结构
+
+```
+devops-ai-skill/
+├── CLAUDE.md                    # Claude Code 入口
+├── AGENTS.md                    # OpenAI Codex 入口
+├── GEMINI.md                    # Gemini CLI 入口
+├── VERSION                      # 版本来源
+│
+├── .claude/                     # Claude Code 平台
+│   ├── settings.json
+│   ├── agents/
+│   │   ├── horus.md
+│   │   └── zeus.md
+│   └── skills/ → symlink to skills/
+│
+├── .codex/                      # OpenAI Codex 平台
+│   ├── config.toml
+│   └── skills/ → symlink to skills/
+│
+├── .gemini/                     # Google Gemini 平台
+│   ├── settings.json
+│   ├── agents/
+│   │   ├── horus.md
+│   │   └── zeus.md
+│   ├── commands/devops/          # 命令面板 TOML 文件
+│   │   ├── agents/               # 2 agent 启动命令
+│   │   └── pipelines/            # 16 pipeline 命令
+│   └── extensions/devops/
+│       └── gemini-extension.json
+│
+├── .agents/                     # Google Antigravity 平台
+│   ├── rules/devops.md
+│   ├── skills/
+│   │   ├── horus/SKILL.md
+│   │   ├── zeus/SKILL.md
+│   │   └── (8 skill symlinks)
+│   └── workflows/               # symlinks → prompts/
+│
+├── skills/                      # 共用技能（Open Agent Skills 标准）
+│   ├── terraform-validate/
+│   ├── terraform-security/
+│   ├── helm-version-upgrade/
+│   ├── helm-scaffold/
+│   ├── cicd-enhancer/
+│   ├── kustomize-resource-validation/
+│   ├── yaml-fix-suggestions/
+│   └── repo-detect/
+│
+├── prompts/                     # 平台中立的流水线定义
+│   ├── horus/                   # 7 条流水线
+│   ├── zeus/                    # 7 条流水线
+│   └── shared/                  # repo-detect, report-format, tool-check
+│
+├── scripts/
+│   ├── setup.sh                    # 统一安装脚本（推荐）
+│   ├── install-tools.sh
+│   ├── version-check.sh
+│   └── setup/
+│       ├── setup-claude.sh         # 平台专用（内部安装）
+│       ├── setup-codex.sh
+│       ├── setup-gemini.sh
+│       └── setup-antigravity.sh
+│
+├── .claude-plugin/              # Claude Code marketplace
+│   ├── plugin.json
+│   └── marketplace.json
+│
+└── docs/
+    ├── quick-start.md           # 5 分钟快速上手
+    ├── setup.md                 # 详细安装指南
+    └── guide/                   # 教程截图（即将推出）
+```
+
+## 版本检查
+
+```bash
+bash scripts/version-check.sh
+```
+
+## 更新
+
+```bash
+# Git
+git pull origin main
+
+# 或指定版本
+git checkout v<version>
+
+# 或 npx skills
+npx skills update
+```
+
+## 设计原则
+
+- **无硬编码路径** — 两个 Agent 都动态发现目录
+- **优雅降级** — 缺少工具时跳过检查并显示安装命令
+- **用户控制** — 重大操作（如 terraform init）总是询问用户
+- **动态发现** — 每个 skill 定义「Step 0: 发现 Repository 布局」
+
+## 授权
+
+MIT
