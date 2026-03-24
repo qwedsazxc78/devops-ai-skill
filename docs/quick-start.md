@@ -33,7 +33,10 @@ Done when you see `✅ Installation complete!`
 
 ```bash
 cd ~/your-project        # Your Terraform/Kustomize project
-claude                   # Or gemini, codex
+claude                   # Claude Code
+# gemini                 # Google Gemini CLI
+# codex                  # OpenAI Codex CLI
+# antigravity            # Google Antigravity (use within IDE)
 ```
 
 The agent auto-detects your project type:
@@ -119,7 +122,7 @@ terraform {
 
 resource "null_resource" "demo" {}
 EOF
-claude    # Start agent, type *health
+claude    # Start agent (or gemini/codex), type *health
 ```
 
 ### Q: Windows?

@@ -38,7 +38,10 @@ bash scripts/install-global.sh
 
 ```bash
 cd ~/your-project        # 你的 Terraform/Kustomize 專案
-claude                   # 或 gemini、codex
+claude                   # Claude Code
+# gemini                 # Google Gemini CLI
+# codex                  # OpenAI Codex CLI
+# antigravity            # Google Antigravity（IDE 內啟動）
 ```
 
 Agent 會自動偵測你的專案類型：
@@ -124,7 +127,7 @@ terraform {
 
 resource "null_resource" "demo" {}
 EOF
-claude    # 啟動 Agent，輸入 *health
+claude    # 啟動 Agent（或 gemini/codex），輸入 *health
 ```
 
 ### Q: 我用 Windows，怎麼辦？
