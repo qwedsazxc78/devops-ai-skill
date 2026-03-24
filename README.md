@@ -39,6 +39,8 @@ bash scripts/install-global.sh          # Auto-detect installed CLIs
 
 Auto-detects Claude Code / Codex CLI / Gemini CLI / Antigravity and installs to their global config paths.
 
+![Global Install](docs/guide/01-install-global-run.png)
+
 > 🆕 **New here?** Check out the [5-minute quick start guide](docs/quick-start.md) — zero prior knowledge required!
 
 <details>
@@ -316,7 +318,7 @@ devops-ai-skill/
 └── docs/
     ├── quick-start.md           # 5-minute quick start
     ├── setup.md                 # Detailed setup guide
-    └── guide/                   # Tutorial images (coming soon)
+    └── guide/                   # Tutorial screenshots
 ```
 
 ## Version Check

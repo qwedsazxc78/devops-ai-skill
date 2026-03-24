@@ -30,7 +30,10 @@ cd devops-ai-skill
 bash scripts/install-global.sh
 ```
 
-看到 `✅ Installation complete!` 就完成了。
+看到 `Global install complete!` 就完成了。
+
+![全局安装运行中](guide/01-install-global-run.png)
+![全局安装完成](guide/03-install-global-complete.png)
 
 ## Step 2：启动 Agent（30 秒）
 
@@ -47,6 +50,15 @@ claude                   # Claude Code
 Agent 会自动检测你的项目类型：
 - 有 `*.tf` 文件 → **Horus**（IaC 专家）自动启动
 - 有 `kustomization.yaml` → **Zeus**（GitOps 专家）自动启动
+
+**Gemini CLI 示例** — skills 和 commands 会自动发现：
+
+![Gemini Skills 列表](guide/06-gemini-skills-list.png)
+![Gemini Commands 与 Pipelines](guide/07-gemini-commands-pipelines.png)
+
+**Zeus Agent 启动** — Agent 自我介绍并列出可用 pipelines：
+
+![Zeus Agent 启动](guide/08-zeus-agent-activation.png)
 
 ## Step 3：跑你的第一个指令（1 分钟）
 
@@ -71,6 +83,8 @@ Zeus 会检查你的 GitOps 仓库：
 - Kustomize overlay 是否正确
 - YAML 格式是否合规
 - 有没有孤立的资源文件
+
+![Zeus Full Pipeline 运行](guide/09-zeus-full-pipeline-run.png)
 
 ## Step 4：试试更多功能（2 分钟）
 
@@ -102,6 +116,9 @@ Zeus 会检查你的 GitOps 仓库：
 ## Step 5：安装 DevOps 工具（选做）
 
 Agent 在执行过程中会告诉你缺少哪些工具，你也可以一次安装：
+
+![工具状态检查](guide/04-install-tools-status.png)
+![Horus 工具安装](guide/05-install-tools-horus.png)
 
 ```bash
 # 交互模式：逐一确认安装
@@ -150,6 +167,8 @@ wsl bash scripts/install-global.sh
 bash scripts/install-global.sh --status
 ```
 
+![安装状态](guide/02-install-global-status.png)
+
 ### Q: 可以同时用多个平台吗？
 
 可以！全局安装会自动检测所有已安装的 AI CLI 并全部设置。
@@ -158,4 +177,4 @@ bash scripts/install-global.sh --status
 
 - 📖 [完整安装指南](setup.md) — 进阶安装选项
 - 🌐 [GitHub Repo](https://github.com/qwedsazxc78/devops-ai-skill) — Star 支持我们！
-- 📂 [docs/guide/](guide/) — 教学截图（持续更新中）
+- 📂 [docs/guide/](guide/) — 教学截图

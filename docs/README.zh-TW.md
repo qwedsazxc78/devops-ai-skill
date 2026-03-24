@@ -39,6 +39,8 @@ bash scripts/install-global.sh          # 自動偵測已安裝的 CLI
 
 自動偵測 Claude Code / Codex CLI / Gemini CLI / Antigravity，安裝至對應全域路徑。
 
+![全域安裝](guide/01-install-global-run.png)
+
 > 🆕 **新手？** 請看 [5 分鐘快速上手指南](quick-start.zh-TW.md)，零基礎也能立刻開始！
 
 <details>

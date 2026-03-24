@@ -27,7 +27,10 @@ cd devops-ai-skill
 bash scripts/install-global.sh
 ```
 
-Done when you see `✅ Installation complete!`
+Done when you see `Global install complete!`
+
+![Global Install Running](guide/01-install-global-run.png)
+![Global Install Complete](guide/03-install-global-complete.png)
 
 ## Step 2: Launch the Agent (30 sec)
 
@@ -42,6 +45,15 @@ claude                   # Claude Code
 The agent auto-detects your project type:
 - Has `*.tf` files → **Horus** (IaC expert) activates
 - Has `kustomization.yaml` → **Zeus** (GitOps expert) activates
+
+**Gemini CLI example** — skills and commands are auto-discovered:
+
+![Gemini Skills List](guide/06-gemini-skills-list.png)
+![Gemini Commands & Pipelines](guide/07-gemini-commands-pipelines.png)
+
+**Zeus agent activation** — the agent introduces itself and lists available pipelines:
+
+![Zeus Agent Activation](guide/08-zeus-agent-activation.png)
 
 ## Step 3: Run Your First Command (1 min)
 
@@ -66,6 +78,8 @@ Zeus checks your GitOps repository:
 - Kustomize overlay correctness
 - YAML format compliance
 - Orphaned resource detection
+
+![Zeus Full Pipeline Run](guide/09-zeus-full-pipeline-run.png)
 
 ## Step 4: Try More Commands (2 min)
 
@@ -97,6 +111,9 @@ Zeus checks your GitOps repository:
 ## Step 5: Install DevOps Tools (optional)
 
 The agent tells you which tools are missing during execution. You can also install them all at once:
+
+![Tool Status](guide/04-install-tools-status.png)
+![Horus Tools](guide/05-install-tools-horus.png)
 
 ```bash
 # Interactive: confirm each install
@@ -145,6 +162,8 @@ Check install status:
 bash scripts/install-global.sh --status
 ```
 
+![Install Status](guide/02-install-global-status.png)
+
 ### Q: Can I use multiple platforms at once?
 
 Yes! Global install auto-detects all installed AI CLIs and configures them all.
@@ -153,4 +172,4 @@ Yes! Global install auto-detects all installed AI CLIs and configures them all.
 
 - 📖 [Full Setup Guide](setup.md) — Advanced install options
 - 🌐 [GitHub Repo](https://github.com/qwedsazxc78/devops-ai-skill) — Star us!
-- 📂 [docs/guide/](guide/) — Tutorial screenshots (coming soon)
+- 📂 [docs/guide/](guide/) — Tutorial screenshots
