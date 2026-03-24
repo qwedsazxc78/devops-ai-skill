@@ -134,7 +134,16 @@ install_codex() {
   echo ""
   echo -e "${BOLD}═══ OpenAI Codex CLI (~/.codex/) ═══${NC}"
 
-  # Skills
+  # 1. Agents — copy agent definitions
+  mkdir -p "$base/agents"
+  for agent_file in "$SKILL_PACK_DIR"/.claude/agents/*.md; do
+    [[ -f "$agent_file" ]] || continue
+    local name
+    name=$(basename "$agent_file")
+    copy_file "$agent_file" "$base/agents/$name" "agent: $name"
+  done
+
+  # 2. Skills
   mkdir -p "$base/skills"
   for skill_dir in "$SKILL_PACK_DIR"/skills/*/; do
     [[ -d "$skill_dir" ]] || continue
@@ -143,7 +152,14 @@ install_codex() {
     copy_dir "$skill_dir" "$base/skills/$name" "skill: $name"
   done
 
-  # Append agent info to instructions.md if not present
+  # 3. Prompts — copy pipeline definitions
+  for prompt_dir in horus zeus shared; do
+    local src_dir="$SKILL_PACK_DIR/prompts/$prompt_dir"
+    [[ -d "$src_dir" ]] || continue
+    copy_dir "$src_dir" "$base/prompts/$prompt_dir" "prompts: $prompt_dir"
+  done
+
+  # 4. Append agent info to instructions.md if not present
   local instructions="$base/instructions.md"
   local marker="<!-- devops-ai-skill -->"
   if [[ -f "$instructions" ]] && grep -q "$marker" "$instructions"; then
@@ -154,8 +170,17 @@ install_codex() {
 <!-- devops-ai-skill -->
 ## DevOps AI Skill Pack (Global)
 
-Skills at `~/.codex/skills/`. Agents: Horus (IaC) and Zeus (GitOps).
-Trigger: `*full`, `*upgrade`, `*security`, `*validate`, `*scaffold`, `*cicd`, `*health`
+Agents at `~/.codex/agents/`, skills at `~/.codex/skills/`, pipelines at `~/.codex/prompts/`.
+
+### Agents
+- **Horus** (IaC) — Read `~/.codex/agents/horus.md` when working with Terraform + Helm + GKE
+- **Zeus** (GitOps) — Read `~/.codex/agents/zeus.md` when working with Kustomize + ArgoCD
+
+### Commands
+Horus: `*full`, `*upgrade`, `*security`, `*validate`, `*scaffold`, `*cicd`, `*health`
+Zeus: `*full`, `*pre-merge`, `*health`, `*review`, `*scaffold`, `*diagram`, `*status`
+
+When a `*command` is triggered, read the corresponding pipeline from `~/.codex/prompts/`.
 ENTRY
     log_ok "Appended agent info to instructions.md"
   fi
@@ -290,9 +315,15 @@ do_uninstall() {
     _rm_if_exists "$HOME/.claude/skills/$skill" "~/.claude/skills/$skill" && ((removed++)) || true
   done
 
-  # Codex: ~/.codex/skills/
+  # Codex: ~/.codex/agents/ + ~/.codex/skills/ + ~/.codex/prompts/
+  for agent in horus zeus; do
+    _rm_if_exists "$HOME/.codex/agents/$agent.md" "~/.codex/agents/$agent.md" && ((removed++)) || true
+  done
   for skill in "${skills[@]}"; do
     _rm_if_exists "$HOME/.codex/skills/$skill" "~/.codex/skills/$skill" && ((removed++)) || true
+  done
+  for prompt_dir in horus zeus shared; do
+    _rm_if_exists "$HOME/.codex/prompts/$prompt_dir" "~/.codex/prompts/$prompt_dir" && ((removed++)) || true
   done
 
   # Gemini: ~/.gemini/agents/ + ~/.gemini/skills/ + ~/.gemini/extensions/devops/
@@ -395,6 +426,16 @@ _status_section() {
     cmd_count=$(find "$base/commands/devops" -name "*.toml" 2>/dev/null | wc -l | tr -d ' ')
     echo -e "  ${GREEN}[ok]${NC} commands: $cmd_count toml files"
     ((found++)) || true
+  fi
+
+  # Prompts (Codex)
+  if [[ -d "$base/prompts" ]]; then
+    local prompt_count
+    prompt_count=$(find "$base/prompts" -name "*.md" 2>/dev/null | wc -l | tr -d ' ')
+    if [[ $prompt_count -gt 0 ]]; then
+      echo -e "  ${GREEN}[ok]${NC} prompts: $prompt_count pipeline files"
+      ((found++)) || true
+    fi
   fi
 
   # Workflows (Antigravity)
