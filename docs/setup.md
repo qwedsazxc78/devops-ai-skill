@@ -111,7 +111,9 @@ bash scripts/install-global.sh
 
 # Or target specific platforms
 bash scripts/install-global.sh --claude
+bash scripts/install-global.sh --codex
 bash scripts/install-global.sh --gemini
+bash scripts/install-global.sh --antigravity
 bash scripts/install-global.sh --all
 ```
 
@@ -237,7 +239,9 @@ bash scripts/install-global.sh
 
 # 指定平台
 bash scripts/install-global.sh --claude
+bash scripts/install-global.sh --codex
 bash scripts/install-global.sh --gemini
+bash scripts/install-global.sh --antigravity
 bash scripts/install-global.sh --all
 ```
 

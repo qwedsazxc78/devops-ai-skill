@@ -45,11 +45,13 @@ Auto-detects Claude Code / Codex CLI / Gemini CLI / Antigravity and installs to 
 <summary><strong>Global Install Options</strong></summary>
 
 ```bash
-bash scripts/install-global.sh --all          # Force all platforms
-bash scripts/install-global.sh --claude       # Claude Code only
-bash scripts/install-global.sh --gemini       # Gemini CLI only
-bash scripts/install-global.sh --status       # Check install status
-bash scripts/install-global.sh --uninstall    # Remove global installs
+bash scripts/install-global.sh --all            # Force all platforms
+bash scripts/install-global.sh --claude         # Claude Code only
+bash scripts/install-global.sh --codex          # Codex CLI only
+bash scripts/install-global.sh --gemini         # Gemini CLI only
+bash scripts/install-global.sh --antigravity    # Antigravity only
+bash scripts/install-global.sh --status         # Check install status
+bash scripts/install-global.sh --uninstall      # Remove global installs
 ```
 
 </details>

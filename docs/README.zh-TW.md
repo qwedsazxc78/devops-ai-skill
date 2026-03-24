@@ -45,11 +45,13 @@ bash scripts/install-global.sh          # 自動偵測已安裝的 CLI
 <summary><strong>全域安裝選項</strong></summary>
 
 ```bash
-bash scripts/install-global.sh --all          # 強制安裝全部平台
-bash scripts/install-global.sh --claude       # 僅 Claude Code
-bash scripts/install-global.sh --gemini       # 僅 Gemini CLI
-bash scripts/install-global.sh --status       # 查看安裝狀態
-bash scripts/install-global.sh --uninstall    # 移除全域安裝
+bash scripts/install-global.sh --all            # 強制安裝全部平台
+bash scripts/install-global.sh --claude         # 僅 Claude Code
+bash scripts/install-global.sh --codex          # 僅 Codex CLI
+bash scripts/install-global.sh --gemini         # 僅 Gemini CLI
+bash scripts/install-global.sh --antigravity    # 僅 Antigravity
+bash scripts/install-global.sh --status         # 查看安裝狀態
+bash scripts/install-global.sh --uninstall      # 移除全域安裝
 ```
 
 </details>
