@@ -596,7 +596,7 @@ if [ -f "$antigravity_script" ]; then
     workflow_count=0
     for wf in "${EXPECTED_WORKFLOWS[@]}"; do
         if grep -q "$wf" "$antigravity_script" 2>/dev/null; then
-            ((workflow_count++))
+            workflow_count=$((workflow_count + 1))
         fi
     done
     if [ "$workflow_count" -eq "${#EXPECTED_WORKFLOWS[@]}" ]; then
