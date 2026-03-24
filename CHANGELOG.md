@@ -15,6 +15,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `npx skills` comparison table showing Skills-only vs Global Install feature gap
 - CHANGELOG entry for v1.4.0
 
+### Fixed
+
+- Codex 全域安裝缺少 agents 與 prompts，導致 `*full-pipeline` 找不到 pipeline 定義
+  - `install_codex()` 新增 agents、prompts 複製，並擴充 `instructions.md` 內容
+  - 同步更新 uninstall 與 status 函式
+- 全域安裝選項文件僅列出 `--claude`、`--gemini`，補齊 `--codex`、`--antigravity`
+- Quick start Step 2 僅顯示 `claude`，補齊四平台 AI CLI 啟動指令
+
 ### Changed
 
 - **BREAKING: Pipeline command alignment** — unified command names across Horus and Zeus:
