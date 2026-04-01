@@ -90,7 +90,7 @@ EOF
         echo "# $p" > "$SANDBOX/prompts/zeus/$p.md"
     done
 
-    local shared_prompts=(repo-detect report-format tool-check)
+    local shared_prompts=(repo-detect report-format tool-check help)
     for p in "${shared_prompts[@]}"; do
         mkdir -p "$SANDBOX/prompts/shared"
         echo "# $p" > "$SANDBOX/prompts/shared/$p.md"
@@ -366,10 +366,10 @@ for skill in "${expected_skills[@]}"; do
     fi
 done
 
-# Workflow symlinks — 7 horus + 7 zeus + 3 shared = 17 total
+# Workflow symlinks — 7 horus + 7 zeus + 4 shared = 18 total
 horus_workflows=(horus-full horus-upgrade horus-security horus-validate horus-scaffold horus-cicd horus-health)
 zeus_workflows=(zeus-full zeus-pre-merge zeus-health zeus-review zeus-scaffold zeus-diagram zeus-status)
-shared_workflows=(shared-repo-detect shared-report-format shared-tool-check)
+shared_workflows=(shared-repo-detect shared-report-format shared-tool-check shared-help)
 
 for wf in "${horus_workflows[@]}" "${zeus_workflows[@]}" "${shared_workflows[@]}"; do
     target="$SANDBOX/.agents/workflows/${wf}.md"
@@ -387,10 +387,10 @@ done
 
 # Workflow count
 wf_count=$(find "$SANDBOX/.agents/workflows" -maxdepth 1 -name '*.md' | wc -l | tr -d ' ')
-if [ "$wf_count" -eq 17 ]; then
+if [ "$wf_count" -eq 18 ]; then
     pass "Correct workflow count: $wf_count"
 else
-    fail "Expected 17 workflows, got $wf_count"
+    fail "Expected 18 workflows, got $wf_count"
 fi
 
 # Output contains completion message
@@ -403,8 +403,8 @@ fi
 # Idempotent
 output2=$(bash "$SANDBOX/scripts/setup/setup-antigravity.sh" 2>&1) || true
 skip_count=$(echo "$output2" | grep -c "\[skip\]" || true)
-# 8 skills + 17 workflows = 25 skips
-if [ "$skip_count" -eq 25 ]; then
+# 8 skills + 18 workflows = 26 skips
+if [ "$skip_count" -eq 26 ]; then
     pass "Idempotent: all 25 items skipped on re-run"
 else
     fail "Idempotent check: expected 25 skips, got $skip_count"

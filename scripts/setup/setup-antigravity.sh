@@ -92,6 +92,7 @@ link_workflow "zeus-status"       "../../prompts/zeus/status.md"
 link_workflow "shared-repo-detect"    "../../prompts/shared/repo-detect.md"
 link_workflow "shared-report-format"  "../../prompts/shared/report-format.md"
 link_workflow "shared-tool-check"     "../../prompts/shared/tool-check.md"
+link_workflow "shared-help"          "../../prompts/shared/help.md"
 
 echo ""
 echo "Antigravity setup complete!"

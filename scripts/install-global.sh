@@ -127,6 +127,13 @@ install_claude() {
     name=$(basename "$skill_dir")
     copy_dir "$skill_dir" "$base/skills/$name" "skill: $name"
   done
+
+  # Prompts — copy pipeline definitions so agents can reference them
+  for prompt_dir in horus zeus shared; do
+    local src_dir="$SKILL_PACK_DIR/prompts/$prompt_dir"
+    [[ -d "$src_dir" ]] || continue
+    copy_dir "$src_dir" "$base/prompts/$prompt_dir" "prompts: $prompt_dir"
+  done
 }
 
 install_codex() {
@@ -307,12 +314,15 @@ do_uninstall() {
   local removed=0
   local skills=("cicd-enhancer" "helm-scaffold" "helm-version-upgrade" "kustomize-resource-validation" "repo-detect" "terraform-security" "terraform-validate" "yaml-fix-suggestions")
 
-  # Claude: ~/.claude/agents/ + ~/.claude/skills/
+  # Claude: ~/.claude/agents/ + ~/.claude/skills/ + ~/.claude/prompts/
   for agent in horus zeus; do
     _rm_if_exists "$HOME/.claude/agents/$agent.md" "~/.claude/agents/$agent.md" && ((removed++)) || true
   done
   for skill in "${skills[@]}"; do
     _rm_if_exists "$HOME/.claude/skills/$skill" "~/.claude/skills/$skill" && ((removed++)) || true
+  done
+  for prompt_dir in horus zeus shared; do
+    _rm_if_exists "$HOME/.claude/prompts/$prompt_dir" "~/.claude/prompts/$prompt_dir" && ((removed++)) || true
   done
 
   # Codex: ~/.codex/agents/ + ~/.codex/skills/ + ~/.codex/prompts/
@@ -345,7 +355,7 @@ do_uninstall() {
     _rm_if_exists "$HOME/.agents/skills/$skill" "~/.agents/skills/$skill" && ((removed++)) || true
   done
   # Workflows
-  local workflows=("horus-full" "horus-upgrade" "horus-security" "horus-validate" "horus-scaffold" "horus-cicd" "horus-health" "zeus-full" "zeus-pre-merge" "zeus-health" "zeus-review" "zeus-scaffold" "zeus-diagram" "zeus-status" "shared-repo-detect" "shared-report-format" "shared-tool-check")
+  local workflows=("horus-full" "horus-upgrade" "horus-security" "horus-validate" "horus-scaffold" "horus-cicd" "horus-health" "zeus-full" "zeus-pre-merge" "zeus-health" "zeus-review" "zeus-scaffold" "zeus-diagram" "zeus-status" "shared-repo-detect" "shared-report-format" "shared-tool-check" "shared-help")
   for wf in "${workflows[@]}"; do
     _rm_if_exists "$HOME/.agents/workflows/${wf}.md" "~/.agents/workflows/${wf}.md" && ((removed++)) || true
   done

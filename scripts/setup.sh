@@ -304,6 +304,7 @@ setup_antigravity() {
     "shared-repo-detect:shared/repo-detect.md"
     "shared-report-format:shared/report-format.md"
     "shared-tool-check:shared/tool-check.md"
+    "shared-help:shared/help.md"
   )
 
   for entry in "${workflows[@]}"; do

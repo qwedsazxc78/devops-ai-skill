@@ -592,7 +592,7 @@ done
 # setup-antigravity.sh should reference all workflow names
 antigravity_script="$ROOT_DIR/scripts/setup/setup-antigravity.sh"
 if [ -f "$antigravity_script" ]; then
-    EXPECTED_WORKFLOWS=("horus-full" "horus-upgrade" "horus-security" "horus-validate" "horus-scaffold" "horus-cicd" "horus-health" "zeus-full" "zeus-pre-merge" "zeus-health" "zeus-review" "zeus-scaffold" "zeus-diagram" "zeus-status" "shared-repo-detect" "shared-report-format" "shared-tool-check")
+    EXPECTED_WORKFLOWS=("horus-full" "horus-upgrade" "horus-security" "horus-validate" "horus-scaffold" "horus-cicd" "horus-health" "zeus-full" "zeus-pre-merge" "zeus-health" "zeus-review" "zeus-scaffold" "zeus-diagram" "zeus-status" "shared-repo-detect" "shared-report-format" "shared-tool-check" "shared-help")
     workflow_count=0
     for wf in "${EXPECTED_WORKFLOWS[@]}"; do
         if grep -q "$wf" "$antigravity_script" 2>/dev/null; then
