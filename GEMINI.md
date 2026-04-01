@@ -19,3 +19,27 @@ Detect the repository type to choose the right agent:
 - For **Terraform, Helm, GKE** → follow Horus workflows from `prompts/horus/`
 - For **Kustomize, ArgoCD, GitOps** → follow Zeus workflows from `prompts/zeus/`
 - **Unsure** → run detection logic from `prompts/shared/repo-detect.md`
+
+## Horus Commands (IaC — Terraform + Helm + GKE)
+
+| Command | Pipeline |
+|---------|----------|
+| *full | Full check (RUNS CLI) + report |
+| *upgrade | Upgrade Helm chart versions |
+| *security | Security audit (file analysis) |
+| *validate | Validation (fmt + file analysis) |
+| *scaffold | Scaffold new Helm module |
+| *cicd | Improve CI/CD pipeline |
+| *health | Platform health check |
+
+## Zeus Commands (GitOps — Kustomize + ArgoCD)
+
+| Command | Pipeline |
+|---------|----------|
+| *full | Full pipeline + YAML/MD reports |
+| *pre-merge | Pre-MR essential checks |
+| *health | Repository health assessment |
+| *review | MR review pipeline |
+| *scaffold | Service scaffold (interactive) |
+| *diagram | Generate architecture diagrams |
+| *status | Tool installation check |

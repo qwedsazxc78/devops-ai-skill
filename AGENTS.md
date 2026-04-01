@@ -16,7 +16,19 @@ Detect the repository type to choose the right agent:
 - For **Kustomize, ArgoCD, GitOps** → follow Zeus workflows from `prompts/zeus/`
 - **Unsure** → run detection logic from `prompts/shared/repo-detect.md`
 
-## Horus Skills
+## Horus Commands (IaC — Terraform + Helm + GKE)
+
+| Command | Pipeline |
+|---------|----------|
+| *full | Full check (RUNS CLI) + report |
+| *upgrade | Upgrade Helm chart versions |
+| *security | Security audit (file analysis) |
+| *validate | Validation (fmt + file analysis) |
+| *scaffold | Scaffold new Helm module |
+| *cicd | Improve CI/CD pipeline |
+| *health | Platform health check |
+
+### Horus Skills
 
 - `$helm-version-upgrade` — Helm chart version management
 - `$terraform-validate` — Validation and linting
@@ -24,7 +36,19 @@ Detect the repository type to choose the right agent:
 - `$cicd-enhancer` — CI/CD pipeline improvement
 - `$helm-scaffold` — New module generation
 
-## Zeus Skills
+## Zeus Commands (GitOps — Kustomize + ArgoCD)
+
+| Command | Pipeline |
+|---------|----------|
+| *full | Full pipeline + YAML/MD reports |
+| *pre-merge | Pre-MR essential checks |
+| *health | Repository health assessment |
+| *review | MR review pipeline |
+| *scaffold | Service scaffold (interactive) |
+| *diagram | Generate architecture diagrams |
+| *status | Tool installation check |
+
+### Zeus Skills
 
 - `$kustomize-resource-validation` — Kustomize build + validation
 - `$yaml-fix-suggestions` — YAML formatting and validation

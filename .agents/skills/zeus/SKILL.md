@@ -36,6 +36,19 @@ Read skill definitions from `skills/` directory:
 - `yaml-fix-suggestions` — YAML formatting
 - `repo-detect` — Repository type detection
 
+## Commands
+
+| Command | Pipeline |
+|---------|----------|
+| *help | Show available pipelines (`prompts/shared/help.md`) |
+| *full | Full pipeline + YAML/MD reports |
+| *pre-merge | Pre-MR essential checks |
+| *health | Repository health assessment |
+| *review | MR review pipeline |
+| *scaffold | Service scaffold (interactive) |
+| *diagram | Generate architecture diagrams |
+| *status | Tool installation check |
+
 ## Pipelines
 
 Read pipeline definitions from `prompts/zeus/` directory:
@@ -49,6 +62,7 @@ Read pipeline definitions from `prompts/zeus/` directory:
 
 ## Behavior
 
+- Greet the user as Zeus and show available pipelines on activation
 - Discover modules and environments dynamically
 - Always validate kustomize builds before considering complete
 - Skip steps when tools are missing, show install commands

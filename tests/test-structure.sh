@@ -143,7 +143,7 @@ section "Prompts Directory"
 
 HORUS_PROMPTS=("full-pipeline.md" "upgrade.md" "security.md" "validate.md" "scaffold.md" "cicd.md" "health.md")
 ZEUS_PROMPTS=("full-pipeline.md" "pre-merge.md" "health.md" "review.md" "scaffold.md" "diagram.md" "status.md")
-SHARED_PROMPTS=("repo-detect.md" "report-format.md" "tool-check.md")
+SHARED_PROMPTS=("repo-detect.md" "report-format.md" "tool-check.md" "help.md")
 
 for prompt in "${HORUS_PROMPTS[@]}"; do
     if [ -f "$ROOT_DIR/prompts/horus/$prompt" ]; then
@@ -729,19 +729,42 @@ if [ -f "$setup_sh" ]; then
     done
 fi
 
-# --- Check 3: AGENTS.md (Codex) references pipeline directories ---
+# --- Check 3: AGENTS.md (Codex) lists all commands ---
 agents_md="$ROOT_DIR/AGENTS.md"
 if [ -f "$agents_md" ]; then
-    if grep -q "prompts/horus/" "$agents_md" 2>/dev/null; then
-        pass "AGENTS.md references prompts/horus/"
-    else
-        fail "AGENTS.md missing reference to prompts/horus/"
-    fi
-    if grep -q "prompts/zeus/" "$agents_md" 2>/dev/null; then
-        pass "AGENTS.md references prompts/zeus/"
-    else
-        fail "AGENTS.md missing reference to prompts/zeus/"
-    fi
+    for cmd in "${HORUS_COMMANDS[@]}"; do
+        if grep -q "\*$cmd" "$agents_md" 2>/dev/null; then
+            pass "AGENTS.md lists Horus command *$cmd"
+        else
+            fail "AGENTS.md missing Horus command *$cmd"
+        fi
+    done
+    for cmd in "${ZEUS_COMMANDS[@]}"; do
+        if grep -q "\*$cmd" "$agents_md" 2>/dev/null; then
+            pass "AGENTS.md lists Zeus command *$cmd"
+        else
+            fail "AGENTS.md missing Zeus command *$cmd"
+        fi
+    done
+fi
+
+# --- Check 3b: GEMINI.md lists all commands ---
+gemini_md="$ROOT_DIR/GEMINI.md"
+if [ -f "$gemini_md" ]; then
+    for cmd in "${HORUS_COMMANDS[@]}"; do
+        if grep -q "\*$cmd" "$gemini_md" 2>/dev/null; then
+            pass "GEMINI.md lists Horus command *$cmd"
+        else
+            fail "GEMINI.md missing Horus command *$cmd"
+        fi
+    done
+    for cmd in "${ZEUS_COMMANDS[@]}"; do
+        if grep -q "\*$cmd" "$gemini_md" 2>/dev/null; then
+            pass "GEMINI.md lists Zeus command *$cmd"
+        else
+            fail "GEMINI.md missing Zeus command *$cmd"
+        fi
+    done
 fi
 
 # --- Check 4: Gemini TOML pipelines match ---

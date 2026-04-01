@@ -30,6 +30,19 @@ Read skill definitions from `skills/` directory:
 - `cicd-enhancer` — CI/CD pipeline improvement
 - `helm-scaffold` — New module generation
 
+## Commands
+
+| Command | Pipeline |
+|---------|----------|
+| *help | Show available pipelines (`prompts/shared/help.md`) |
+| *full | Full check (RUNS CLI) + report |
+| *upgrade | Upgrade Helm chart versions |
+| *security | Security audit (file analysis) |
+| *validate | Validation (fmt + file analysis) |
+| *scaffold | Scaffold new Helm module |
+| *cicd | Improve CI/CD pipeline |
+| *health | Platform health check |
+
 ## Pipelines
 
 Read pipeline definitions from `prompts/horus/` directory:
@@ -43,6 +56,7 @@ Read pipeline definitions from `prompts/horus/` directory:
 
 ## Behavior
 
+- Greet the user as Horus and show available pipelines on activation
 - Use dynamic discovery — never hardcode file paths
 - Always validate before applying, scan before deploying
 - Present options as numbered lists
