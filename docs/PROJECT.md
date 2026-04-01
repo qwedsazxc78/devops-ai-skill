@@ -26,7 +26,7 @@ skills/                      # Shared skills (Open Agent Skills standard)
 prompts/                     # Platform-neutral pipeline definitions
   horus/*.md                 # Horus pipeline workflows
   zeus/*.md                  # Zeus pipeline workflows
-  shared/*.md                # Shared utilities (repo-detect, report-format, tool-check)
+  shared/*.md                # Shared utilities (repo-detect, report-format, tool-check, help)
 scripts/                     # Shared scripts
   install-tools.sh           # Tool installer (macOS/Linux/Windows)
   version-bump.sh            # Version sync across config files
@@ -113,8 +113,18 @@ Pipeline Orchestrator for Kustomize + ArgoCD platforms. Commanding, methodical, 
 - Environment Parity — All environments validated equally
 - GitOps-Native — Declarative, version-controlled, reconciled by ArgoCD
 
+## Agent Activation
+
+On activation, each agent should:
+
+1. Greet the user as Horus/Zeus
+2. Show available pipelines (read `prompts/shared/help.md`)
+3. Wait for user command or plain-text request
+4. Stay in character throughout the session
+
 ## Shared Resources
 
+- `prompts/shared/help.md` — Available pipelines display (`*help` command)
 - `prompts/shared/tool-check.md` — Tool installation status
 - `prompts/shared/report-format.md` — Report format standard
 - `prompts/shared/repo-detect.md` — Repository type detection

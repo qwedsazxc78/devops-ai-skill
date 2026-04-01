@@ -212,6 +212,7 @@ One-command installer supporting macOS (Homebrew), Linux (apt/snap), Windows (wi
 
 | Pipeline | Description |
 |----------|-------------|
+| `*help` | Show available pipelines |
 | `*full` | Full check (RUNS CLI tools) + report |
 | `*upgrade` | Upgrade Helm chart versions |
 | `*security` | Security audit (file analysis) |
@@ -224,6 +225,7 @@ One-command installer supporting macOS (Homebrew), Linux (apt/snap), Windows (wi
 
 | Pipeline | Description |
 |----------|-------------|
+| `*help` | Show available pipelines |
 | `*full` | Full pipeline + YAML/MD reports |
 | `*pre-merge` | Pre-MR essential checks |
 | `*health` | Repository health assessment |
@@ -299,7 +301,14 @@ devops-ai-skill/
 ├── prompts/                     # Platform-neutral pipeline definitions
 │   ├── horus/                   # 7 pipelines
 │   ├── zeus/                    # 7 pipelines
-│   └── shared/                  # repo-detect, report-format, tool-check
+│   └── shared/                  # repo-detect, report-format, tool-check, help
+│
+├── docs/
+│   ├── quick-start.md           # 5-minute quick start
+│   ├── setup.md                 # Detailed setup guide
+│   ├── guide/                   # Tutorial screenshots
+│   ├── reports/                 # Generated pipeline reports (*full output)
+│   └── diagrams/                # Generated architecture diagrams (*diagram output)
 │
 ├── scripts/
 │   ├── setup.sh                    # Unified install script (recommended)
@@ -315,10 +324,8 @@ devops-ai-skill/
 │   ├── plugin.json
 │   └── marketplace.json
 │
-└── docs/
-    ├── quick-start.md           # 5-minute quick start
-    ├── setup.md                 # Detailed setup guide
-    └── guide/                   # Tutorial screenshots
+└── tests/
+    └── test-structure.sh        # 374 structure + parity tests
 ```
 
 ## Version Check
