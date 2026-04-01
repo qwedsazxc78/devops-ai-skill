@@ -682,6 +682,148 @@ else
 fi
 
 # ============================================
+# SECTION 16: Command Name Consistency
+# ============================================
+section "Command Name Consistency"
+
+# Canonical command names derived from pipeline filenames
+# Horus: full-pipeline.md → *full, upgrade.md → *upgrade, etc.
+HORUS_COMMANDS=("full" "upgrade" "security" "validate" "scaffold" "cicd" "health")
+ZEUS_COMMANDS=("full" "pre-merge" "health" "review" "scaffold" "diagram" "status")
+
+# --- Check 1: CLAUDE.md lists all commands ---
+claude_md="$ROOT_DIR/CLAUDE.md"
+if [ -f "$claude_md" ]; then
+    for cmd in "${HORUS_COMMANDS[@]}"; do
+        if grep -q "\*$cmd" "$claude_md" 2>/dev/null; then
+            pass "CLAUDE.md lists Horus command *$cmd"
+        else
+            fail "CLAUDE.md missing Horus command *$cmd"
+        fi
+    done
+    for cmd in "${ZEUS_COMMANDS[@]}"; do
+        if grep -q "\*$cmd" "$claude_md" 2>/dev/null; then
+            pass "CLAUDE.md lists Zeus command *$cmd"
+        else
+            fail "CLAUDE.md missing Zeus command *$cmd"
+        fi
+    done
+fi
+
+# --- Check 2: setup.sh CLAUDE.md section lists all commands ---
+setup_sh="$ROOT_DIR/scripts/setup.sh"
+if [ -f "$setup_sh" ]; then
+    for cmd in "${HORUS_COMMANDS[@]}"; do
+        if grep -q "\*$cmd" "$setup_sh" 2>/dev/null; then
+            pass "setup.sh lists Horus command *$cmd"
+        else
+            fail "setup.sh missing Horus command *$cmd"
+        fi
+    done
+    for cmd in "${ZEUS_COMMANDS[@]}"; do
+        if grep -q "\*$cmd" "$setup_sh" 2>/dev/null; then
+            pass "setup.sh lists Zeus command *$cmd"
+        else
+            fail "setup.sh missing Zeus command *$cmd"
+        fi
+    done
+fi
+
+# --- Check 3: AGENTS.md (Codex) references pipeline directories ---
+agents_md="$ROOT_DIR/AGENTS.md"
+if [ -f "$agents_md" ]; then
+    if grep -q "prompts/horus/" "$agents_md" 2>/dev/null; then
+        pass "AGENTS.md references prompts/horus/"
+    else
+        fail "AGENTS.md missing reference to prompts/horus/"
+    fi
+    if grep -q "prompts/zeus/" "$agents_md" 2>/dev/null; then
+        pass "AGENTS.md references prompts/zeus/"
+    else
+        fail "AGENTS.md missing reference to prompts/zeus/"
+    fi
+fi
+
+# --- Check 4: Gemini TOML pipelines match ---
+gemini_pipelines_dir="$ROOT_DIR/.gemini/commands/devops/pipelines"
+if [ -d "$gemini_pipelines_dir" ]; then
+    for cmd in "${HORUS_COMMANDS[@]}"; do
+        # full-pipeline.md maps to horus-full.toml (special case)
+        toml_name="horus-$cmd"
+        if [ -f "$gemini_pipelines_dir/$toml_name.toml" ]; then
+            pass "Gemini pipeline $toml_name.toml exists"
+        else
+            fail "Gemini pipeline $toml_name.toml missing"
+        fi
+    done
+    for cmd in "${ZEUS_COMMANDS[@]}"; do
+        toml_name="zeus-$cmd"
+        if [ -f "$gemini_pipelines_dir/$toml_name.toml" ]; then
+            pass "Gemini pipeline $toml_name.toml exists"
+        else
+            fail "Gemini pipeline $toml_name.toml missing"
+        fi
+    done
+fi
+
+# --- Check 5: Antigravity SKILL.md lists all pipeline files ---
+for agent in horus zeus; do
+    skill_file="$ROOT_DIR/.agents/skills/$agent/SKILL.md"
+    if [ -f "$skill_file" ]; then
+        if [ "$agent" = "horus" ]; then
+            cmds=("${HORUS_COMMANDS[@]}")
+        else
+            cmds=("${ZEUS_COMMANDS[@]}")
+        fi
+        for cmd in "${cmds[@]}"; do
+            # Pipeline files: full → full-pipeline.md, others → <cmd>.md
+            if [ "$cmd" = "full" ]; then
+                pipeline_file="full-pipeline.md"
+            else
+                pipeline_file="$cmd.md"
+            fi
+            if grep -q "$pipeline_file" "$skill_file" 2>/dev/null; then
+                pass ".agents/skills/$agent/SKILL.md references $pipeline_file"
+            else
+                fail ".agents/skills/$agent/SKILL.md missing reference to $pipeline_file"
+            fi
+        done
+    fi
+done
+
+# --- Check 6: No old command names remain ---
+OLD_COMMANDS=("new-module" "health-check" "onboard")
+for old_cmd in "${OLD_COMMANDS[@]}"; do
+    # Check in CLAUDE.md, AGENTS.md, GEMINI.md, setup.sh, SKILL.md files
+    found_in=""
+    for check_file in "$ROOT_DIR/CLAUDE.md" "$ROOT_DIR/AGENTS.md" "$ROOT_DIR/GEMINI.md" "$ROOT_DIR/scripts/setup.sh"; do
+        if [ -f "$check_file" ] && grep -q "\*$old_cmd" "$check_file" 2>/dev/null; then
+            found_in="$found_in $(basename "$check_file")"
+        fi
+    done
+    for agent in horus zeus; do
+        skill_file="$ROOT_DIR/.agents/skills/$agent/SKILL.md"
+        if [ -f "$skill_file" ] && grep -q "\*$old_cmd" "$skill_file" 2>/dev/null; then
+            found_in="$found_in .agents/skills/$agent/SKILL.md"
+        fi
+    done
+    if [ -z "$found_in" ]; then
+        pass "No references to deprecated command *$old_cmd"
+    else
+        fail "Deprecated command *$old_cmd still found in:$found_in"
+    fi
+done
+
+# --- Check 7: Output directories exist ---
+for dir in docs/reports docs/diagrams; do
+    if [ -d "$ROOT_DIR/$dir" ]; then
+        pass "$dir/ directory exists"
+    else
+        fail "$dir/ directory missing (needed by *full and *diagram pipelines)"
+    fi
+done
+
+# ============================================
 # SUMMARY
 # ============================================
 echo ""
