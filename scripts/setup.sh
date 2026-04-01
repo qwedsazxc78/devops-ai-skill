@@ -122,7 +122,7 @@ Read `devops-ai-skill/docs/PROJECT.md` for shared project context.
 - Skills directory: `.claude/skills/` (8 skills)
 - Pipelines: `devops-ai-skill/prompts/` (14 pipelines)
 
-### Commands
+### Horus Commands (IaC — Terraform + Helm + GKE)
 
 | Command | Pipeline |
 |---------|----------|
@@ -133,6 +133,18 @@ Read `devops-ai-skill/docs/PROJECT.md` for shared project context.
 | *scaffold | Scaffold new Helm module |
 | *cicd | Improve CI/CD pipeline |
 | *health | Platform health check |
+
+### Zeus Commands (GitOps — Kustomize + ArgoCD)
+
+| Command | Pipeline |
+|---------|----------|
+| *full | Full pipeline + reports |
+| *pre-merge | Pre-MR essential checks |
+| *health | Repository health assessment |
+| *review | MR review pipeline |
+| *scaffold | Service scaffold (interactive) |
+| *diagram | Generate architecture diagrams |
+| *status | Tool installation check |
 ENTRY
 )
   if [ -f "$TARGET_DIR/CLAUDE.md" ]; then

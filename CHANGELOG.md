@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.1] - 2026-04-01
+
+### Fixed
+
+- `setup.sh` git clone 安裝方式的 CLAUDE.md 區段缺少 Zeus 指令表（僅列出 Horus 7 條指令）
+  - 新增 Zeus Commands 表格（`*full`, `*pre-merge`, `*health`, `*review`, `*scaffold`, `*diagram`, `*status`）
+  - 將原 Commands 標題改為 Horus Commands / Zeus Commands 雙表格格式
+- `*full` pipeline 所需的 `docs/reports/` 目錄不存在，新增 `.gitkeep` 確保 git clone 後目錄可用
+- Zeus `*diagram` pipeline 所需的 `docs/diagrams/` 目錄不存在，新增 `.gitkeep`
+
 ## [1.4.0] - 2026-03-23
 
 ### Added
@@ -117,6 +127,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Bilingual documentation (EN + 繁體中文)
 
 <!-- Links -->
+[1.4.1]: https://github.com/qwedsazxc78/devops-ai-skill/compare/v1.4.0...v1.4.1
+[1.4.0]: https://github.com/qwedsazxc78/devops-ai-skill/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/qwedsazxc78/devops-ai-skill/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/qwedsazxc78/devops-ai-skill/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/qwedsazxc78/devops-ai-skill/compare/v1.0.0...v1.1.0

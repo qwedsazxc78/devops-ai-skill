@@ -25,8 +25,13 @@ pnpm-lock.yaml
 .env
 .env.*
 
-# Reports (generated)
-docs/reports/
+# Reports (generated) — keep directory via .gitkeep, ignore contents
+docs/reports/*
+!docs/reports/.gitkeep
+
+# Diagrams (generated) — keep directory via .gitkeep, ignore contents
+docs/diagrams/*
+!docs/diagrams/.gitkeep
 
 # Symlink targets (platform-specific, created by setup scripts)
 # .claude/skills/ and .codex/skills/ may be symlinks
