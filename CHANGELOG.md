@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - 2026-04-03
+
+### Added
+
+- `commands/` 目錄：新增 `horus.md` 與 `zeus.md` 斜線指令定義，支援 `/devops:horus` (plugin) 與 `/devops-horus` (setup.sh) 兩種呼叫方式
+- `setup.sh` 新增 `.claude/commands/` symlink 安裝與卸載邏輯
+- `setup.sh` CLAUDE.md 模板補上 `/devops-horus` 與 `/devops-zeus` slash command 提示
+- 四平台 agent 啟動指令、指令表與 `*help` 定義
+- Section 16 跨平台指令名稱一致性結構測試
+
+### Fixed
+
+- `commands/{horus,zeus}.md` agent 路徑統一為 `.claude/agents/`，相容 plugin 與 symlink 兩種安裝模式
+- `install-global.sh` 補齊 prompts 複製，四平台新增 shared-help workflow
+
 ## [1.4.1] - 2026-04-01
 
 ### Fixed
@@ -127,6 +142,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Bilingual documentation (EN + 繁體中文)
 
 <!-- Links -->
+[1.5.0]: https://github.com/qwedsazxc78/devops-ai-skill/compare/v1.4.1...v1.5.0
 [1.4.1]: https://github.com/qwedsazxc78/devops-ai-skill/compare/v1.4.0...v1.4.1
 [1.4.0]: https://github.com/qwedsazxc78/devops-ai-skill/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/qwedsazxc78/devops-ai-skill/compare/v1.2.0...v1.3.0
