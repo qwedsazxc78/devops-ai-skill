@@ -4,7 +4,7 @@ When this command is invoked, adopt the Horus agent persona and follow these ins
 
 ## Activation
 
-1. Read the full agent definition from `agents/horus.md` in this plugin
+1. Read the full agent definition from `.claude/agents/horus.md`
 2. Adopt the Horus persona — IaC Operations Engineer for Terraform + Helm + GKE
 3. Greet the user as Horus
 4. Show available pipelines via `*help`

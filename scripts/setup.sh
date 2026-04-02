@@ -109,6 +109,17 @@ setup_claude() {
       "agent: $agent"
   done
 
+  # Commands: TARGET/.claude/commands/{devops-horus,devops-zeus}.md → devops-ai-skill/commands/*.md
+  mkdir -p "$TARGET_DIR/.claude/commands"
+  for cmd_file in "$SKILL_PACK_DIR"/commands/*.md; do
+    local cmd_name
+    cmd_name=$(basename "$cmd_file" .md)
+    create_symlink \
+      "$TARGET_DIR/.claude/commands/devops-$cmd_name.md" \
+      "../../$rel/commands/$cmd_name.md" \
+      "command: devops-$cmd_name"
+  done
+
   # Append to CLAUDE.md
   local marker="<!-- devops-ai-skill -->"
   local section
@@ -121,6 +132,7 @@ Read `devops-ai-skill/docs/PROJECT.md` for shared project context.
 - Agent definitions: `.claude/agents/horus.md` (IaC) and `.claude/agents/zeus.md` (GitOps)
 - Skills directory: `.claude/skills/` (8 skills)
 - Pipelines: `devops-ai-skill/prompts/` (14 pipelines)
+- Slash commands: `/devops-horus` (activate Horus agent) and `/devops-zeus` (activate Zeus agent)
 
 ### Horus Commands (IaC — Terraform + Helm + GKE)
 
@@ -154,9 +166,10 @@ ENTRY
     log_ok "Created CLAUDE.md"
   fi
 
-  local count
-  count=$(find "$TARGET_DIR/.claude/skills" -maxdepth 1 -mindepth 1 -type l 2>/dev/null | wc -l | tr -d ' ')
-  echo -e "  Skills: ${GREEN}$count${NC} | Agents: ${GREEN}2${NC}"
+  local skill_count cmd_count
+  skill_count=$(find "$TARGET_DIR/.claude/skills" -maxdepth 1 -mindepth 1 -type l 2>/dev/null | wc -l | tr -d ' ')
+  cmd_count=$(find "$TARGET_DIR/.claude/commands" -maxdepth 1 -name "devops-*.md" -type l 2>/dev/null | wc -l | tr -d ' ')
+  echo -e "  Skills: ${GREEN}$skill_count${NC} | Agents: ${GREEN}2${NC} | Commands: ${GREEN}$cmd_count${NC}"
 }
 
 setup_codex() {
@@ -322,12 +335,17 @@ do_uninstall() {
   echo ""
   echo -e "${BOLD}═══ Uninstall devops-ai-skill ═══${NC}"
 
-  # Claude skills & agents
+  # Claude skills, agents & commands
   for skill_dir in "$SKILL_PACK_DIR"/skills/*/; do
     remove_symlink "$TARGET_DIR/.claude/skills/$(basename "$skill_dir")"
   done
   for agent in horus zeus; do
     remove_symlink "$TARGET_DIR/.claude/agents/$agent.md"
+  done
+  for cmd_file in "$SKILL_PACK_DIR"/commands/*.md; do
+    local cmd_name
+    cmd_name=$(basename "$cmd_file" .md)
+    remove_symlink "$TARGET_DIR/.claude/commands/devops-$cmd_name.md"
   done
 
   # Codex skills
