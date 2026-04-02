@@ -134,6 +134,117 @@ install_claude() {
     [[ -d "$src_dir" ]] || continue
     copy_dir "$src_dir" "$base/prompts/$prompt_dir" "prompts: $prompt_dir"
   done
+
+  # Commands — copy to plugin cache for /devops:* slash commands
+  _claude_register_plugin "$base"
+}
+
+# Register as Claude Code marketplace plugin so /devops:* commands are discoverable
+_claude_register_plugin() {
+  local base="$1"
+  local settings="$base/settings.json"
+  local installed="$base/plugins/installed_plugins.json"
+  local marketplace_id="devops-ai-skill"
+  local plugin_name="devops"
+  local plugin_key="${plugin_name}@${marketplace_id}"
+  local version
+  version=$(cat "$SKILL_PACK_DIR/VERSION" 2>/dev/null || echo "unknown")
+
+  # Determine the cache directory
+  local cache_dir="$base/plugins/cache/$marketplace_id/$plugin_name/$version"
+
+  # Copy plugin files to cache
+  mkdir -p "$cache_dir"
+  # .claude-plugin/
+  copy_dir "$SKILL_PACK_DIR/.claude-plugin" "$cache_dir/.claude-plugin" "plugin: .claude-plugin"
+  # commands/
+  if [[ -d "$SKILL_PACK_DIR/commands" ]]; then
+    copy_dir "$SKILL_PACK_DIR/commands" "$cache_dir/commands" "plugin: commands"
+  fi
+  # agents/ (flat copy for plugin context)
+  mkdir -p "$cache_dir/agents"
+  for agent_file in "$SKILL_PACK_DIR"/.claude/agents/*.md; do
+    [[ -f "$agent_file" ]] || continue
+    local name
+    name=$(basename "$agent_file")
+    cp "$agent_file" "$cache_dir/agents/$name"
+  done
+  # skills/
+  if [[ -d "$SKILL_PACK_DIR/skills" ]]; then
+    copy_dir "$SKILL_PACK_DIR/skills" "$cache_dir/skills" "plugin: skills"
+  fi
+  # prompts/
+  for prompt_dir in horus zeus shared; do
+    local src_dir="$SKILL_PACK_DIR/prompts/$prompt_dir"
+    [[ -d "$src_dir" ]] || continue
+    mkdir -p "$cache_dir/prompts"
+    cp -r "$src_dir" "$cache_dir/prompts/$prompt_dir"
+  done
+
+  # Update settings.json — add marketplace + enable plugin
+  if command -v python3 &>/dev/null && [[ -f "$settings" ]]; then
+    python3 - "$settings" "$marketplace_id" "$plugin_key" <<'PYEOF'
+import json, sys
+
+settings_path, marketplace_id, plugin_key = sys.argv[1], sys.argv[2], sys.argv[3]
+
+with open(settings_path, "r") as f:
+    settings = json.load(f)
+
+# Add extraKnownMarketplaces entry
+mkts = settings.setdefault("extraKnownMarketplaces", {})
+mkts[marketplace_id] = {
+    "source": {
+        "source": "github",
+        "repo": "qwedsazxc78/devops-ai-skill"
+    },
+    "autoUpdate": True
+}
+
+# Enable the plugin
+enabled = settings.setdefault("enabledPlugins", {})
+enabled[plugin_key] = True
+
+with open(settings_path, "w") as f:
+    json.dump(settings, f, indent=2, ensure_ascii=False)
+    f.write("\n")
+PYEOF
+    log_ok "settings.json: marketplace registered + plugin enabled"
+  else
+    log_warn "settings.json: python3 not found or settings missing — manual setup needed"
+    echo -e "    ${DIM}Add to ~/.claude/settings.json enabledPlugins: \"${plugin_key}\": true${NC}"
+  fi
+
+  # Update installed_plugins.json
+  if command -v python3 &>/dev/null && [[ -f "$installed" ]]; then
+    python3 - "$installed" "$plugin_key" "$cache_dir" "$version" <<'PYEOF'
+import json, sys, datetime
+
+installed_path = sys.argv[1]
+plugin_key = sys.argv[2]
+cache_dir = sys.argv[3]
+version = sys.argv[4]
+
+with open(installed_path, "r") as f:
+    data = json.load(f)
+
+now = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z")
+
+plugins = data.setdefault("plugins", {})
+plugins[plugin_key] = [{
+    "scope": "user",
+    "installPath": cache_dir,
+    "version": version,
+    "installedAt": now,
+    "lastUpdated": now
+}]
+
+with open(installed_path, "w") as f:
+    json.dump(data, f, indent=4, ensure_ascii=False)
+    f.write("\n")
+PYEOF
+    log_ok "installed_plugins.json: $plugin_key registered"
+  fi
 }
 
 install_codex() {
@@ -307,6 +418,51 @@ _rm_if_exists() {
   return 1
 }
 
+_claude_unregister_plugin() {
+  local settings="$HOME/.claude/settings.json"
+  local installed="$HOME/.claude/plugins/installed_plugins.json"
+  if ! command -v python3 &>/dev/null; then return 1; fi
+
+  # Remove from settings.json
+  if [[ -f "$settings" ]]; then
+    python3 - "$settings" <<'PYEOF'
+import json, sys
+path = sys.argv[1]
+with open(path, "r") as f:
+    s = json.load(f)
+changed = False
+if "extraKnownMarketplaces" in s and "devops-ai-skill" in s["extraKnownMarketplaces"]:
+    del s["extraKnownMarketplaces"]["devops-ai-skill"]
+    changed = True
+if "enabledPlugins" in s and "devops@devops-ai-skill" in s["enabledPlugins"]:
+    del s["enabledPlugins"]["devops@devops-ai-skill"]
+    changed = True
+if changed:
+    with open(path, "w") as f:
+        json.dump(s, f, indent=2, ensure_ascii=False)
+        f.write("\n")
+PYEOF
+    echo -e "  ${RED}[rm]${NC} settings.json: devops-ai-skill entries"
+  fi
+
+  # Remove from installed_plugins.json
+  if [[ -f "$installed" ]]; then
+    python3 - "$installed" <<'PYEOF'
+import json, sys
+path = sys.argv[1]
+with open(path, "r") as f:
+    d = json.load(f)
+if "plugins" in d and "devops@devops-ai-skill" in d["plugins"]:
+    del d["plugins"]["devops@devops-ai-skill"]
+    with open(path, "w") as f:
+        json.dump(d, f, indent=4, ensure_ascii=False)
+        f.write("\n")
+PYEOF
+    echo -e "  ${RED}[rm]${NC} installed_plugins.json: devops@devops-ai-skill"
+  fi
+  return 0
+}
+
 do_uninstall() {
   echo ""
   echo -e "${BOLD}═══ Uninstall (Global) ═══${NC}"
@@ -314,7 +470,7 @@ do_uninstall() {
   local removed=0
   local skills=("cicd-enhancer" "helm-scaffold" "helm-version-upgrade" "kustomize-resource-validation" "repo-detect" "terraform-security" "terraform-validate" "yaml-fix-suggestions")
 
-  # Claude: ~/.claude/agents/ + ~/.claude/skills/ + ~/.claude/prompts/
+  # Claude: ~/.claude/agents/ + ~/.claude/skills/ + ~/.claude/prompts/ + plugin cache
   for agent in horus zeus; do
     _rm_if_exists "$HOME/.claude/agents/$agent.md" "~/.claude/agents/$agent.md" && ((removed++)) || true
   done
@@ -324,6 +480,9 @@ do_uninstall() {
   for prompt_dir in horus zeus shared; do
     _rm_if_exists "$HOME/.claude/prompts/$prompt_dir" "~/.claude/prompts/$prompt_dir" && ((removed++)) || true
   done
+  # Plugin cache + settings entries
+  _rm_if_exists "$HOME/.claude/plugins/cache/devops-ai-skill" "~/.claude/plugins/cache/devops-ai-skill" && ((removed++)) || true
+  _claude_unregister_plugin && ((removed++)) || true
 
   # Codex: ~/.codex/agents/ + ~/.codex/skills/ + ~/.codex/prompts/
   for agent in horus zeus; do
@@ -435,6 +594,14 @@ _status_section() {
     local cmd_count
     cmd_count=$(find "$base/commands/devops" -name "*.toml" 2>/dev/null | wc -l | tr -d ' ')
     echo -e "  ${GREEN}[ok]${NC} commands: $cmd_count toml files"
+    ((found++)) || true
+  fi
+
+  # Plugin (Claude — /devops:* commands)
+  if [[ -d "$base/plugins/cache/devops-ai-skill" ]]; then
+    local cmd_md_count
+    cmd_md_count=$(find "$base/plugins/cache/devops-ai-skill" -path "*/commands/*.md" 2>/dev/null | wc -l | tr -d ' ')
+    echo -e "  ${GREEN}[ok]${NC} plugin: devops ($cmd_md_count commands → /devops:*)"
     ((found++)) || true
   fi
 
