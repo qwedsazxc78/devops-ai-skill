@@ -80,6 +80,7 @@ EXPECTED_SKILLS=(
     "kustomize-resource-validation"
     "yaml-fix-suggestions"
     "repo-detect"
+    "release-validate"
 )
 
 for skill in "${EXPECTED_SKILLS[@]}"; do

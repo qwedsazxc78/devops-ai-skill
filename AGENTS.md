@@ -53,3 +53,7 @@ Detect the repository type to choose the right agent:
 - `$kustomize-resource-validation` — Kustomize build + validation
 - `$yaml-fix-suggestions` — YAML formatting and validation
 - `$repo-detect` — Repository type detection
+
+### Shared Skills
+
+- `$release-validate` — Release readiness validation (versions, cross-platform links, setup smoke tests)

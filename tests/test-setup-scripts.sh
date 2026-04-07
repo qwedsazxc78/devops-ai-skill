@@ -62,7 +62,7 @@ create_sandbox() {
     # Skills directory with SKILL.md in each
     local skills=(
         cicd-enhancer helm-scaffold helm-version-upgrade
-        kustomize-resource-validation repo-detect
+        kustomize-resource-validation release-validate repo-detect
         terraform-security terraform-validate yaml-fix-suggestions
     )
     for skill in "${skills[@]}"; do
@@ -165,10 +165,10 @@ else
     fail ".claude/skills/ directory not created"
 fi
 
-# All 8 skills symlinked
+# All 9 skills symlinked
 expected_skills=(
     cicd-enhancer helm-scaffold helm-version-upgrade
-    kustomize-resource-validation repo-detect
+    kustomize-resource-validation release-validate repo-detect
     terraform-security terraform-validate yaml-fix-suggestions
 )
 for skill in "${expected_skills[@]}"; do
@@ -187,10 +187,10 @@ done
 
 # Count matches expected
 count=$(find "$SANDBOX/.claude/skills" -maxdepth 1 -mindepth 1 | wc -l | tr -d ' ')
-if [ "$count" -eq 8 ]; then
+if [ "$count" -eq 9 ]; then
     pass "Correct skill count: $count"
 else
-    fail "Expected 8 skills, got $count"
+    fail "Expected 9 skills, got $count"
 fi
 
 # Output contains completion message
@@ -203,10 +203,10 @@ fi
 # Idempotent: run again, should skip all
 output2=$(bash "$SANDBOX/scripts/setup/setup-claude.sh" 2>&1) || true
 skip_count=$(echo "$output2" | grep -c "\[skip\]" || true)
-if [ "$skip_count" -eq 8 ]; then
-    pass "Idempotent: all 8 skills skipped on re-run"
+if [ "$skip_count" -eq 9 ]; then
+    pass "Idempotent: all 9 skills skipped on re-run"
 else
-    fail "Idempotent check: expected 8 skips, got $skip_count"
+    fail "Idempotent check: expected 9 skips, got $skip_count"
 fi
 
 cleanup_sandbox
@@ -226,7 +226,7 @@ else
     fail ".codex/skills/ directory not created"
 fi
 
-# All 8 skills symlinked
+# All 9 skills symlinked
 for skill in "${expected_skills[@]}"; do
     target="$SANDBOX/.codex/skills/$skill"
     if [ -L "$target" ] && [ -d "$target" ]; then
@@ -238,10 +238,10 @@ done
 
 # Count matches
 count=$(find "$SANDBOX/.codex/skills" -maxdepth 1 -mindepth 1 | wc -l | tr -d ' ')
-if [ "$count" -eq 8 ]; then
+if [ "$count" -eq 9 ]; then
     pass "Correct skill count: $count"
 else
-    fail "Expected 8 skills, got $count"
+    fail "Expected 9 skills, got $count"
 fi
 
 # AGENTS.md check: exists → no warn
@@ -261,10 +261,10 @@ fi
 # Idempotent
 output2=$(bash "$SANDBOX/scripts/setup/setup-codex.sh" 2>&1) || true
 skip_count=$(echo "$output2" | grep -c "\[skip\]" || true)
-if [ "$skip_count" -eq 8 ]; then
-    pass "Idempotent: all 8 skills skipped on re-run"
+if [ "$skip_count" -eq 9 ]; then
+    pass "Idempotent: all 9 skills skipped on re-run"
 else
-    fail "Idempotent check: expected 8 skips, got $skip_count"
+    fail "Idempotent check: expected 9 skips, got $skip_count"
 fi
 
 cleanup_sandbox
@@ -356,7 +356,7 @@ else
     fail "devops.md rules file verification failed"
 fi
 
-# Skill symlinks (8 skills)
+# Skill symlinks (9 skills)
 for skill in "${expected_skills[@]}"; do
     target="$SANDBOX/.agents/skills/$skill"
     if [ -L "$target" ] && [ -d "$target" ]; then
@@ -403,11 +403,11 @@ fi
 # Idempotent
 output2=$(bash "$SANDBOX/scripts/setup/setup-antigravity.sh" 2>&1) || true
 skip_count=$(echo "$output2" | grep -c "\[skip\]" || true)
-# 8 skills + 18 workflows = 26 skips
-if [ "$skip_count" -eq 26 ]; then
-    pass "Idempotent: all 25 items skipped on re-run"
+# 9 skills + 18 workflows = 27 skips
+if [ "$skip_count" -eq 27 ]; then
+    pass "Idempotent: all 27 items skipped on re-run"
 else
-    fail "Idempotent check: expected 25 skips, got $skip_count"
+    fail "Idempotent check: expected 27 skips, got $skip_count"
 fi
 
 cleanup_sandbox

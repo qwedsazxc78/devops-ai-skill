@@ -1,6 +1,6 @@
 {
   "name": "devops-ai-skill",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "description": "DevOps AI Skill Pack — Horus (IaC) + Zeus (GitOps) agents",
   "agents": [
     {
@@ -54,6 +54,11 @@
       "name": "yaml-fix-suggestions",
       "description": "YAML formatting and validation suggestions",
       "path": "../../../skills/yaml-fix-suggestions/SKILL.md"
+    },
+    {
+      "name": "release-validate",
+      "description": "Release readiness validation across versions, cross-platform links, and setup scripts",
+      "path": "../../../skills/release-validate/SKILL.md"
     }
   ]
 }

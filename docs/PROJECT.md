@@ -94,6 +94,12 @@ Pipeline Orchestrator for Kustomize + ArgoCD platforms. Commanding, methodical, 
 | yaml-fix-suggestions | YAML formatting and validation |
 | repo-detect | Repository type detection |
 
+### Shared Skills (from `skills/` directory)
+
+| Skill | Purpose |
+|-------|---------|
+| release-validate | Release readiness validation (versions, cross-platform links, setup smoke tests) |
+
 ### Zeus Pipelines (from `prompts/zeus/`)
 
 | Command | Pipeline File | Description |

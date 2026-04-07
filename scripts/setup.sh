@@ -130,7 +130,7 @@ setup_claude() {
 Read `devops-ai-skill/docs/PROJECT.md` for shared project context.
 
 - Agent definitions: `.claude/agents/horus.md` (IaC) and `.claude/agents/zeus.md` (GitOps)
-- Skills directory: `.claude/skills/` (8 skills)
+- Skills directory: `.claude/skills/` (9 skills)
 - Pipelines: `devops-ai-skill/prompts/` (14 pipelines)
 - Slash commands: `/devops-horus` (activate Horus agent) and `/devops-zeus` (activate Zeus agent)
 

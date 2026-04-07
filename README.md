@@ -5,7 +5,7 @@
 [![DEVOPS](https://img.shields.io/badge/DEVOPS-SKILL-blue?style=flat-square)](https://github.com/qwedsazxc78/devops-ai-skill)
 [![LICENSE](https://img.shields.io/badge/LICENSE-MIT-green?style=flat-square)](https://github.com/qwedsazxc78/devops-ai-skill/blob/main/LICENSE)
 [![FILES](https://img.shields.io/badge/FILES-65+-orange?style=flat-square)](#project-structure)
-[![SKILLS](https://img.shields.io/badge/SKILLS-8-blueviolet?style=flat-square)](#skills)
+[![SKILLS](https://img.shields.io/badge/SKILLS-9-blueviolet?style=flat-square)](#skills)
 [![PIPELINES](https://img.shields.io/badge/PIPELINES-14-ff6f61?style=flat-square)](#horus-pipelines-iac)
 [![AGENTS](https://img.shields.io/badge/AGENTS-2-critical?style=flat-square)](#agents)
 [![PLATFORMS](https://img.shields.io/badge/PLATFORMS-4-teal?style=flat-square)](#platform-support)
@@ -113,11 +113,11 @@ npx skills add qwedsazxc78/devops-ai-skill
 npx skills update
 ```
 
-> **⚠️ Note: This method installs only the 8 Skills (SKILL.md), not the full pack:**
+> **⚠️ Note: This method installs only the 9 Skills (SKILL.md), not the full pack:**
 >
 > | Feature | npx skills | Global Install |
 > |---------|:----------:|:--------------:|
-> | 8 Skills (SKILL.md) | ✅ | ✅ |
+> | 9 Skills (SKILL.md) | ✅ | ✅ |
 > | 2 Agents (Horus / Zeus) | ❌ | ✅ |
 > | 14 Pipelines (`*full`, `*security`, etc.) | ❌ | ✅ |
 > | Command palette (Gemini CLI) | ❌ | ✅ |
@@ -248,6 +248,7 @@ All skills follow the [Open Agent Skills](https://agentskills.io/specification) 
 | kustomize-resource-validation | Zeus | Kustomize build + validation |
 | yaml-fix-suggestions | Zeus | YAML formatting |
 | repo-detect | Both | Repository type detection |
+| release-validate | Shared | Release readiness validation |
 
 ## Project Structure
 
@@ -285,7 +286,7 @@ devops-ai-skill/
 │   ├── skills/
 │   │   ├── horus/SKILL.md
 │   │   ├── zeus/SKILL.md
-│   │   └── (8 skill symlinks)
+│   │   └── (9 skill symlinks)
 │   └── workflows/               # symlinks → prompts/
 │
 ├── skills/                      # Shared skills (Open Agent Skills standard)
