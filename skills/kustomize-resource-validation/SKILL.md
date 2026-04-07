@@ -150,10 +150,47 @@ This check reduces the risk of patches silently doing nothing because their targ
 - **Remote resources** (`resources: [https://...]`): Skip existence check, note as INFO that remote resources can't be validated offline.
 - **Helm chart generators**: If `helmCharts:` section exists, note it as INFO — these are validated by Helm, not Kustomize.
 
+## Report Persistence
+
+After all checks complete, write the full validation report to the repository's `docs/reports/` directory.
+
+### File path
+
+```
+docs/reports/kustomize-validation-<YYYY-MM-DD>.md
+```
+
+- Use today's date in `YYYY-MM-DD` format.
+- Create `docs/reports/` if it does not exist (use `mkdir -p`).
+- If a report file for today already exists, overwrite it.
+
+### File content
+
+The written report must include:
+
+1. A header with repository name, date, branch (`git rev-parse --abbrev-ref HEAD`), and trigger file path.
+2. The same validation summary table(s) shown in the terminal output.
+3. Any Errors / Warnings sections, or "All checks passed." if clean.
+
+### Example header
+
+```markdown
+# Kustomize Validation Report
+
+**Repository:** <repo-root-directory-name>
+**Date:** <YYYY-MM-DD>
+**Branch:** <current-branch>
+**Triggered by:** <path/to/kustomization.yaml>
+```
+
+### Error handling
+
+- If the write fails (e.g., permission error), print a warning to the terminal but do not fail the pipeline.
+
 ## Dry-Run Support
 
-This skill is **read-only by default** — validation doesn't modify files. All checks use Glob/Read to verify references. The only command that has side effects is `kustomize build`, which writes to stdout only.
+This skill is **read-only by default** — validation doesn't modify files. All checks use Glob/Read to verify references. The only command that has side effects is `kustomize build`, which writes to stdout only. The **Report Persistence** step is the sole exception — it writes one Markdown file to `docs/reports/`.
 
 ## Rollback Strategy
 
-No rollback needed — this skill only reads and reports. It never modifies files.
+No rollback needed — this skill only reads and reports. The only file written is the Markdown report under `docs/reports/`, which can be safely deleted.
