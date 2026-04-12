@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Create a standalone, buildable Kustomize + ArgoCD practice repository at `/Users/MH/Documents/git_awoo/gitops-template-ai-skill` for beginners to explore and validate with the Zeus agent.
+**Goal:** Create a standalone, buildable Kustomize + ArgoCD practice repository at `/Users/MH/Documents/git_awoo/infra-iac/gitops-template-ai-skill` for beginners to explore and validate with the Zeus agent.
 
 **Architecture:** Standard GitOps layout — `base/` holds canonical K8s manifests, `overlays/{dev,stg,prd}` patch per-environment, `argocd/` holds ArgoCD Application CRDs. Uses `nginx:1.25` as a universal container image with no registry auth required.
 

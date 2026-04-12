@@ -6,7 +6,7 @@ A standalone, buildable Kustomize + ArgoCD practice repository for beginners. Mi
 
 **Goal:** Provide a complete, valid GitOps project that beginners can explore, modify, and validate using the Zeus agent (`*full`, `*review`, etc.) from the `devops-ai-skill` plugin.
 
-**Location:** `/Users/MH/Documents/git_awoo/gitops-template-ai-skill` (standalone git repo)
+**Location:** `/Users/MH/Documents/git_awoo/infra-iac/gitops-template-ai-skill` (standalone git repo)
 
 ## File Structure
 
