@@ -1,0 +1,37 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ingress-nginx
+  annotations:
+    networking.gke.io/managed-certificates: prd-argocd-ingress-nginx-crt, prd-grafana-ingress-nginx-crt, prd-airflow-ingress-nginx-crt
+    nginx.ingress.kubernetes.io/server-snippet: |
+      add_header X-Content-Type-Options "nosniff" always;
+      add_header X-XSS-Protection "1; mode=block" always;
+      add_header X-Frame-Options "SAMEORIGIN" always;
+      add_header Set-Cookie "Secure";
+      add_header Set-Cookie "HttpOnly";
+      add_header Set-Cookie "/; HttpOnly; Secure;SameSite=Lax";
+      location ~ \.(ht|env|example|lock|yaml|md|gitignore|gitmodules|txt)$ {
+        deny all;
+        return 404;
+      }
+      location ~ /(.git|dbconfig|vendor|docs|Dockerfile|system|models)/ {
+        deny all;
+        return 404;
+      }
+spec:
+  rules:
+    - host: argocd.awoo.org
+    - host: grafana.awoo.org
+    - host: airflow.awoo.org
+  tls:
+    - hosts:
+        - argocd.awoo.org
+      secretName: prd-argocd-ingress-nginx-crt
+    - hosts:
+        - grafana.awoo.org
+      secretName: prd-grafana-ingress-nginx-crt
+    - hosts:
+        - airflow.awoo.org
+      secretName: prd-airflow-ingress-nginx-crt

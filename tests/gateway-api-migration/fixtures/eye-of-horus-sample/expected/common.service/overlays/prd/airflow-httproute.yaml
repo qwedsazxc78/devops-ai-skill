@@ -1,0 +1,50 @@
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: airflow-webserver
+  namespace: airflow
+spec:
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: common-gateway
+      namespace: ingress-nginx
+      sectionName: airflow-https
+  hostnames:
+    - airflow.awoo.org
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      # row 9a: X-* security headers auto-converted from server-snippet add_header directives
+      filters:
+        - type: ResponseHeaderModifier
+          responseHeaderModifier:
+            add:
+              - name: X-Content-Type-Options
+                value: nosniff
+              - name: X-XSS-Protection
+                value: "1; mode=block"
+              - name: X-Frame-Options
+                value: SAMEORIGIN
+      # TODO(gateway-migrate): row 9b — Set-Cookie headers cannot be set via
+      # responseHeaderModifier (cookie attributes require application-level handling).
+      # Original nginx snippet:
+      #   add_header Set-Cookie "Secure";
+      #   add_header Set-Cookie "HttpOnly";
+      #   add_header Set-Cookie "/; HttpOnly; Secure;SameSite=Lax";
+      # Migrate manually: configure SameSite/Secure/HttpOnly at the application layer or
+      # via a GCPBackendPolicy custom response header (if supported by your GKE version).
+      #
+      # TODO(gateway-migrate): row 9c — path denylist blocks cannot be expressed in
+      # HTTPRoute match rules without creating separate HTTPRoute rules per extension.
+      # Original nginx snippet:
+      #   location ~ \.(ht|env|example|lock|yaml|md|gitignore|gitmodules|txt)$ { deny all; return 404; }
+      #   location ~ /(.git|dbconfig|vendor|docs|Dockerfile|system|models)/ { deny all; return 404; }
+      # Migrate manually: add explicit HTTPRoute rules with path regex matches returning
+      # 404 via a RequestRedirect filter, or enforce at the application/WAF layer.
+      backendRefs:
+        - name: airflow-webserver
+          port: 8080

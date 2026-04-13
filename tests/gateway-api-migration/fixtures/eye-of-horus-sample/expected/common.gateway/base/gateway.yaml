@@ -1,0 +1,57 @@
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: common-gateway
+  namespace: ingress-nginx
+spec:
+  gatewayClassName: gke-l7-global-external-managed
+  listeners:
+    - name: argocd-https
+      port: 443
+      protocol: HTTPS
+      hostname: argocd.awoo.org
+      allowedRoutes:
+        namespaces:
+          from: Selector
+          selector:
+            matchLabels:
+              gateway-access: ingress-nginx
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - kind: ManagedCertificate
+            group: networking.gke.io
+            name: prd-argocd-ingress-nginx-crt
+    - name: grafana-https
+      port: 443
+      protocol: HTTPS
+      hostname: grafana.awoo.org
+      allowedRoutes:
+        namespaces:
+          from: Selector
+          selector:
+            matchLabels:
+              gateway-access: ingress-nginx
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - kind: ManagedCertificate
+            group: networking.gke.io
+            name: prd-grafana-ingress-nginx-crt
+    - name: airflow-https
+      port: 443
+      protocol: HTTPS
+      hostname: airflow.awoo.org
+      allowedRoutes:
+        namespaces:
+          from: Selector
+          selector:
+            matchLabels:
+              gateway-access: ingress-nginx
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - kind: ManagedCertificate
+            group: networking.gke.io
+            name: prd-airflow-ingress-nginx-crt
