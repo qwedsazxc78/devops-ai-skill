@@ -1,0 +1,23 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ingress-nginx
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress/mergeable-ingress-type: master
+spec:
+  rules:
+    - host: dev-argocd.example.com
+    - host: dev-grafana.example.com
+    - host: dev-alertmanager.example.com
+  tls:
+    - hosts:
+        - dev-argocd.example.com
+      secretName: dev-argocd-tls
+    - hosts:
+        - dev-grafana.example.com
+      secretName: dev-grafana-tls
+    - hosts:
+        - dev-alertmanager.example.com
+      secretName: dev-alertmanager-tls

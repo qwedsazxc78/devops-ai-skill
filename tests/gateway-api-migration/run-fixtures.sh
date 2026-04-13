@@ -17,17 +17,30 @@ for fixture in "$FIXTURES_DIR"/*/; do
   echo ""
   echo "Fixture: $name"
 
-  # Check 1: both input/ and expected/ exist
+  # Check 1: input/ exists
   if [ -d "$fixture/input" ]; then
     pass "$name has input/"
   else
     fail "$name missing input/"
   fi
 
-  if [ -d "$fixture/expected" ]; then
-    pass "$name has expected/"
-  else
-    fail "$name missing expected/"
+  # Check for expectError marker (error-path fixtures have no expected/)
+  expect_error=false
+  if [ -f "$fixture/input/fixture.meta.yaml" ]; then
+    if command -v yq >/dev/null 2>&1 && \
+       yq eval '.expectError // false' "$fixture/input/fixture.meta.yaml" | grep -q true; then
+      expect_error=true
+      pass "$name is an expectError fixture (skipping expected/ check)"
+    fi
+  fi
+
+  # Skip the "expected/ exists" check if this is an expectError fixture
+  if [ "$expect_error" = false ]; then
+    if [ -d "$fixture/expected" ]; then
+      pass "$name has expected/"
+    else
+      fail "$name missing expected/"
+    fi
   fi
 
   # Check 2: all YAML files parse
