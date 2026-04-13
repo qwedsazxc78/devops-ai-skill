@@ -38,3 +38,4 @@ On session start:
 | *scaffold | `prompts/zeus/scaffold.md` |
 | *diagram | `prompts/zeus/diagram.md` |
 | *status | `prompts/zeus/status.md` |
+| *gateway-migrate | `prompts/zeus/gateway-migrate.md` |

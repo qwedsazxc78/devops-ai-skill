@@ -43,3 +43,4 @@ Detect the repository type to choose the right agent:
 | *scaffold | Service scaffold (interactive) |
 | *diagram | Generate architecture diagrams |
 | *status | Tool installation check |
+| *gateway-migrate | Migrate NGINX Ingress to GKE Gateway API (per-hostname DNS cutover) |
