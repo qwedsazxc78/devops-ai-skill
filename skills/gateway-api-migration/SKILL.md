@@ -333,3 +333,99 @@ Apply to:
 
 **Gate:** HALT on any write failure, target-exists-without-force, or
 in-place edit validation failure.
+
+## Step 4 — Validate
+
+### 4a. Kustomize build (required)
+
+For each generated overlay in `common.gateway/` and for each modified
+overlay in `common.service/`:
+
+```bash
+kustomize build common.gateway/overlays/dev
+kustomize build common.gateway/overlays/stg
+kustomize build common.gateway/overlays/prd
+kustomize build common.service/overlays/dev
+kustomize build common.service/overlays/stg
+kustomize build common.service/overlays/prd
+```
+
+Record each result in `state.yaml` under `steps[4].checks.kustomizeBuild`.
+
+On failure → HALT. Leave generated files in place for user debugging.
+User can fix and re-run with `--resume`.
+
+### 4b. Kubeconform (optional)
+
+Only if `kubeconform` was detected in Step 0. Run against the generated
+output with Gateway API CRD schemas:
+
+```bash
+kustomize build common.gateway/overlays/prd | \
+  kubeconform -schema-location default \
+    -schema-location 'https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/v1.1.0/config/crd/standard/{{.ResourceKind}}_{{.Group}}_{{.KindLowerSuffix}}.json' \
+    -ignore-missing-schemas
+```
+
+GKE-specific resources (`GCPBackendPolicy`, `ManagedCertificate`) won't
+have public schemas — use `-ignore-missing-schemas`. Warnings are WARN
+not FAIL.
+
+### 4c. Second-opinion diff (optional)
+
+Only if `ingress2gateway` was detected. For each master Ingress manifest:
+
+```bash
+ingress2gateway print --providers ingress-nginx \
+  --input-file common.ingress/overlays/prd/app.ingress.yaml \
+  > /tmp/i2g-output-prd.yaml
+```
+
+Normalize both outputs (sort map keys alphabetically, strip comments,
+normalize list order by `metadata.name`) and compute a line-level diff
+against the skill's generated `common.gateway/` equivalent. Record in
+`state.yaml`:
+
+```yaml
+  - id: 4
+    name: validate
+    checks:
+      ingress2gatewaySecondOpinion:
+        status: ran
+        divergences: <count>
+        summary: <one-line>
+        details: <full diff written to docs/reports/gateway-migration/<slug>/second-opinion.diff>
+```
+
+Divergences are informational only — never halt.
+
+**Gate:** HALT on 4a failure; WARN on 4b/4c.
+
+## Step 5 — Render report
+
+Generate `docs/reports/gateway-migration/<module-slug>/report.md` from
+`state.yaml`. Follow `prompts/shared/report-format.md`. Required sections:
+
+1. **Header** — module, target GatewayClass, date, verdict
+   (`PASS` / `COMPLETED WITH MANUAL REVIEW REQUIRED` / `FAIL`)
+2. **Summary table** — 8-row table of step results
+3. **Topology** — master/minion (or standalone), counts, orphan list
+4. **Annotation Inventory** — portable / convertible / split-category /
+   drop-info from state YAML
+5. **Manual Review Required** — for each split-category stub and
+   drop-info entry: what it was, why no direct translation, suggested
+   alternative, exact `file:line` of occurrences
+6. **Cutover Runbook** — per-hostname DNS phases (copy from
+   `references/runbook-template.md` with variable substitution)
+7. **Rollback Procedure** — DNS-flip back; both stacks coexist until
+   Phase 4 cleanup
+8. **Second Opinion** — only if Step 4c ran; normalized diff + explanation
+9. **Consolidation Opportunities** — optional follow-ups (wildcard cert,
+   etc.)
+
+Verdict escalation rules:
+- Any `splitCategory.stubbed` entries → `COMPLETED WITH MANUAL REVIEW REQUIRED`
+- Any Step 4a failure → `FAIL`
+- Otherwise → `PASS`
+
+On write failure, WARN and print the report to stdout as fallback.
