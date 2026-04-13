@@ -1462,7 +1462,8 @@ Add row to "Zeus Pipelines" table:
 
 - [ ] **Step 3: Update CLAUDE.md Zeus commands table**
 
-Find the "Zeus Commands" table and add:
+The Zeus Commands table is at `## Zeus Commands` (around line 30). Append
+this row as the final entry (after `*status`):
 
 ```markdown
 | *gateway-migrate | `prompts/zeus/gateway-migrate.md` |
@@ -1470,11 +1471,19 @@ Find the "Zeus Commands" table and add:
 
 - [ ] **Step 4: Update AGENTS.md**
 
-Same addition as CLAUDE.md. AGENTS.md structure may differ — find the Zeus commands section and append consistently.
+AGENTS.md uses a slightly different section header:
+`## Zeus Commands (GitOps — Kustomize + ArgoCD)`. Read the file first to
+see the exact table format — the columns may differ from CLAUDE.md.
+Append a row following the existing pattern in the Zeus commands table.
 
 - [ ] **Step 5: Update GEMINI.md**
 
-Same addition. GEMINI.md may reference TOML commands instead of raw prompts — match the existing pattern for `zeus-scaffold` etc.
+GEMINI.md uses the same section header as AGENTS.md
+(`## Zeus Commands (GitOps — Kustomize + ArgoCD)`). Read the file first
+and match its table format. If GEMINI.md references TOML command files
+instead of raw prompt files (e.g., `.gemini/commands/devops/pipelines/zeus-*.toml`),
+point the new entry at the TOML created in Task 16 rather than the prompt
+from Task 14.
 
 - [ ] **Step 6: Verify all four files mention gateway-migrate**
 
@@ -1567,42 +1576,43 @@ Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>"
 **Files:**
 - Modify: `scripts/install-tools.sh`
 
-- [ ] **Step 1: Read the current file**
+- [ ] **Step 1: Inspect the TOOLS array format**
 
 ```bash
-cat scripts/install-tools.sh
-```
-Identify where optional tools are installed (look for `kubeconform` or `kube-score` install block).
-
-- [ ] **Step 2: Add ingress2gateway install block**
-
-Add a new optional-tool block next to `kubeconform`:
-
-```bash
-# ingress2gateway (optional, second-opinion for *gateway-migrate)
-if ! command -v ingress2gateway >/dev/null 2>&1; then
-  echo "Installing ingress2gateway (optional)..."
-  case "$(uname -s)" in
-    Darwin)
-      brew install ingress2gateway || echo "  skipped (brew install failed)"
-      ;;
-    Linux)
-      if command -v go >/dev/null 2>&1; then
-        go install github.com/kubernetes-sigs/ingress2gateway@latest || echo "  skipped"
-      else
-        echo "  skipped (go not installed; install manually from kubernetes-sigs/ingress2gateway)"
-      fi
-      ;;
-    *)
-      echo "  skipped (unsupported OS)"
-      ;;
-  esac
-else
-  echo "ingress2gateway already installed: $(ingress2gateway version 2>&1 | head -1)"
-fi
+sed -n '73,112p' scripts/install-tools.sh
 ```
 
-Place the block after the existing optional-tool block(s), before any final summary section.
+Verify the format matches CSV-style entries:
+`"binary_name|category|tier|brew_cmd|apt_cmd|pip_cmd|winget_cmd"`
+
+The script iterates this array; adding a new tool means adding one line
+to the array, NOT writing a bash install block.
+
+- [ ] **Step 2: Add ingress2gateway entry to the TOOLS array**
+
+Find the "Zeus (GitOps) — Recommended" section (the block starting after
+`# Zeus (GitOps) — Recommended` comment, around line 90). Use `Edit` to
+insert this new line after the `kubeconform` entry:
+
+Old string (exact match):
+```
+  "kubeconform|zeus|recommended|brew install kubeconform|||scoop install kubeconform"
+```
+
+New string:
+```
+  "kubeconform|zeus|recommended|brew install kubeconform|||scoop install kubeconform"
+  "ingress2gateway|zeus|recommended|brew install ingress2gateway|||"
+```
+
+Explanation of fields:
+- `ingress2gateway` — binary name
+- `zeus` — category (GitOps agent)
+- `recommended` — tier (optional, graceful degradation)
+- `brew install ingress2gateway` — macOS install
+- empty `apt_cmd` — no apt package; user installs via `go install` manually
+- empty `pip_cmd` — not a Python tool
+- empty `winget_cmd` — no Windows package
 
 - [ ] **Step 3: Verify the script is syntactically valid**
 
@@ -1611,7 +1621,16 @@ bash -n scripts/install-tools.sh
 ```
 Expected: no output (success).
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 4: Verify the array parses correctly**
+
+```bash
+bash scripts/install-tools.sh 2>&1 | grep ingress2gateway
+```
+Expected: output line like `[--] ingress2gateway not installed` (on a
+machine without it) or `[OK] ingress2gateway ...` (if already installed).
+Either confirms the array entry is being read.
+
+- [ ] **Step 5: Commit**
 
 ```bash
 git add scripts/install-tools.sh
