@@ -429,3 +429,103 @@ Verdict escalation rules:
 - Otherwise → `PASS`
 
 On write failure, WARN and print the report to stdout as fallback.
+
+## Step 6 — Runbook & next steps
+
+Print to the Zeus session and also write to `common.gateway/MIGRATION.md`
+(substituted from `references/runbook-template.md`). The runbook is
+structured around per-hostname DNS cutover (see spec §6.8 for the full
+template). Key sections:
+
+- **Pre-cutover setup** — install Gateway API CRDs, install GKE Gateway
+  controller, label target namespaces with `gateway-access=ingress-nginx`
+  (the skill provides the exact `kubectl label` command with discovered
+  namespaces).
+- **Phase 1** — Deploy `common.gateway/` (Gateway resource only, no
+  traffic).
+- **Phase 2** — Deploy updated `common.service/` (HTTPRoutes attach to
+  Gateway, both stacks serve hostnames at separate IPs).
+- **Phase 3** — Per-hostname DNS cutover (gradual, reversible, one
+  hostname at a time).
+- **Phase 4** — Bake and clean up (delete `common.ingress/` and minions
+  after 1+ week of stability).
+- **Rollback** — DNS flip back; nothing was destructively removed in
+  Phases 1-3.
+
+**Gate:** informational.
+
+## Step 7 — Pre-commit hints
+
+Print the suggested commit message and file list to the session. Format:
+
+```
+feat(ingress): migrate common.ingress to Gateway API (master/minion)
+
+- Generate common.gateway/ Kustomize module (Gateway + base/dev/stg/prd overlays)
+- Add HTTPRoutes to common.service/overlays/{dev,stg,prd}/ for <N> services
+- Register new HTTPRoute files in common.service/overlays/*/kustomization.yaml
+- Target: gke-l7-global-external-managed
+- <N> HTTPRoutes, <N> listeners, <N> responseHeaderModifier filters
+- <N> manual review items — see docs/reports/gateway-migration/<slug>/report.md
+- common.ingress/ and common.service/overlays/*/*-nginx-ingress.yaml
+  untouched — side-by-side for safe per-hostname DNS cutover
+```
+
+Files to stage (list every file from `state.yaml` `steps[3].generated[]`
+and `steps[3].modified[]`, plus the report and state file):
+
+```bash
+git add common.gateway/
+git add common.service/overlays/dev/argocd-httproute.yaml \
+        common.service/overlays/dev/grafana-httproute.yaml \
+        ...
+git add common.service/overlays/dev/kustomization.yaml \
+        common.service/overlays/stg/kustomization.yaml \
+        common.service/overlays/prd/kustomization.yaml
+git add docs/reports/gateway-migration/<slug>/state.yaml \
+        docs/reports/gateway-migration/<slug>/report.md
+```
+
+**Never auto-commit.** The user drives git.
+
+**Gate:** informational.
+
+## Halt / resume semantics
+
+| Failure point | State | Resume behavior |
+|---|---|---|
+| Step 1 discovery fails | no state written | re-run normally |
+| Step 2 analyze errors | state exists, step 2 marked error | `--resume` re-runs from step 2 |
+| Step 3A write fails | temp dir cleaned, no partial output | re-run normally; target still clean |
+| Step 3B build fails | kustomization.yaml reverted, new httproute files removed | `--resume` retries step 3B from the failing env |
+| Step 4a build fails | generated module left in place | user fixes; `--resume` re-runs step 4 |
+| Step 4b/4c warn | state records warnings | no halt; continue |
+| User aborts step 2 | state `status: aborted` | `--resume` restarts from step 2 |
+| Run completes | state `status: completed` | rerun refused unless `--force` |
+
+On `--resume`, the skill:
+1. Reads `state.yaml` from the path argument.
+2. Verifies `schemaVersion` matches (`1`). Mismatch → HALT.
+3. Reads `currentStep` and `topology`.
+4. Jumps to that step and re-executes it in full (not mid-step).
+5. Prints `Resumed from step N (<name>).` to the user.
+
+## State YAML schema
+
+See spec §4.1 for the full schema example. Required top-level fields:
+
+- `schemaVersion: 1`
+- `topology: master-minion | standalone`
+- `module: <master-module-name>`
+- `moduleSlug: <slug-for-paths>`
+- `targetGatewayClass: gke-l7-global-external-managed`
+- `generatedModule: common.gateway`
+- `createdAt`, `updatedAt`: ISO 8601 timestamps
+- `status`: `discovering | analyzing | converting | validating | completed | failed | aborted`
+- `currentStep`: integer 1-7
+- `environment.tools`: map of tool name → version
+- `master`: object with `module`, `namespace`, `files[]`, `hostnamesDeclared`
+- `minions[]`: array of minion objects (topology: master-minion only)
+- `orphanHosts[]`, `orphanMinions[]`: diagnostic arrays
+- `steps[]`: array of step records with `id`, `name`, `status`, `findings`
+- `reportPath`: path to the rendered markdown report
