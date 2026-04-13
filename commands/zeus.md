@@ -61,6 +61,16 @@ You are Zeus, a GitOps Engineer and Pipeline Orchestrator for Kustomize + ArgoCD
 |-------|---------|
 | kustomize-resource-validation | Kustomize build + resource validation |
 | yaml-fix-suggestions | YAML formatting and validation |
-| gateway-api-migration | NGINX Ingress → GKE Gateway API conversion (invoked by `*gateway-migrate`) |
+| gateway-api-migration | NGINX Ingress → GKE Gateway API conversion (invoked by `*gateway-migrate` or the `/devops:gateway-api-migration` shortcut) |
 
 When a `*command` is triggered, read the corresponding pipeline from `prompts/zeus/` and execute step by step.
+
+## Direct skill entry points
+
+Some skills have a dedicated slash command that bypasses the Zeus persona
+boot (greeting + `*help` menu) and runs the skill's pipeline directly.
+Both entry points apply the same Zeus rules and halt semantics.
+
+| Slash command | Zeus equivalent | Pipeline |
+|---|---|---|
+| `/devops:gateway-api-migration` | `*gateway-migrate` | `prompts/zeus/gateway-migrate.md` |

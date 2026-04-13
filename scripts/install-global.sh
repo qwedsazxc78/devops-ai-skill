@@ -110,33 +110,51 @@ install_claude() {
   echo ""
   echo -e "${BOLD}═══ Claude Code (~/.claude/) ═══${NC}"
 
-  # Agents
-  mkdir -p "$base/agents"
-  for agent_file in "$SKILL_PACK_DIR"/.claude/agents/*.md; do
-    [[ -f "$agent_file" ]] || continue
-    local name
-    name=$(basename "$agent_file")
-    copy_file "$agent_file" "$base/agents/$name" "agent: $name"
-  done
+  # --- Legacy cleanup ---
+  # Earlier versions of this script copied skills/agents/prompts directly
+  # under ~/.claude/{skills,agents,prompts}/ in ADDITION to registering the
+  # plugin. That caused every item to appear twice in Claude Code (once
+  # unscoped, once under the `devops:` namespace). Remove those legacy
+  # duplicates so only the plugin-scoped entries remain.
+  _claude_purge_legacy_direct_install "$base"
 
-  # Skills
-  mkdir -p "$base/skills"
-  for skill_dir in "$SKILL_PACK_DIR"/skills/*/; do
-    [[ -d "$skill_dir" ]] || continue
-    local name
-    name=$(basename "$skill_dir")
-    copy_dir "$skill_dir" "$base/skills/$name" "skill: $name"
-  done
-
-  # Prompts — copy pipeline definitions so agents can reference them
-  for prompt_dir in horus zeus shared; do
-    local src_dir="$SKILL_PACK_DIR/prompts/$prompt_dir"
-    [[ -d "$src_dir" ]] || continue
-    copy_dir "$src_dir" "$base/prompts/$prompt_dir" "prompts: $prompt_dir"
-  done
-
-  # Commands — copy to plugin cache for /devops:* slash commands
+  # Claude Code is plugin-only now: everything lives in the plugin cache
+  # and is exposed under the `devops:` namespace via marketplace registration.
   _claude_register_plugin "$base"
+}
+
+# Remove unscoped copies from pre-plugin-only installs so they stop
+# duplicating the plugin-registered entries.
+_claude_purge_legacy_direct_install() {
+  local base="$1"
+  local legacy_skills=(cicd-enhancer gateway-api-migration helm-scaffold \
+    helm-version-upgrade kustomize-resource-validation release-validate \
+    repo-detect terraform-security terraform-validate yaml-fix-suggestions)
+  local purged=0
+  for skill in "${legacy_skills[@]}"; do
+    if [[ -d "$base/skills/$skill" ]]; then
+      rm -rf "$base/skills/$skill"
+      echo -e "  ${YELLOW}[purge]${NC} legacy skill: $skill"
+      ((purged++)) || true
+    fi
+  done
+  for agent in horus zeus; do
+    if [[ -f "$base/agents/$agent.md" ]]; then
+      rm -f "$base/agents/$agent.md"
+      echo -e "  ${YELLOW}[purge]${NC} legacy agent: $agent.md"
+      ((purged++)) || true
+    fi
+  done
+  for prompt_dir in horus zeus shared; do
+    if [[ -d "$base/prompts/$prompt_dir" ]]; then
+      rm -rf "$base/prompts/$prompt_dir"
+      echo -e "  ${YELLOW}[purge]${NC} legacy prompts: $prompt_dir"
+      ((purged++)) || true
+    fi
+  done
+  if [[ $purged -gt 0 ]]; then
+    echo -e "  ${DIM}Removed $purged legacy direct-install items — now plugin-only${NC}"
+  fi
 }
 
 # Register as Claude Code marketplace plugin so /devops:* commands are discoverable
