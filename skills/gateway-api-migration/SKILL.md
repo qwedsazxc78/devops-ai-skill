@@ -70,6 +70,8 @@ Install: brew install <tool>
 Re-run *gateway-migrate after install.
 ```
 
+**Gate:** HALT on missing required tools (kustomize, yq); WARN and SKIP on missing optional tools (kubeconform, ingress2gateway).
+
 ## Step 1 — Discover (topology-aware)
 
 Classification rules (reproduced here for agent in-context use; full
@@ -521,7 +523,7 @@ See spec §4.1 for the full schema example. Required top-level fields:
 - `targetGatewayClass: gke-l7-global-external-managed`
 - `generatedModule: common.gateway`
 - `createdAt`, `updatedAt`: ISO 8601 timestamps
-- `status`: `discovering | analyzing | converting | validating | completed | failed | aborted`
+- `status`: `in_progress | discovering | analyzing | converting | validating | completed | failed | aborted`
 - `currentStep`: integer 1-7
 - `environment.tools`: map of tool name → version
 - `master`: object with `module`, `namespace`, `files[]`, `hostnamesDeclared`

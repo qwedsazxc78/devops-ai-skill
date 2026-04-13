@@ -1,0 +1,3 @@
+---
+expectError: true
+errorMessage: ambiguous master-minion pairing — minion host matches multiple masters
