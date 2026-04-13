@@ -200,3 +200,136 @@ Proceed with conversion? [y/N]
 ```
 
 **Gate:** interactive — user must confirm. HALT on decline.
+
+## Step 3 — Convert (two-phase)
+
+Conversion is split into **Phase 3A** (create new `common.gateway/` module)
+and **Phase 3B** (create HTTPRoutes alongside minions + in-place edit
+kustomization.yaml).
+
+**Pre-flight:**
+
+1. Check target path `<master-parent>/common.gateway/`:
+   - If exists without `--force` → HALT: "Target already present; use
+     `--resume` or `--force`."
+   - If exists with `--force` → continue (existing content will be
+     overwritten).
+2. For each minion, check destination `common.service/overlays/<env>/<svc>-httproute.yaml`:
+   - If exists without `--force` → HALT.
+   - If exists with `--force` → overwrite.
+3. For each `common.service/overlays/<env>/kustomization.yaml` that will
+   be modified, capture the pre-edit SHA256 hash and record in state YAML
+   under `steps[3].modified[].preEditHash`.
+
+### Phase 3A — Generate `common.gateway/`
+
+Atomic: write everything to `common.gateway.tmp/` first, then rename to
+`common.gateway/`. On any failure, remove the temp directory.
+
+1. `common.gateway/base/kustomization.yaml`:
+   ```yaml
+   apiVersion: kustomize.config.k8s.io/v1beta1
+   kind: Kustomization
+   namespace: ingress-nginx
+   resources:
+     - gateway.yaml
+     # - gcpbackendpolicy-<svc>.yaml (one per service with CORS)
+   ```
+2. `common.gateway/base/gateway.yaml`:
+   - One `Gateway` resource, `gatewayClassName: gke-l7-global-external-managed`
+   - One listener per master hostname
+   - Each listener: `allowedRoutes.namespaces.from: Selector`,
+     `selector.matchLabels.gateway-access: ingress-nginx`
+   - TLS listeners reference the ManagedCertificate name from the master's
+     TLS entries via `certificateRefs[kind: ManagedCertificate, name: <name>]`
+   - HTTP listeners (port 80) included for HTTP→HTTPS redirect
+3. `common.gateway/base/gcpbackendpolicy-<svc>.yaml` (only if Row 5–8
+   annotations were present):
+   - `apiVersion: networking.gke.io/v1`
+   - `kind: GCPBackendPolicy`
+   - `spec.targetRef` → the backend Service
+   - `spec.cors` populated from CORS annotations
+4. `common.gateway/overlays/{dev,stg,prd}/kustomization.yaml`:
+   ```yaml
+   apiVersion: kustomize.config.k8s.io/v1beta1
+   kind: Kustomization
+   namespace: ingress-nginx
+   resources:
+     - ../../base
+   patches:
+     - path: gateway.patch.yaml
+   ```
+5. `common.gateway/overlays/<env>/gateway.patch.yaml`:
+   - Per-env listeners with the environment's hostnames and
+     ManagedCertificate refs
+6. `common.gateway/argocd/{dev,stg,prd}.yaml`:
+   - Copy `common.ingress/argocd/<env>.yaml`
+   - Change `metadata.name` from `<name>` to `<name>-gateway`
+   - Change `spec.source.path` from `common.ingress/overlays/<env>` to
+     `common.gateway/overlays/<env>`
+7. `common.gateway/MIGRATION.md`:
+   - Copy `references/runbook-template.md`
+   - Substitute variables: `{{master_module}}`, `{{generated_module}}`,
+     `{{target_namespaces}}`, `{{hostnames_per_env}}`, `{{service_list}}`
+
+Record each generated file in `state.yaml` under `steps[3].generated[]`.
+
+### Phase 3B — Generate HTTPRoutes + edit kustomization.yaml
+
+For each `(env, service)` tuple from the state's `minions[]`:
+
+1. Read `references/httproute-template.yaml`, substitute variables:
+   - `{{service}}` → minion's service name
+   - `{{namespace}}` → minion's effective namespace
+   - `{{hostname}}` → minion's declared host for this env
+   - `{{listener_name}}` → Gateway listener name matching this hostname
+   - `{{path_rules}}` → translated from minion's `spec.rules[].http.paths[]`
+   - `{{backend_name}}` → minion's backend Service name
+   - `{{backend_port}}` → minion's backend Service port
+   - `{{response_header_filters}}` → X-* headers from master's server-snippet
+2. Write to `common.service/overlays/<env>/<service>-httproute.yaml`.
+3. Edit `common.service/overlays/<env>/kustomization.yaml` in place:
+   ```bash
+   # Check idempotency first
+   if ! yq eval ".resources | contains([\"<svc>-httproute.yaml\"])" \
+        "common.service/overlays/<env>/kustomization.yaml" | grep -q true; then
+     yq eval -i ".resources += [\"<svc>-httproute.yaml\"]" \
+        "common.service/overlays/<env>/kustomization.yaml"
+   fi
+   ```
+4. After all edits for this env are complete, validate:
+   ```bash
+   kustomize build common.service/overlays/<env>
+   ```
+5. On build failure:
+   - Restore `kustomization.yaml` from the pre-edit SHA256 snapshot
+     captured in pre-flight.
+   - Remove all newly created `*-httproute.yaml` files for this env.
+   - HALT: "In-place edit validation failed. Target repo reverted to
+     pre-edit state. Error: <kustomize output>. Fix and re-run with
+     `--resume`."
+
+Record each modification in `state.yaml` under `steps[3].modified[]`.
+
+**TODO stubs:** insert inline in generated YAML as:
+
+```yaml
+# TODO(gateway-migrate): <reason> — see report.md Manual Review #<n>
+```
+
+Apply to:
+- Gateway listener comments when `server-snippet` has stubbed directives
+- HTTPRoute comments when the minion's backend relies on a stubbed feature
+
+**Atomicity:**
+
+- Phase 3A uses a temp directory (`common.gateway.tmp/`) — failure before
+  rename leaves no partial state in the target location.
+- Phase 3B treats each env as an atomic group: all HTTPRoutes for an env
+  are written before the kustomization edit; rollback removes all of
+  them together.
+- `--resume` skips any `(env, service)` tuple already recorded as
+  complete in `state.yaml`.
+
+**Gate:** HALT on any write failure, target-exists-without-force, or
+in-place edit validation failure.
