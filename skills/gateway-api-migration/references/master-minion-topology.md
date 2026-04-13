@@ -1,0 +1,1 @@
+../../../docs/gateway/master-minion-topology.md

@@ -1,0 +1,1 @@
+../../../docs/gateway/migrate-from-ingress.md

@@ -1,0 +1,1 @@
+../../../docs/gateway/gke-gateway-notes.md

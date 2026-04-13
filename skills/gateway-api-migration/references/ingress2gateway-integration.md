@@ -1,0 +1,1 @@
+../../../docs/gateway/ingress2gateway-integration.md
