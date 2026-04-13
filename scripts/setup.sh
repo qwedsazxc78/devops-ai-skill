@@ -130,8 +130,8 @@ setup_claude() {
 Read `devops-ai-skill/docs/PROJECT.md` for shared project context.
 
 - Agent definitions: `.claude/agents/horus.md` (IaC) and `.claude/agents/zeus.md` (GitOps)
-- Skills directory: `.claude/skills/` (9 skills)
-- Pipelines: `devops-ai-skill/prompts/` (14 pipelines)
+- Skills directory: `.claude/skills/` (10 skills)
+- Pipelines: `devops-ai-skill/prompts/` (15 pipelines)
 - Slash commands: `/devops-horus` (activate Horus agent) and `/devops-zeus` (activate Zeus agent)
 
 ### Horus Commands (IaC — Terraform + Helm + GKE)
@@ -250,7 +250,7 @@ Read `devops-ai-skill/docs/PROJECT.md` for shared project context.
 
 - Agent definitions: `.gemini/agents/horus.md` (IaC) and `.gemini/agents/zeus.md` (GitOps)
 - Extension: `.gemini/extensions/devops/gemini-extension.json`
-- Pipelines: `devops-ai-skill/prompts/` (14 pipelines)
+- Pipelines: `devops-ai-skill/prompts/` (15 pipelines)
 
 Trigger with `*full`, `*upgrade`, `*security`, `*validate`, `*scaffold`, `*cicd`, `*health` (Horus) or `*full`, `*pre-merge`, `*health`, `*review`, `*scaffold`, `*diagram`, `*status` (Zeus).
 ENTRY

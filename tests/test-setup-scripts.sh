@@ -61,7 +61,7 @@ create_sandbox() {
 
     # Skills directory with SKILL.md in each
     local skills=(
-        cicd-enhancer helm-scaffold helm-version-upgrade
+        cicd-enhancer gateway-api-migration helm-scaffold helm-version-upgrade
         kustomize-resource-validation release-validate repo-detect
         terraform-security terraform-validate yaml-fix-suggestions
     )
@@ -84,7 +84,7 @@ EOF
         echo "# $p" > "$SANDBOX/prompts/horus/$p.md"
     done
 
-    local zeus_prompts=(full-pipeline pre-merge health review scaffold diagram status)
+    local zeus_prompts=(full-pipeline pre-merge health review scaffold diagram status gateway-migrate)
     for p in "${zeus_prompts[@]}"; do
         mkdir -p "$SANDBOX/prompts/zeus"
         echo "# $p" > "$SANDBOX/prompts/zeus/$p.md"
@@ -165,9 +165,9 @@ else
     fail ".claude/skills/ directory not created"
 fi
 
-# All 9 skills symlinked
+# All 10 skills symlinked
 expected_skills=(
-    cicd-enhancer helm-scaffold helm-version-upgrade
+    cicd-enhancer gateway-api-migration helm-scaffold helm-version-upgrade
     kustomize-resource-validation release-validate repo-detect
     terraform-security terraform-validate yaml-fix-suggestions
 )
@@ -187,10 +187,10 @@ done
 
 # Count matches expected
 count=$(find "$SANDBOX/.claude/skills" -maxdepth 1 -mindepth 1 | wc -l | tr -d ' ')
-if [ "$count" -eq 9 ]; then
+if [ "$count" -eq 10 ]; then
     pass "Correct skill count: $count"
 else
-    fail "Expected 9 skills, got $count"
+    fail "Expected 10 skills, got $count"
 fi
 
 # Output contains completion message
@@ -203,10 +203,10 @@ fi
 # Idempotent: run again, should skip all
 output2=$(bash "$SANDBOX/scripts/setup/setup-claude.sh" 2>&1) || true
 skip_count=$(echo "$output2" | grep -c "\[skip\]" || true)
-if [ "$skip_count" -eq 9 ]; then
-    pass "Idempotent: all 9 skills skipped on re-run"
+if [ "$skip_count" -eq 10 ]; then
+    pass "Idempotent: all 10 skills skipped on re-run"
 else
-    fail "Idempotent check: expected 9 skips, got $skip_count"
+    fail "Idempotent check: expected 10 skips, got $skip_count"
 fi
 
 cleanup_sandbox
@@ -226,7 +226,7 @@ else
     fail ".codex/skills/ directory not created"
 fi
 
-# All 9 skills symlinked
+# All 10 skills symlinked
 for skill in "${expected_skills[@]}"; do
     target="$SANDBOX/.codex/skills/$skill"
     if [ -L "$target" ] && [ -d "$target" ]; then
@@ -238,10 +238,10 @@ done
 
 # Count matches
 count=$(find "$SANDBOX/.codex/skills" -maxdepth 1 -mindepth 1 | wc -l | tr -d ' ')
-if [ "$count" -eq 9 ]; then
+if [ "$count" -eq 10 ]; then
     pass "Correct skill count: $count"
 else
-    fail "Expected 9 skills, got $count"
+    fail "Expected 10 skills, got $count"
 fi
 
 # AGENTS.md check: exists → no warn
@@ -261,10 +261,10 @@ fi
 # Idempotent
 output2=$(bash "$SANDBOX/scripts/setup/setup-codex.sh" 2>&1) || true
 skip_count=$(echo "$output2" | grep -c "\[skip\]" || true)
-if [ "$skip_count" -eq 9 ]; then
-    pass "Idempotent: all 9 skills skipped on re-run"
+if [ "$skip_count" -eq 10 ]; then
+    pass "Idempotent: all 10 skills skipped on re-run"
 else
-    fail "Idempotent check: expected 9 skips, got $skip_count"
+    fail "Idempotent check: expected 10 skips, got $skip_count"
 fi
 
 cleanup_sandbox
@@ -356,7 +356,7 @@ else
     fail "devops.md rules file verification failed"
 fi
 
-# Skill symlinks (9 skills)
+# Skill symlinks (10 skills)
 for skill in "${expected_skills[@]}"; do
     target="$SANDBOX/.agents/skills/$skill"
     if [ -L "$target" ] && [ -d "$target" ]; then
@@ -403,11 +403,11 @@ fi
 # Idempotent
 output2=$(bash "$SANDBOX/scripts/setup/setup-antigravity.sh" 2>&1) || true
 skip_count=$(echo "$output2" | grep -c "\[skip\]" || true)
-# 9 skills + 19 workflows = 28 skips
-if [ "$skip_count" -eq 28 ]; then
-    pass "Idempotent: all 28 items skipped on re-run"
+# 10 skills + 19 workflows = 29 skips
+if [ "$skip_count" -eq 29 ]; then
+    pass "Idempotent: all 29 items skipped on re-run"
 else
-    fail "Idempotent check: expected 28 skips, got $skip_count"
+    fail "Idempotent check: expected 29 skips, got $skip_count"
 fi
 
 cleanup_sandbox

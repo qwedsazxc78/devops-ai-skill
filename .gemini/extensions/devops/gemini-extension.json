@@ -31,6 +31,11 @@
       "path": "../../../skills/helm-version-upgrade/SKILL.md"
     },
     {
+      "name": "gateway-api-migration",
+      "description": "NGINX Ingress → GKE Gateway API migration (master/minion or standalone)",
+      "path": "../../../skills/gateway-api-migration/SKILL.md"
+    },
+    {
       "name": "helm-scaffold",
       "description": "New Helm module generation from templates",
       "path": "../../../skills/helm-scaffold/SKILL.md"
