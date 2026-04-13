@@ -261,6 +261,32 @@ The `*gateway-migrate` pipeline migrates an NGINX Ingress GitOps repo to GKE Gat
 
 This pattern maps cleanly onto Gateway API's persona model: the master becomes a `Gateway` resource, each minion becomes an `HTTPRoute`.
 
+### Prerequisites
+
+Before running `*gateway-migrate`, ensure:
+
+**On the GKE cluster**
+- Gateway API CRDs installed (the skill checks but does not install them):
+  ```bash
+  kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.1.0/standard-install.yaml
+  ```
+- GKE Gateway controller add-on enabled (applies to Standard or Autopilot):
+  ```bash
+  gcloud container clusters update <CLUSTER> --region <REGION> --gateway-api=standard
+  ```
+
+**On your workstation** (the machine running Zeus)
+- `kustomize` — required. `brew install kustomize`
+- `yq` — required (used for idempotent in-place kustomization.yaml edits). `brew install yq`
+- `kubeconform` — optional, for schema validation. `brew install kubeconform`
+- `ingress2gateway` — optional, for cross-check validation. `brew install ingress2gateway`
+- `devops-ai-skill` installed via [one-click install](#global-install-recommended) or per-repo `setup.sh`
+
+**In the target GitOps repo**
+- Kustomize `base/` + `overlays/{dev,stg,prd}/` layout (standard pattern)
+- At least one `kind: Ingress` manifest with `apiVersion: networking.k8s.io/v1`
+- For master/minion topology: master declares hosts only (no `http.paths`), minions have paths + backends in separate Kustomize modules
+
 ### Workflow
 
 ```bash
@@ -290,6 +316,76 @@ git add common.gateway/ common.service/overlays/ docs/reports/gateway-migration/
 git commit
 ```
 
+### Session walkthrough
+
+When you run `*gateway-migrate` inside a Zeus session, expect output like this:
+
+```
+Zeus › *gateway-migrate
+
+Step 0 · Tool check
+  ✓ kustomize v5.4.2
+  ✓ yq v4.44.1
+  ✓ kubeconform v0.6.7
+  ✓ ingress2gateway v0.3.0
+
+Step 1 · Discovery
+
+Discovered migration unit: master/minion topology
+  Master:  common.ingress/                 (4 files, 14 hostnames declared)
+  Minions: common.service/overlays/        (11 services × 3 envs = 33 files)
+    ✓ argocd      → dev/stg/prd-argocd.awoo.org     → argocd-server:80
+    ✓ grafana     → dev/stg/prd-grafana.awoo.org    → grafana:80
+    ✓ airflow     → dev/stg/prd-airflow.awoo.org    → airflow-webserver:8080
+    ... (11 services total)
+  Orphan hosts:   2  (dev-alertmanager, dev-n8n — declared in master, no minion)
+  Orphan minions: 0
+
+Proceed with end-to-end master + minion migration? [y/N] y
+
+Step 2 · Annotation analysis
+  portable:              3
+  portable-GKE:          4  (ManagedCertificate refs)
+  convertible:           4  (→ GCPBackendPolicy resources)
+  split-category (auto): 3  (X-* headers → responseHeaderModifier filter)
+  split-category (stub): 2  (Set-Cookie rewrites, path denylists)
+  drop-info:             1  (mergeable-ingress-type)
+
+Proceed with conversion? [y/N] y
+
+Step 3 · Convert
+  Phase 3A: generating common.gateway/...
+    ✓ common.gateway/base/kustomization.yaml
+    ✓ common.gateway/base/gateway.yaml              (14 listeners)
+    ✓ common.gateway/overlays/{dev,stg,prd}/...
+    ✓ common.gateway/argocd/{dev,stg,prd}.yaml
+    ✓ common.gateway/MIGRATION.md
+  Phase 3B: HTTPRoutes + kustomization.yaml edits
+    ✓ common.service/overlays/dev/argocd-httproute.yaml
+    ✓ common.service/overlays/dev/kustomization.yaml (in-place, idempotent)
+    ... (33 HTTPRoutes across 3 envs)
+
+Step 4 · Validate
+  ✓ kustomize build common.gateway/overlays/dev
+  ✓ kustomize build common.gateway/overlays/stg
+  ✓ kustomize build common.gateway/overlays/prd
+  ✓ kustomize build common.service/overlays/dev
+  ✓ kustomize build common.service/overlays/stg
+  ✓ kustomize build common.service/overlays/prd
+  ✓ kubeconform: 0 errors
+  ✓ ingress2gateway second-opinion: 2 divergences (GKE-specific extensions)
+
+Step 5 · Render report
+  ✓ docs/reports/gateway-migration/common-ingress/state.yaml
+  ✓ docs/reports/gateway-migration/common-ingress/report.md
+
+Step 6 · Runbook
+  See common.gateway/MIGRATION.md for per-hostname DNS cutover steps.
+
+Step 7 · Pre-commit hints
+  Suggested commit message ready. Files to stage listed below.
+```
+
 ### Invocation forms
 
 | Form | What it does |
@@ -307,9 +403,202 @@ git commit
 - **`docs/reports/gateway-migration/<module>/state.yaml`** — resumable migration state (audit trail)
 - **`docs/reports/gateway-migration/<module>/report.md`** — human report with cutover runbook + manual-review TODO list
 
+### Before / After — concrete YAML example
+
+**Input — master Ingress (`common.ingress/overlays/prd/app.ingress.yaml`):**
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ingress-nginx
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress/mergeable-ingress-type: master
+    networking.gke.io/managed-certificates: prd-argocd-ingress-nginx-crt
+    nginx.ingress.kubernetes.io/server-snippet: |
+      add_header X-Content-Type-Options "nosniff" always;
+      add_header X-Frame-Options "SAMEORIGIN" always;
+spec:
+  rules:
+    - host: argocd.awoo.org    # host-only, no paths (this is the "master" pattern)
+  tls:
+    - hosts: [argocd.awoo.org]
+      secretName: prd-argocd-ingress-nginx-crt
+```
+
+**Input — minion Ingress (`common.service/overlays/prd/argocd-nginx-ingress.yaml`):**
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: argocd-server-nginx-ingress
+  namespace: argocd
+  annotations:
+    kubernetes.io/ingress.class: nginx
+spec:
+  rules:
+    - host: argocd.awoo.org
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: argocd-server
+                port: { number: 80 }
+```
+
+**Output — generated Gateway (`common.gateway/base/gateway.yaml`):**
+
+```yaml
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: common-gateway
+  namespace: ingress-nginx
+spec:
+  gatewayClassName: gke-l7-global-external-managed
+  listeners:
+    - name: argocd-https
+      port: 443
+      protocol: HTTPS
+      hostname: argocd.awoo.org
+      allowedRoutes:
+        namespaces:
+          from: Selector
+          selector:
+            matchLabels:
+              gateway-access: ingress-nginx
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - group: networking.gke.io
+            kind: ManagedCertificate
+            name: prd-argocd-ingress-nginx-crt
+```
+
+**Output — generated HTTPRoute (`common.service/overlays/prd/argocd-httproute.yaml`):**
+
+```yaml
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: argocd-server
+  namespace: argocd
+spec:
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: common-gateway
+      namespace: ingress-nginx
+      sectionName: argocd-https
+  hostnames:
+    - argocd.awoo.org
+  rules:
+    - matches:
+        - path: { type: PathPrefix, value: / }
+      filters:
+        - type: ResponseHeaderModifier
+          responseHeaderModifier:
+            add:
+              - name: X-Content-Type-Options
+                value: nosniff
+              - name: X-Frame-Options
+                value: SAMEORIGIN
+      backendRefs:
+        - name: argocd-server
+          port: 80
+```
+
+**Notes on the transformation:**
+
+- `mergeable-ingress-type: master` **dropped** — HTTPRoute attachment via `parentRef` is the native Gateway API equivalent
+- `networking.gke.io/managed-certificates` **preserved** — the same `ManagedCertificate` resource is referenced from the listener's `certificateRefs`
+- `server-snippet` X-* headers **auto-converted** to a `responseHeaderModifier` filter (loss-free)
+- Any `add_header Set-Cookie "..."` or `location ~ ... { return 404; }` blocks in the snippet would be **stubbed** with `# TODO(gateway-migrate):` comments pointing at `docs/reports/gateway-migration/<module>/report.md` for manual review (Cloud Armor territory)
+- Cross-namespace routing (`ingress-nginx` Gateway → `argocd` namespace HTTPRoute) is enabled via `allowedRoutes.namespaces.from: Selector` with the `gateway-access: ingress-nginx` label — **you must label target namespaces before the HTTPRoutes attach** (see "Post-migration steps" below)
+
 ### Cutover strategy
 
 The skill never modifies the master Ingress and never overwrites minion Ingress files — both stacks coexist. The runbook walks through a **per-hostname DNS cutover**: deploy the new Gateway, deploy HTTPRoutes alongside minions, then flip DNS one hostname at a time. Rollback is a DNS flip back; old stack remains live throughout.
+
+### Post-migration steps
+
+After `*gateway-migrate` exits successfully, the generated files are on disk but **nothing has been deployed yet**. Here's the operational sequence:
+
+**1. Label target namespaces** (required for cross-namespace routing to work)
+
+```bash
+# List all namespaces the HTTPRoutes live in (derived from your minions)
+kubectl label namespace argocd monitoring airflow --overwrite \
+  gateway-access=ingress-nginx
+```
+
+The exact namespace list appears in `common.gateway/MIGRATION.md`'s "Pre-cutover setup" section with the correct `kubectl` command pre-filled.
+
+**2. Review the generated report**
+
+```bash
+less docs/reports/gateway-migration/<module>/report.md
+```
+
+Pay attention to the **Manual Review Required** section — any `TODO(gateway-migrate)` stubs need to be addressed before traffic-flipping (typically Cloud Armor policies for `server-snippet` path denylists).
+
+**3. Commit the generated changes**
+
+The skill's Step 7 prints a suggested commit message. Or:
+
+```bash
+git add common.gateway/ \
+        common.service/overlays/ \
+        docs/reports/gateway-migration/
+git commit -m "feat(ingress): migrate common.ingress to Gateway API"
+git push
+```
+
+**4. Deploy the Gateway first** (Phase 1 of the runbook)
+
+Sync the `common.gateway/` ArgoCD Application for the target environment. The Gateway resource will acquire an external IP:
+
+```bash
+kubectl get gateway common-gateway -n ingress-nginx -o wide
+# NAME             CLASS                             ADDRESS          READY
+# common-gateway   gke-l7-global-external-managed    34.120.XX.XX     True
+```
+
+Nothing points at this IP yet — safe to deploy without traffic impact.
+
+**5. Deploy the HTTPRoutes** (Phase 2)
+
+Sync the `common.service/` ArgoCD Application. HTTPRoutes attach to the Gateway listeners. Both stacks now serve the same hostnames: old stack via DNS, new stack via the new Gateway IP only.
+
+```bash
+kubectl get httproute -A
+kubectl describe httproute argocd-server -n argocd
+# Look for: `Parents: ... Conditions: Accepted=True, ResolvedRefs=True`
+```
+
+If you see `Accepted=False` with a reason like `NotAllowedByListeners`, the target namespace is missing the `gateway-access=ingress-nginx` label (see step 1).
+
+**6. Per-hostname DNS cutover** (Phase 3, gradual)
+
+For each hostname, one at a time:
+
+```bash
+# Smoke-test the new path via curl before touching DNS
+curl --resolve argocd.awoo.org:443:<new-gateway-ip> https://argocd.awoo.org
+
+# If healthy, update the DNS A/AAAA record to point at the new Gateway IP
+# Wait for TTL + 15 minutes of monitoring (error rates, latency, cert serving)
+
+# If unhealthy, DNS-revert to the old ingress-nginx LB — old stack is still live
+```
+
+**7. Clean up** (Phase 4, after 1+ week stable)
+
+Delete the old `common.ingress/` module and remove the minion `*-nginx-ingress.yaml` files from `common.service/overlays/`. Update `common.service/overlays/<env>/kustomization.yaml` to drop those entries. Commit.
 
 ### Reference docs
 
@@ -330,6 +619,29 @@ brew install ingress2gateway
 ```
 
 Without it, the skill still works fine — the second-opinion check is just skipped (graceful degradation).
+
+### Troubleshooting
+
+**`kustomize build` fails after in-place edit**
+- The skill automatically restores `common.service/overlays/<env>/kustomization.yaml` from the pre-edit SHA256 snapshot and halts. Read the error output, fix the underlying issue (usually a stale resource ref), then re-run with `--resume`.
+
+**HTTPRoute shows `Accepted=False` after deploy**
+- Check the condition's `Reason` and `Message`:
+  - `NotAllowedByListeners` → target namespace missing the `gateway-access=ingress-nginx` label. Run `kubectl label namespace <ns> gateway-access=ingress-nginx`.
+  - `InvalidKind` → verify the Gateway's listener `allowedRoutes.kinds` accepts HTTPRoute (default does).
+  - `HostnameNotMatching` → the HTTPRoute's `hostnames[]` doesn't match any listener's `hostname`. Usually means the master declared the host but the minion's declared host differs (typo).
+
+**ManagedCertificate stays in `Provisioning` state**
+- GKE `ManagedCertificate` needs DNS validation. Check `kubectl describe managedcertificate <name> -n ingress-nginx` — usually shows "Waiting for DNS records". Ensure the domain's A record points at something routable during provisioning.
+
+**State YAML says `status: failed` at Step 3B**
+- The in-place edit failed post-validation. Look at `state.yaml` → `steps[3].modified[]` for the pre-edit hash and the env where failure occurred. Fix the source minion's YAML, then `*gateway-migrate <module> --resume`.
+
+**Re-running the skill on an already-migrated module**
+- Use `--resume` if you want to pick up from the last successful step. Use `--force` if you want to regenerate everything (the skill's never-clobber check will be bypassed). Without flags, the skill refuses to proceed if `common.gateway/` already exists.
+
+**Gemini CLI users: skill not appearing in the skills list**
+- `gateway-api-migration` needs to be registered in `.gemini/extensions/devops/gemini-extension.json`. v1.7.0 shipped with a gap — fixed on `main` post-release. Update to the next published version, or manually run `scripts/setup/setup-gemini.sh` which re-syncs the extension.
 
 ## Project Structure
 
