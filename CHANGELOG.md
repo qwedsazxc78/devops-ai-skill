@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.0] - 2026-04-13
+
+### Added
+- **Zeus:** `*gateway-migrate` pipeline and `gateway-api-migration` skill
+  for migrating NGINX Ingress (master/minion or standalone) to GKE Gateway API
+- **docs/gateway/**: 7 canonical reference files (annotation-map,
+  master-minion-topology, gke-gateway-notes, http-routing-guide,
+  ingress2gateway-integration, migrate-from-ingress, ingress-nginx-welcome)
+- **tests/gateway-api-migration/**: 8 structural fixtures covering
+  standalone and master/minion topologies
+- Optional `ingress2gateway` tool integration for second-opinion diffs
+- `scripts/install-tools.sh` now installs `ingress2gateway` as an optional
+  tool on macOS (brew) and Linux (go install)
+
+### Changed
+- `docs/gateway/welcom-Ingress-NGINX.md` renamed to `ingress-nginx-welcome.md`
+  (typo fix); content rewritten for project-facing use
+- `docs/gateway/migrate-from-ingress.md` rewritten to remove marketing
+  sections and focus on the concepts `*gateway-migrate` depends on
+
+### Technical
+- First Zeus skill to perform idempotent in-place edits
+  (`common.service/overlays/<env>/kustomization.yaml`)
+- Introduces resumable YAML state files for long-running migrations
+
 ## [1.6.0] - 2026-04-07
 
 ### Added
@@ -155,6 +180,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Bilingual documentation (EN + 繁體中文)
 
 <!-- Links -->
+[1.7.0]: https://github.com/qwedsazxc78/devops-ai-skill/compare/v1.6.0...v1.7.0
 [1.6.0]: https://github.com/qwedsazxc78/devops-ai-skill/compare/v1.5.0...v1.6.0
 [1.5.0]: https://github.com/qwedsazxc78/devops-ai-skill/compare/v1.4.1...v1.5.0
 [1.4.1]: https://github.com/qwedsazxc78/devops-ai-skill/compare/v1.4.0...v1.4.1

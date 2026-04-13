@@ -85,8 +85,9 @@ link_workflow "zeus-pre-merge"    "../../prompts/zeus/pre-merge.md"
 link_workflow "zeus-health"        "../../prompts/zeus/health.md"
 link_workflow "zeus-review"       "../../prompts/zeus/review.md"
 link_workflow "zeus-scaffold"     "../../prompts/zeus/scaffold.md"
-link_workflow "zeus-diagram"      "../../prompts/zeus/diagram.md"
-link_workflow "zeus-status"       "../../prompts/zeus/status.md"
+link_workflow "zeus-diagram"          "../../prompts/zeus/diagram.md"
+link_workflow "zeus-status"           "../../prompts/zeus/status.md"
+link_workflow "zeus-gateway-migrate"  "../../prompts/zeus/gateway-migrate.md"
 
 # Shared workflows
 link_workflow "shared-repo-detect"    "../../prompts/shared/repo-detect.md"

@@ -1,0 +1,1 @@
+../../../docs/gateway/ingress-nginx-welcome.md

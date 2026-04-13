@@ -387,10 +387,10 @@ done
 
 # Workflow count
 wf_count=$(find "$SANDBOX/.agents/workflows" -maxdepth 1 -name '*.md' | wc -l | tr -d ' ')
-if [ "$wf_count" -eq 18 ]; then
+if [ "$wf_count" -eq 19 ]; then
     pass "Correct workflow count: $wf_count"
 else
-    fail "Expected 18 workflows, got $wf_count"
+    fail "Expected 19 workflows, got $wf_count"
 fi
 
 # Output contains completion message
@@ -403,11 +403,11 @@ fi
 # Idempotent
 output2=$(bash "$SANDBOX/scripts/setup/setup-antigravity.sh" 2>&1) || true
 skip_count=$(echo "$output2" | grep -c "\[skip\]" || true)
-# 9 skills + 18 workflows = 27 skips
-if [ "$skip_count" -eq 27 ]; then
-    pass "Idempotent: all 27 items skipped on re-run"
+# 9 skills + 19 workflows = 28 skips
+if [ "$skip_count" -eq 28 ]; then
+    pass "Idempotent: all 28 items skipped on re-run"
 else
-    fail "Idempotent check: expected 27 skips, got $skip_count"
+    fail "Idempotent check: expected 28 skips, got $skip_count"
 fi
 
 cleanup_sandbox

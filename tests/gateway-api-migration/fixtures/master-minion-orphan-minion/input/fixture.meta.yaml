@@ -1,0 +1,2 @@
+expectError: true
+errorMessage: orphan minion

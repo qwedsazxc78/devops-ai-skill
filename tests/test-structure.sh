@@ -292,10 +292,10 @@ done
 
 # Count total TOML files
 toml_count=$(find "$gemini_cmds_dir" -name "*.toml" 2>/dev/null | wc -l | tr -d ' ')
-if [ "$toml_count" -eq 18 ]; then
+if [ "$toml_count" -eq 19 ]; then
     pass "Correct TOML command count: $toml_count"
 else
-    fail "Expected 18 TOML commands, found $toml_count"
+    fail "Expected 19 TOML commands, found $toml_count"
 fi
 
 # ============================================
@@ -844,6 +844,97 @@ for dir in docs/reports docs/diagrams; do
         pass "$dir/ directory exists"
     else
         fail "$dir/ directory missing (needed by *full and *diagram pipelines)"
+    fi
+done
+
+# ============================================
+# SECTION 17: gateway-api-migration skill
+# ============================================
+section "gateway-api-migration skill"
+
+# SKILL.md exists and has frontmatter
+if [ -f "$ROOT_DIR/skills/gateway-api-migration/SKILL.md" ]; then
+    pass "skills/gateway-api-migration/SKILL.md exists"
+    if head -1 "$ROOT_DIR/skills/gateway-api-migration/SKILL.md" | grep -q "^---$"; then
+        pass "SKILL.md has YAML frontmatter opener"
+    else
+        fail "SKILL.md missing YAML frontmatter"
+    fi
+    if grep -q "^name: gateway-api-migration" "$ROOT_DIR/skills/gateway-api-migration/SKILL.md"; then
+        pass "SKILL.md has correct name field"
+    else
+        fail "SKILL.md name field incorrect"
+    fi
+else
+    fail "skills/gateway-api-migration/SKILL.md missing"
+fi
+
+# All 8 Step sections present
+step_count=$(grep -c "^## Step " "$ROOT_DIR/skills/gateway-api-migration/SKILL.md" 2>/dev/null || echo 0)
+if [ "$step_count" -eq 8 ]; then
+    pass "SKILL.md has all 8 Step sections (0-7)"
+else
+    fail "SKILL.md has $step_count Step sections, expected 8"
+fi
+
+# All reference symlinks resolve
+for ref in annotation-map master-minion-topology gke-gateway-notes \
+           http-routing-guide ingress2gateway-integration \
+           migration-from-ingress ingress-nginx-welcome; do
+    if [ -f "$ROOT_DIR/skills/gateway-api-migration/references/$ref.md" ]; then
+        pass "reference: $ref.md resolves"
+    else
+        fail "reference: $ref.md broken or missing"
+    fi
+done
+
+# Template files exist
+for tmpl in runbook-template.md httproute-template.yaml manual-review-patterns.md; do
+    if [ -f "$ROOT_DIR/skills/gateway-api-migration/references/$tmpl" ]; then
+        pass "template: $tmpl exists"
+    else
+        fail "template: $tmpl missing"
+    fi
+done
+
+# Pipeline file exists
+if [ -f "$ROOT_DIR/prompts/zeus/gateway-migrate.md" ]; then
+    pass "prompts/zeus/gateway-migrate.md exists"
+else
+    fail "prompts/zeus/gateway-migrate.md missing"
+fi
+
+# Gemini TOML exists
+if [ -f "$ROOT_DIR/.gemini/commands/devops/pipelines/zeus-gateway-migrate.toml" ]; then
+    pass "zeus-gateway-migrate.toml exists"
+else
+    fail "zeus-gateway-migrate.toml missing"
+fi
+
+# docs/gateway/ canonical files exist
+for doc in annotation-map master-minion-topology gke-gateway-notes \
+           http-routing-guide ingress2gateway-integration \
+           migrate-from-ingress ingress-nginx-welcome; do
+    if [ -f "$ROOT_DIR/docs/gateway/$doc.md" ]; then
+        pass "docs/gateway/$doc.md exists"
+    else
+        fail "docs/gateway/$doc.md missing"
+    fi
+done
+
+# Typo'd filename must NOT exist
+if [ ! -f "$ROOT_DIR/docs/gateway/welcom-Ingress-NGINX.md" ]; then
+    pass "docs/gateway/welcom-Ingress-NGINX.md correctly absent (typo'd)"
+else
+    fail "docs/gateway/welcom-Ingress-NGINX.md still present (should be renamed)"
+fi
+
+# *gateway-migrate registered in all platform docs
+for md in CLAUDE.md AGENTS.md GEMINI.md docs/PROJECT.md; do
+    if grep -q "gateway-migrate" "$ROOT_DIR/$md"; then
+        pass "$md mentions gateway-migrate"
+    else
+        fail "$md missing gateway-migrate reference"
     fi
 done
 

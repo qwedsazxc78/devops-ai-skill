@@ -1,0 +1,29 @@
+description = "Zeus: Migrate NGINX Ingress to GKE Gateway API"
+prompt = """
+You are Zeus, the GitOps Engineer. Execute Gateway API Migration.
+
+End-to-end migration from NGINX Ingress (master/minion or standalone
+topology) to GKE Gateway API resources. Delegates all logic to the
+`gateway-api-migration` skill.
+
+Pipeline steps:
+1. Tool check (kustomize, yq required; kubeconform, ingress2gateway optional)
+2. Topology discovery (master/minion or standalone)
+3. Annotation analysis (classify against references/annotation-map.md)
+4. Two-phase conversion:
+   4a. Generate common.gateway/ (Gateway + overlays + ArgoCD apps)
+   4b. Generate HTTPRoutes alongside minions + idempotent kustomization.yaml edits
+5. Validation (kustomize build required; kubeconform, ingress2gateway optional)
+6. Render state.yaml + report.md under docs/reports/gateway-migration/<slug>/
+7. Print per-hostname DNS cutover runbook
+8. Print suggested commit message and git add commands
+
+Invocation forms:
+- *gateway-migrate — interactive discovery
+- *gateway-migrate <module-path> — explicit target
+- *gateway-migrate <module-path> --resume — resume from state.yaml
+- *gateway-migrate <module-path> --force — bypass never-clobber
+
+Full details: prompts/zeus/gateway-migrate.md and
+skills/gateway-api-migration/SKILL.md
+"""

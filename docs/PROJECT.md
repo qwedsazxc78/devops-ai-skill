@@ -93,6 +93,7 @@ Pipeline Orchestrator for Kustomize + ArgoCD platforms. Commanding, methodical, 
 | kustomize-resource-validation | Kustomize build + resource validation |
 | yaml-fix-suggestions | YAML formatting and validation |
 | repo-detect | Repository type detection |
+| gateway-api-migration | NGINX Ingress → GKE Gateway API migration (master/minion + standalone) |
 
 ### Shared Skills (from `skills/` directory)
 
@@ -111,6 +112,7 @@ Pipeline Orchestrator for Kustomize + ArgoCD platforms. Commanding, methodical, 
 | *scaffold | scaffold.md | Service scaffold (interactive) |
 | *diagram | diagram.md | Generate architecture diagrams |
 | *status | status.md | Tool installation check |
+| *gateway-migrate | gateway-migrate.md | Migrate NGINX Ingress to GKE Gateway API (per-hostname DNS cutover) |
 
 ### Zeus Core Principles
 

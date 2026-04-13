@@ -90,6 +90,7 @@ TOOLS=(
   # Zeus (GitOps) — Recommended
   "yamllint|zeus|recommended|||pip install yamllint|"
   "kubeconform|zeus|recommended|brew install kubeconform|||scoop install kubeconform"
+  "ingress2gateway|zeus|recommended|brew install ingress2gateway|||"
   "kube-score|zeus|recommended|brew install kube-score|||"
   "kube-linter|zeus|recommended|brew install kube-linter|||"
   "polaris|zeus|recommended|brew install FairwindsOps/tap/polaris|||"

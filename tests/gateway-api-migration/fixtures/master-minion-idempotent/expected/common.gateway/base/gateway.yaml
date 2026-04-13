@@ -1,0 +1,24 @@
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: common-gateway
+  namespace: ingress-nginx
+spec:
+  gatewayClassName: gke-l7-global-external-managed
+  listeners:
+    - name: dev-argocd-https
+      port: 443
+      protocol: HTTPS
+      hostname: dev-argocd.example.com
+      allowedRoutes:
+        namespaces:
+          from: Selector
+          selector:
+            matchLabels:
+              gateway-access: ingress-nginx
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - kind: Secret
+            name: dev-argocd-tls
