@@ -296,7 +296,7 @@ Agents at `~/.codex/agents/`, skills at `~/.codex/skills/`, pipelines at `~/.cod
 
 ### Commands
 Horus: `*full`, `*upgrade`, `*security`, `*validate`, `*scaffold`, `*cicd`, `*health`
-Zeus: `*full`, `*pre-merge`, `*health`, `*review`, `*scaffold`, `*diagram`, `*status`
+Zeus: `*full`, `*pre-merge`, `*health`, `*review`, `*scaffold`, `*diagram`, `*status`, `*gateway-migrate`
 
 When a `*command` is triggered, read the corresponding pipeline from `~/.codex/prompts/`.
 ENTRY
@@ -468,7 +468,7 @@ do_uninstall() {
   echo -e "${BOLD}═══ Uninstall (Global) ═══${NC}"
 
   local removed=0
-  local skills=("cicd-enhancer" "helm-scaffold" "helm-version-upgrade" "kustomize-resource-validation" "repo-detect" "terraform-security" "terraform-validate" "yaml-fix-suggestions")
+  local skills=("cicd-enhancer" "gateway-api-migration" "helm-scaffold" "helm-version-upgrade" "kustomize-resource-validation" "release-validate" "repo-detect" "terraform-security" "terraform-validate" "yaml-fix-suggestions")
 
   # Claude: ~/.claude/agents/ + ~/.claude/skills/ + ~/.claude/prompts/ + plugin cache
   for agent in horus zeus; do
@@ -514,7 +514,7 @@ do_uninstall() {
     _rm_if_exists "$HOME/.agents/skills/$skill" "~/.agents/skills/$skill" && ((removed++)) || true
   done
   # Workflows
-  local workflows=("horus-full" "horus-upgrade" "horus-security" "horus-validate" "horus-scaffold" "horus-cicd" "horus-health" "zeus-full" "zeus-pre-merge" "zeus-health" "zeus-review" "zeus-scaffold" "zeus-diagram" "zeus-status" "shared-repo-detect" "shared-report-format" "shared-tool-check" "shared-help")
+  local workflows=("horus-full" "horus-upgrade" "horus-security" "horus-validate" "horus-scaffold" "horus-cicd" "horus-health" "zeus-full" "zeus-pre-merge" "zeus-health" "zeus-review" "zeus-scaffold" "zeus-diagram" "zeus-status" "zeus-gateway-migrate" "shared-repo-detect" "shared-report-format" "shared-tool-check" "shared-help")
   for wf in "${workflows[@]}"; do
     _rm_if_exists "$HOME/.agents/workflows/${wf}.md" "~/.agents/workflows/${wf}.md" && ((removed++)) || true
   done
@@ -530,7 +530,7 @@ do_status() {
   echo ""
   echo -e "${BOLD}═══ Global Install Status ═══${NC}"
 
-  local skills=("cicd-enhancer" "helm-scaffold" "helm-version-upgrade" "kustomize-resource-validation" "repo-detect" "terraform-security" "terraform-validate" "yaml-fix-suggestions")
+  local skills=("cicd-enhancer" "gateway-api-migration" "helm-scaffold" "helm-version-upgrade" "kustomize-resource-validation" "release-validate" "repo-detect" "terraform-security" "terraform-validate" "yaml-fix-suggestions")
 
   # Claude: ~/.claude/
   _status_section "Claude Code" "$HOME/.claude" "claude"
@@ -547,7 +547,7 @@ do_status() {
 
 _status_section() {
   local label="$1" base="$2" id="$3"
-  local skills=("cicd-enhancer" "helm-scaffold" "helm-version-upgrade" "kustomize-resource-validation" "repo-detect" "terraform-security" "terraform-validate" "yaml-fix-suggestions")
+  local skills=("cicd-enhancer" "gateway-api-migration" "helm-scaffold" "helm-version-upgrade" "kustomize-resource-validation" "release-validate" "repo-detect" "terraform-security" "terraform-validate" "yaml-fix-suggestions")
   local found=0
 
   echo ""

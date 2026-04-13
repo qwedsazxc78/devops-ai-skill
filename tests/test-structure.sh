@@ -280,7 +280,7 @@ for agent in horus zeus; do
 done
 
 # Pipeline command TOMLs
-gemini_pipelines=("horus-full" "horus-upgrade" "horus-security" "horus-validate" "horus-scaffold" "horus-cicd" "horus-health" "zeus-full" "zeus-pre-merge" "zeus-health" "zeus-review" "zeus-scaffold" "zeus-diagram" "zeus-status" "repo-detect" "tool-check")
+gemini_pipelines=("horus-full" "horus-upgrade" "horus-security" "horus-validate" "horus-scaffold" "horus-cicd" "horus-health" "zeus-full" "zeus-pre-merge" "zeus-health" "zeus-review" "zeus-scaffold" "zeus-diagram" "zeus-status" "zeus-gateway-migrate" "repo-detect" "tool-check")
 for pipeline in "${gemini_pipelines[@]}"; do
     toml_file="$gemini_cmds_dir/pipelines/$pipeline.toml"
     if [ -f "$toml_file" ]; then

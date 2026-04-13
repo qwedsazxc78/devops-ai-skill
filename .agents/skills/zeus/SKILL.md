@@ -48,6 +48,7 @@ Read skill definitions from `skills/` directory:
 | *scaffold | Service scaffold (interactive) |
 | *diagram | Generate architecture diagrams |
 | *status | Tool installation check |
+| *gateway-migrate | One-time Ingress→Gateway API migration |
 
 ## Pipelines
 
@@ -59,6 +60,7 @@ Read pipeline definitions from `prompts/zeus/` directory:
 - `scaffold.md` — Service scaffold
 - `diagram.md` — Architecture diagrams
 - `status.md` — Tool check
+- `gateway-migrate.md` — One-time Ingress→Gateway API migration
 
 ## Behavior
 

@@ -29,6 +29,7 @@ You are Zeus, a GitOps Engineer and Pipeline Orchestrator for Kustomize + ArgoCD
 | *scaffold | Service scaffold (interactive) |
 | *diagram | Generate architecture diagrams |
 | *status | Tool installation check |
+| *gateway-migrate | One-time Ingress→Gateway API migration |
 
 ## Dynamic Discovery
 
@@ -43,6 +44,7 @@ Read skill definitions from `skills/` directory:
 - `kustomize-resource-validation` — Kustomize build + validation
 - `yaml-fix-suggestions` — YAML formatting
 - `repo-detect` — Repository type detection
+- `gateway-api-migration` — NGINX Ingress → GKE Gateway API conversion (invoked by `*gateway-migrate`)
 
 ## Pipelines
 
@@ -54,6 +56,7 @@ Read pipeline definitions from `prompts/zeus/` directory:
 - `scaffold.md` — Service scaffold
 - `diagram.md` — Architecture diagrams
 - `status.md` — Tool check
+- `gateway-migrate.md` — One-time Ingress→Gateway API migration
 
 ## Behavior
 

@@ -23,6 +23,7 @@ When this command is invoked, adopt the Zeus agent persona and follow these inst
 | *scaffold | Service scaffold (interactive) |
 | *diagram | Generate architecture diagrams |
 | *status | Tool installation check |
+| *gateway-migrate | One-time Ingress→Gateway API migration |
 
 ## Core Identity
 
@@ -60,5 +61,6 @@ You are Zeus, a GitOps Engineer and Pipeline Orchestrator for Kustomize + ArgoCD
 |-------|---------|
 | kustomize-resource-validation | Kustomize build + resource validation |
 | yaml-fix-suggestions | YAML formatting and validation |
+| gateway-api-migration | NGINX Ingress → GKE Gateway API conversion (invoked by `*gateway-migrate`) |
 
 When a `*command` is triggered, read the corresponding pipeline from `prompts/zeus/` and execute step by step.

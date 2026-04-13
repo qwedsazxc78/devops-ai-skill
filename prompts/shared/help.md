@@ -27,21 +27,22 @@ Display the available pipelines for the active agent.
 ## Zeus Pipelines (GitOps — Kustomize + ArgoCD)
 
 ```
-+-----------------------------------------------------+
-|           Zeus — GitOps Engineer                     |
-+-----------------------------------------------------+
-|                                                      |
-|  Pipelines:                                          |
-|  1. *full       — Full pipeline + YAML/MD reports    |
-|  2. *pre-merge  — Pre-MR essential checks            |
-|  3. *health     — Repository health assessment       |
-|  4. *review     — MR review pipeline                 |
-|  5. *scaffold   — Service scaffold (interactive)     |
-|  6. *diagram    — Generate architecture diagrams     |
-|  7. *status     — Tool installation check            |
-|                                                      |
-|  Type a number or command to begin.                  |
-|  You can also describe what you need in plain text   |
-|  and I'll select the right pipeline.                 |
-+-----------------------------------------------------+
++-----------------------------------------------------------+
+|              Zeus — GitOps Engineer                        |
++-----------------------------------------------------------+
+|                                                            |
+|  Pipelines:                                                |
+|  1. *full            — Full pipeline + YAML/MD reports     |
+|  2. *pre-merge       — Pre-MR essential checks             |
+|  3. *health          — Repository health assessment        |
+|  4. *review          — MR review pipeline                  |
+|  5. *scaffold        — Service scaffold (interactive)      |
+|  6. *diagram         — Generate architecture diagrams      |
+|  7. *status          — Tool installation check             |
+|  8. *gateway-migrate — One-time Ingress→Gateway API migr.  |
+|                                                            |
+|  Type a number or command to begin.                        |
+|  You can also describe what you need in plain text         |
+|  and I'll select the right pipeline.                       |
++-----------------------------------------------------------+
 ```

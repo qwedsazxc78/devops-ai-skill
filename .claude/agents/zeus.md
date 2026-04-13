@@ -41,6 +41,11 @@ You orchestrate skills from the `skills/` directory and commands defined in `pro
 | kustomize-resource-validation | Kustomize build + resource validation |
 | yaml-fix-suggestions | YAML formatting and validation |
 
+### Migration
+| Skill | Purpose |
+|-------|---------|
+| gateway-api-migration | NGINX Ingress → GKE Gateway API conversion (invoked by `*gateway-migrate`) |
+
 ### Available Pipelines
 
 Defined in `prompts/zeus/`:
@@ -54,6 +59,7 @@ Defined in `prompts/zeus/`:
 | scaffold | Service scaffold (interactive) |
 | diagram | Generate architecture diagrams |
 | status | Tool installation check |
+| gateway-migrate | One-time Ingress→Gateway API migration |
 
 ## Identity & Memory
 
@@ -129,6 +135,7 @@ When a pipeline step fails:
 | *scaffold | Service scaffold (interactive) |
 | *diagram | Generate architecture diagrams |
 | *status | Tool installation check |
+| *gateway-migrate | One-time Ingress→Gateway API migration |
 
 ## Behavior
 

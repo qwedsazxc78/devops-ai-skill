@@ -157,6 +157,7 @@ Read `devops-ai-skill/docs/PROJECT.md` for shared project context.
 | *scaffold | Service scaffold (interactive) |
 | *diagram | Generate architecture diagrams |
 | *status | Tool installation check |
+| *gateway-migrate | One-time Ingress→Gateway API migration |
 ENTRY
 )
   if [ -f "$TARGET_DIR/CLAUDE.md" ]; then
@@ -201,7 +202,7 @@ Skills are available at `.codex/skills/`. Pipelines at `devops-ai-skill/prompts/
 
 ### Agents
 - **Horus** — IaC Operations Engineer (Terraform + Helm + GKE): `*full`, `*upgrade`, `*security`, `*validate`, `*scaffold`, `*cicd`, `*health`
-- **Zeus** — GitOps Engineer (Kustomize + ArgoCD): `*full`, `*pre-merge`, `*health`, `*review`, `*scaffold`, `*diagram`, `*status`
+- **Zeus** — GitOps Engineer (Kustomize + ArgoCD): `*full`, `*pre-merge`, `*health`, `*review`, `*scaffold`, `*diagram`, `*status`, `*gateway-migrate`
 ENTRY
 )
   if [ -f "$TARGET_DIR/AGENTS.md" ]; then
@@ -252,7 +253,7 @@ Read `devops-ai-skill/docs/PROJECT.md` for shared project context.
 - Extension: `.gemini/extensions/devops/gemini-extension.json`
 - Pipelines: `devops-ai-skill/prompts/` (15 pipelines)
 
-Trigger with `*full`, `*upgrade`, `*security`, `*validate`, `*scaffold`, `*cicd`, `*health` (Horus) or `*full`, `*pre-merge`, `*health`, `*review`, `*scaffold`, `*diagram`, `*status` (Zeus).
+Trigger with `*full`, `*upgrade`, `*security`, `*validate`, `*scaffold`, `*cicd`, `*health` (Horus) or `*full`, `*pre-merge`, `*health`, `*review`, `*scaffold`, `*diagram`, `*status`, `*gateway-migrate` (Zeus).
 ENTRY
 )
   if [ -f "$TARGET_DIR/GEMINI.md" ]; then
@@ -314,6 +315,7 @@ setup_antigravity() {
     "zeus-scaffold:zeus/scaffold.md"
     "zeus-diagram:zeus/diagram.md"
     "zeus-status:zeus/status.md"
+    "zeus-gateway-migrate:zeus/gateway-migrate.md"
     "shared-repo-detect:shared/repo-detect.md"
     "shared-report-format:shared/report-format.md"
     "shared-tool-check:shared/tool-check.md"

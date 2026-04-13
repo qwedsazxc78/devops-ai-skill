@@ -183,8 +183,8 @@ if (skipped.length > 0) {
 }
 
 console.log('\n🤖 Agents: Horus (IaC) + Zeus (GitOps)');
-console.log('📋 Prompts: 14 pipeline workflows');
-console.log('🔧 Skills: 8 shared skills in skills/');
+console.log('📋 Prompts: 15 pipeline workflows');
+console.log('🔧 Skills: 10 shared skills in skills/');
 console.log('\nSetup symlinks for your platform:');
 console.log('  bash node_modules/devops-ai-skill/scripts/setup/setup-claude.sh');
 console.log('  bash node_modules/devops-ai-skill/scripts/setup/setup-codex.sh');

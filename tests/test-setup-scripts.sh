@@ -366,9 +366,9 @@ for skill in "${expected_skills[@]}"; do
     fi
 done
 
-# Workflow symlinks — 7 horus + 7 zeus + 4 shared = 18 total
+# Workflow symlinks — 7 horus + 8 zeus + 4 shared = 19 total
 horus_workflows=(horus-full horus-upgrade horus-security horus-validate horus-scaffold horus-cicd horus-health)
-zeus_workflows=(zeus-full zeus-pre-merge zeus-health zeus-review zeus-scaffold zeus-diagram zeus-status)
+zeus_workflows=(zeus-full zeus-pre-merge zeus-health zeus-review zeus-scaffold zeus-diagram zeus-status zeus-gateway-migrate)
 shared_workflows=(shared-repo-detect shared-report-format shared-tool-check shared-help)
 
 for wf in "${horus_workflows[@]}" "${zeus_workflows[@]}" "${shared_workflows[@]}"; do
