@@ -1,0 +1,44 @@
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: demo
+  namespace: default
+spec:
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: common-gateway
+      sectionName: demo-https
+  hostnames:
+    - demo.example.com
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      # row 9a: X-* security headers auto-converted from server-snippet add_header directives
+      filters:
+        - type: ResponseHeaderModifier
+          responseHeaderModifier:
+            add:
+              - name: X-Content-Type-Options
+                value: nosniff
+              - name: X-XSS-Protection
+                value: "1; mode=block"
+              - name: X-Frame-Options
+                value: SAMEORIGIN
+      # TODO(gateway-migrate): row 9b — Set-Cookie header cannot be set via
+      # responseHeaderModifier (cookie attributes require application-level handling).
+      # Original nginx snippet: add_header Set-Cookie "SameSite=Strict; Secure" always;
+      # Migrate manually: configure SameSite/Secure at the application layer or via
+      # a GCPBackendPolicy custom response header (if supported by your GKE version).
+      #
+      # TODO(gateway-migrate): row 9c — path denylist block cannot be expressed in
+      # HTTPRoute match rules without creating separate HTTPRoute rules per extension.
+      # Original nginx snippet: location ~ \.(ht|env|git|svn|bak|sql|log)$ { return 404; }
+      # Migrate manually: add explicit HTTPRoute rules with path regex matches returning
+      # 404 via a RequestRedirect filter, or enforce at the application/WAF layer.
+      backendRefs:
+        - name: demo
+          port: 80

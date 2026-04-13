@@ -1,0 +1,37 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: demo
+  namespace: default
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/server-snippet: |
+      # row 9a: security headers — auto-convert to responseHeaderModifier
+      add_header X-Content-Type-Options "nosniff" always;
+      add_header X-XSS-Protection "1; mode=block" always;
+      add_header X-Frame-Options "SAMEORIGIN" always;
+
+      # row 9b: Set-Cookie — requires manual migration (TODO stub)
+      add_header Set-Cookie "SameSite=Strict; Secure" always;
+
+      # row 9c: path denylist — requires manual migration (TODO stub)
+      location ~ \.(ht|env|git|svn|bak|sql|log)$ {
+        return 404;
+      }
+spec:
+  tls:
+    - hosts:
+        - demo.example.com
+      secretName: demo-tls
+  rules:
+    - host: demo.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: demo
+                port:
+                  number: 80

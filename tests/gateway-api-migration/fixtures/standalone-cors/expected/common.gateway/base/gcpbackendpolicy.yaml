@@ -1,0 +1,21 @@
+---
+apiVersion: networking.gke.io/v1
+kind: GCPBackendPolicy
+metadata:
+  name: demo-cors
+  namespace: default
+spec:
+  targetRef:
+    group: ""
+    kind: Service
+    name: demo
+  cors:
+    allowOrigins:
+      - https://foo.example.com
+    allowMethods:
+      - GET
+      - POST
+      - OPTIONS
+    allowHeaders:
+      - Content-Type
+      - X-Api-Key
