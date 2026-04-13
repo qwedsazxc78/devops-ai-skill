@@ -108,6 +108,23 @@ Zeus checks your GitOps repository:
 # → Horus queries ArtifactHub, lists upgradable Helm Charts
 ```
 
+### Scenario: Migrate from NGINX Ingress to GKE Gateway API (Zeus)
+
+If your GitOps repo uses NGINX Ingress and you want to move to GKE Gateway API:
+
+```
+> *gateway-migrate
+```
+
+Zeus will detect your Ingress topology (master/minion or standalone), classify each annotation against the [annotation map](../docs/gateway/annotation-map.md), and generate:
+
+- A new `common.gateway/` Kustomize module with the Gateway resource
+- HTTPRoute resources alongside your existing minions (side-by-side, no overwrites)
+- A state YAML + migration report under `docs/reports/gateway-migration/`
+- A per-hostname DNS cutover runbook
+
+Old NGINX Ingress stack stays untouched — both run in parallel, you flip DNS one hostname at a time. Full reference: [docs/gateway/](../docs/gateway/).
+
 ## Step 5: Install DevOps Tools (optional)
 
 The agent tells you which tools are missing during execution. You can also install them all at once:

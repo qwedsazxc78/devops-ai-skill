@@ -233,6 +233,7 @@ One-command installer supporting macOS (Homebrew), Linux (apt/snap), Windows (wi
 | `*scaffold` | Service scaffold (interactive) |
 | `*diagram` | Generate architecture diagrams |
 | `*status` | Tool installation check |
+| `*gateway-migrate` | NGINX Ingress → GKE Gateway API migration (master/minion or standalone) |
 
 ## Skills
 
@@ -247,8 +248,88 @@ All skills follow the [Open Agent Skills](https://agentskills.io/specification) 
 | cicd-enhancer | Horus | CI/CD pipeline improvement |
 | kustomize-resource-validation | Zeus | Kustomize build + validation |
 | yaml-fix-suggestions | Zeus | YAML formatting |
+| gateway-api-migration | Zeus | NGINX Ingress → GKE Gateway API migration with state tracking |
 | repo-detect | Both | Repository type detection |
 | release-validate | Shared | Release readiness validation |
+
+## Example: NGINX → Gateway API Migration
+
+The `*gateway-migrate` pipeline migrates an NGINX Ingress GitOps repo to GKE Gateway API resources. It handles the common **master/minion** topology where:
+
+- `common.ingress/` declares hosts + TLS (the "master")
+- `common.service/overlays/<env>/<svc>-nginx-ingress.yaml` declares paths + backends per service (the "minions")
+
+This pattern maps cleanly onto Gateway API's persona model: the master becomes a `Gateway` resource, each minion becomes an `HTTPRoute`.
+
+### Workflow
+
+```bash
+# 1. cd into your GitOps repo
+cd /path/to/your-gitops-repo
+claude    # or gemini / codex / antigravity
+
+# 2. Run the pipeline (interactive)
+> *gateway-migrate
+
+# Zeus will:
+#   - Detect master/minion or standalone topology
+#   - Show annotation classification (portable / convertible / manual review)
+#   - Ask for confirmation before generating any files
+#   - Create a new `common.gateway/` Kustomize module (Gateway resource)
+#   - Add HTTPRoutes alongside existing minions in `common.service/overlays/`
+#   - Run `kustomize build` validation
+#   - Write a state YAML + markdown report under `docs/reports/gateway-migration/`
+#   - Print a per-hostname DNS cutover runbook
+
+# 3. Review the generated module
+ls common.gateway/
+cat docs/reports/gateway-migration/<module>/report.md
+
+# 4. Stage and commit
+git add common.gateway/ common.service/overlays/ docs/reports/gateway-migration/
+git commit
+```
+
+### Invocation forms
+
+| Form | What it does |
+|------|--------------|
+| `*gateway-migrate` | Interactive discovery — Zeus finds Ingress modules and asks which to migrate |
+| `*gateway-migrate <module-path>` | Skip discovery, target a known module directly |
+| `*gateway-migrate <module-path> --resume` | Resume from a previously failed run via the state YAML |
+| `*gateway-migrate <module-path> --force` | Bypass the never-clobber check on the target module |
+
+### What gets generated
+
+- **`common.gateway/`** — new Kustomize module with the Gateway resource, per-env overlays, ArgoCD `Application` manifests
+- **`common.service/overlays/<env>/<svc>-httproute.yaml`** — one HTTPRoute per minion, side-by-side with existing minion files
+- **`common.service/overlays/<env>/kustomization.yaml`** — idempotent in-place edit registering the new HTTPRoute resources
+- **`docs/reports/gateway-migration/<module>/state.yaml`** — resumable migration state (audit trail)
+- **`docs/reports/gateway-migration/<module>/report.md`** — human report with cutover runbook + manual-review TODO list
+
+### Cutover strategy
+
+The skill never modifies the master Ingress and never overwrites minion Ingress files — both stacks coexist. The runbook walks through a **per-hostname DNS cutover**: deploy the new Gateway, deploy HTTPRoutes alongside minions, then flip DNS one hostname at a time. Rollback is a DNS flip back; old stack remains live throughout.
+
+### Reference docs
+
+- [`docs/gateway/annotation-map.md`](docs/gateway/annotation-map.md) — Canonical 13-row Ingress → Gateway API translation table
+- [`docs/gateway/master-minion-topology.md`](docs/gateway/master-minion-topology.md) — Detection rules and pairing algorithm
+- [`docs/gateway/gke-gateway-notes.md`](docs/gateway/gke-gateway-notes.md) — GKE GatewayClasses, GCPBackendPolicy, ManagedCertificate
+- [`docs/gateway/http-routing-guide.md`](docs/gateway/http-routing-guide.md) — HTTPRoute reference
+- [`docs/gateway/migrate-from-ingress.md`](docs/gateway/migrate-from-ingress.md) — Concepts and worked example
+- [`docs/gateway/ingress2gateway-integration.md`](docs/gateway/ingress2gateway-integration.md) — Optional second-opinion tool
+- [`docs/gateway/ingress-nginx-welcome.md`](docs/gateway/ingress-nginx-welcome.md) — Migration welcome page
+
+### Optional second opinion
+
+Install the upstream [`kubernetes-sigs/ingress2gateway`](https://github.com/kubernetes-sigs/ingress2gateway) tool and the skill will run it as a cross-check during validation, surfacing any divergence between its output and the skill's output in the report:
+
+```bash
+brew install ingress2gateway
+```
+
+Without it, the skill still works fine — the second-opinion check is just skipped (graceful degradation).
 
 ## Project Structure
 
@@ -277,7 +358,7 @@ devops-ai-skill/
 │   │   └── zeus.md
 │   ├── commands/devops/          # Command palette TOML
 │   │   ├── agents/               # 2 agent start commands
-│   │   └── pipelines/            # 16 pipeline commands
+│   │   └── pipelines/            # 17 pipeline commands
 │   └── extensions/devops/
 │       └── gemini-extension.json
 │
@@ -297,16 +378,18 @@ devops-ai-skill/
 │   ├── cicd-enhancer/
 │   ├── kustomize-resource-validation/
 │   ├── yaml-fix-suggestions/
+│   ├── gateway-api-migration/
 │   └── repo-detect/
 │
 ├── prompts/                     # Platform-neutral pipeline definitions
 │   ├── horus/                   # 7 pipelines
-│   ├── zeus/                    # 7 pipelines
+│   ├── zeus/                    # 8 pipelines
 │   └── shared/                  # repo-detect, report-format, tool-check, help
 │
 ├── docs/
 │   ├── quick-start.md           # 5-minute quick start
 │   ├── setup.md                 # Detailed setup guide
+│   ├── gateway/                 # NGINX → Gateway API migration reference
 │   ├── guide/                   # Tutorial screenshots
 │   ├── reports/                 # Generated pipeline reports (*full output)
 │   └── diagrams/                # Generated architecture diagrams (*diagram output)
