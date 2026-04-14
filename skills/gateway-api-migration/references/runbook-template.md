@@ -46,18 +46,73 @@ kubectl get crd gateways.gateway.networking.k8s.io \
 # Expect: v1
 ```
 
-### 0.3 Enable the GKE Gateway controller (skip if Step 0b preflight confirmed it)
+### 0.3 Install / enable the target Gateway controller (skip if Step 0b preflight confirmed it)
+
+**The install step branches on `{{target_gateway_class}}`**. Read the value
+from the report header or `state.yaml.header.target_gateway_class` and
+run the matching block.
+
+#### Option 0.3.T — Traefik (default, target class starts with `traefik`)
 
 ```bash
 # Verify the GatewayClass exists:
-kubectl get gatewayclass gke-l7-global-external-managed
-# Expect: output with `ACCEPTED=True`
+kubectl get gatewayclass {{target_gateway_class}}
+# Expect: output with ACCEPTED=True
 
-# If missing, enable the add-on on the cluster (takes ~2 minutes):
+# If missing, install Traefik v3.1+ via Helm (~1 minute):
+helm repo add traefik https://traefik.github.io/charts
+helm repo update
+helm install traefik traefik/traefik \
+  --namespace traefik \
+  --create-namespace \
+  --set providers.kubernetesGateway.enabled=true \
+  --set gateway.enabled=true \
+  --set image.tag=v3.1.6
+
+# Verify Traefik CRDs are installed:
+kubectl get crd | grep traefik.io
+# Expected at minimum:
+#   middlewares.traefik.io
+#   serverstransports.traefik.io
+#   tlsoptions.traefik.io
+#   tlsstores.traefik.io
+
+# Verify Traefik version is >= v3.1 (required for Gateway API extensionRef support):
+kubectl get pods -n traefik -l app.kubernetes.io/name=traefik \
+  -o jsonpath='{.items[0].spec.containers[0].image}'
+```
+
+If the cluster uses a non-default Traefik GatewayClass name
+(e.g., `traefik-external`, `traefik-internal`), pass the exact name as
+`--gateway-class <name>` when re-running `*gateway-migrate` — the
+generated Gateway resource embeds this value and it must match what the
+controller provides.
+
+#### Option 0.3.G — GKE Gateway (target class starts with `gke-l7-`)
+
+```bash
+# Verify the GatewayClass exists:
+kubectl get gatewayclass {{target_gateway_class}}
+# Expect: output with ACCEPTED=True
+
+# If missing, enable the GKE Gateway controller add-on (takes ~2 minutes):
 gcloud container clusters update {{cluster_name}} \
   --region {{cluster_region}} \
   --gateway-api=standard
+
+# Verify GKE-specific policy CRDs are installed:
+kubectl get crd | grep networking.gke.io
+# Expected at minimum:
+#   gcpbackendpolicies.networking.gke.io
+#   healthcheckpolicies.networking.gke.io
 ```
+
+#### Option 0.3.V — Vanilla Gateway API (any other target class)
+
+Install the controller for your chosen GatewayClass per its
+documentation. The skill only emits standard Gateway API resources for
+unknown targets; provider-specific policy CRDs (CORS, rate limiting)
+are deferred to manual review per the report's Risk Register.
 
 ### 0.4 Label target namespaces
 
@@ -77,14 +132,18 @@ every check.
 
 ```bash
 bash {{skill_path}}/scripts/check_cluster_preflight.sh \
+  --gateway-class {{target_gateway_class}} \
   --namespaces "{{target_namespaces_space_separated}}" \
   --verify-only
 ```
 
-Expected output: `OK context`, `OK crds`, `OK gatewayclass`, `OK policies`,
-`OK namespaces`. Any `FAIL` line means Phase 1 will not work — re-read
-the corresponding check in `references/preflight-checks.md` and fix
-before proceeding.
+Expected output (per target): `OK context`, `OK crds`, `OK gatewayclass
+{{target_gateway_class}} present`, `OK policies <target-specific CRDs>`,
+`OK namespaces`. For Traefik targets additionally expect
+`OK traefik-version v3.x.y (>= v3.1 required for extensionRef)`.
+
+Any `FAIL` line means Phase 1 will not work — re-read the corresponding
+check in `references/preflight-checks.md` and fix before proceeding.
 
 ---
 

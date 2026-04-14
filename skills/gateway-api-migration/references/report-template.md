@@ -247,15 +247,19 @@ annotations).
 
 Cert kinds and expected provisioning waits:
 
-- **`ManagedCertificate`** (GKE) — 15–60 minutes after Gateway
-  deployment AND after DNS validation. ManagedCertificate will stay
-  `Provisioning` until the hostname resolves to the Gateway IP. This
-  means the first cutover for a hostname needs DNS flip *before* the
-  cert goes active, which is a chicken-and-egg problem solved by the
-  `--resolve` curl test in the runbook.
 - **`Secret`** (cert-manager) — 0 minutes, already provisioned if the
-  `Certificate` CR is `Ready`.
+  `Certificate` CR is `Ready`. **Used by all Traefik targets** and by
+  GKE targets that use cert-manager for TLS.
 - **`Secret`** (manually managed) — 0 minutes, already present.
+- **`ManagedCertificate`** (GKE only) — 15–60 minutes after Gateway
+  deployment AND after DNS validation. Used when the source master had
+  `networking.gke.io/managed-certificates` annotation and the target is
+  `gke-l7-*`. ManagedCertificate will stay `Provisioning` until the
+  hostname resolves to the Gateway IP. This means the first cutover for
+  a hostname needs DNS flip *before* the cert goes active, which is a
+  chicken-and-egg problem solved by the `--resolve` curl test in the
+  runbook. **Not applicable when the target is `traefik*`** — Traefik
+  uses Secret-backed TLS exclusively.
 
 ---
 

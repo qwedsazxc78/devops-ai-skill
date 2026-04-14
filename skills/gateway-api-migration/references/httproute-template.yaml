@@ -11,10 +11,31 @@
 # Repeating blocks (the skill emits one copy per source path rule):
 #   {{rules_block}}          — expands to one `- matches: ... backendRefs: ...` entry per (path, pathType, backend) tuple
 #   {{response_header_filters}} — optional ResponseHeaderModifier block with X-* headers from master server-snippet (row 9a)
+#   {{traefik_middleware_refs}} — Traefik target only: list of ExtensionRef filters for CORS, path-denylist, etc.
+#                                 Expands to 0+ entries under rules[].filters[] when target family is traefik.
 #
 # The generated HTTPRoute MUST validate under `kustomize build` before
 # the skill proceeds to Step 4. `apiVersion` is always `v1` (GA); do
 # not emit `v1beta1` — see references/http-routing-guide.md.
+#
+# Traefik target — example filters block with two Middleware references:
+#   filters:
+#     - type: ExtensionRef
+#       extensionRef:
+#         group: traefik.io
+#         kind: Middleware
+#         name: common-cors
+#     - type: ExtensionRef
+#       extensionRef:
+#         group: traefik.io
+#         kind: Middleware
+#         name: block-sensitive-paths
+#     - type: ResponseHeaderModifier
+#       responseHeaderModifier:
+#         add:
+#           - name: X-Content-Type-Options
+#             value: nosniff
+#           # ... (row 9a security headers)
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
