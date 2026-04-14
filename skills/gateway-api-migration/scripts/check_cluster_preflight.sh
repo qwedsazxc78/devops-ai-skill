@@ -11,12 +11,19 @@
 #   3 — prerequisite missing (kubectl / jq / gcloud)
 #
 # Usage:
-#   ./check_cluster_preflight.sh                         # all checks, JSON to stdout
-#   ./check_cluster_preflight.sh --namespaces "a b c"   # also probe those namespaces
-#   ./check_cluster_preflight.sh --verify-only          # human-readable OK/FAIL lines
-#                                                       # (used by runbook Step 0.5)
-#   ./check_cluster_preflight.sh --skip-check 4         # skip policy-CRD check
-#   ./check_cluster_preflight.sh --offline              # emit stub JSON, exit 0
+#   ./check_cluster_preflight.sh                              # default --gateway-class traefik
+#   ./check_cluster_preflight.sh --gateway-class traefik      # explicit Traefik target
+#   ./check_cluster_preflight.sh --gateway-class gke-l7-global-external-managed
+#   ./check_cluster_preflight.sh --namespaces "a b c"         # probe those namespaces
+#   ./check_cluster_preflight.sh --verify-only                # human OK/FAIL lines
+#   ./check_cluster_preflight.sh --skip-check 4               # skip policy-CRD check
+#   ./check_cluster_preflight.sh --offline                    # emit stub JSON, exit 0
+#
+# The --gateway-class flag controls which GatewayClass Check 3 looks for and
+# which CRD set Check 4 probes:
+#   traefik*    → probe middlewares.traefik.io + Traefik version (v3.1+ required)
+#   gke-l7-*    → probe gcpbackendpolicies.networking.gke.io
+#   other       → no provider CRD probe; skipped with info message
 #
 # Prints nothing other than JSON (or OK/FAIL lines in --verify-only mode).
 # All informational output goes to stderr so `jq` can consume stdout.
@@ -24,7 +31,8 @@
 
 set -uo pipefail
 
-VERSION="1.1.0"
+VERSION="1.2.0"
+GATEWAY_CLASS="traefik"  # default — matches SKILL.md v1.2.0
 NAMESPACES=""
 VERIFY_ONLY=false
 OFFLINE=false
@@ -33,16 +41,24 @@ SKIP_CHECKS=""
 # --- Arg parse ---
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --namespaces)   NAMESPACES="$2"; shift 2 ;;
-    --verify-only)  VERIFY_ONLY=true; shift ;;
-    --offline)      OFFLINE=true; shift ;;
-    --skip-check)   SKIP_CHECKS="$SKIP_CHECKS $2"; shift 2 ;;
+    --gateway-class) GATEWAY_CLASS="$2"; shift 2 ;;
+    --namespaces)    NAMESPACES="$2"; shift 2 ;;
+    --verify-only)   VERIFY_ONLY=true; shift ;;
+    --offline)       OFFLINE=true; shift ;;
+    --skip-check)    SKIP_CHECKS="$SKIP_CHECKS $2"; shift 2 ;;
     --help|-h)
       grep -E '^#( |$)' "$0" | sed 's/^# \{0,1\}//' >&2
       exit 0 ;;
     *) echo "[preflight] unknown arg: $1" >&2; exit 3 ;;
   esac
 done
+
+# --- Determine target family from GatewayClass prefix ---
+case "$GATEWAY_CLASS" in
+  traefik*)  TARGET_FAMILY="traefik" ;;
+  gke-l7-*)  TARGET_FAMILY="gke" ;;
+  *)         TARGET_FAMILY="vanilla" ;;
+esac
 
 # --- Prerequisites ---
 for tool in kubectl jq; do
@@ -55,19 +71,26 @@ done
 
 # --- Offline short-circuit ---
 if $OFFLINE; then
-  cat <<'JSON'
+  cat <<JSON
 {
   "checkedOffline": true,
+  "gatewayClass": "$GATEWAY_CLASS",
+  "targetFamily": "$TARGET_FAMILY",
   "context": "unknown",
   "cluster": "unknown",
   "project": "unknown",
   "gatewayApiVersion": "assumed-v1",
-  "gatewayClassesAvailable": ["assumed-gke-l7-global-external-managed"],
+  "gatewayClassesAvailable": ["assumed-$GATEWAY_CLASS"],
+  "traefikVersion": null,
+  "traefikAddonEnabled": null,
   "gkeAddonEnabled": null,
   "policyCRDs": {
-    "gcpbackendpolicies": null,
-    "healthcheckpolicies": null,
-    "gcpgatewaypolicies": null
+    "middlewares.traefik.io": null,
+    "serverstransports.traefik.io": null,
+    "tlsoptions.traefik.io": null,
+    "gcpbackendpolicies.networking.gke.io": null,
+    "healthcheckpolicies.networking.gke.io": null,
+    "gcpgatewaypolicies.networking.gke.io": null
   },
   "namespaces": {},
   "warnings": ["offline mode — no cluster checks performed"],
@@ -141,8 +164,9 @@ elif [[ $FAILED -eq 0 ]]; then
   fi
 fi
 
-# --- Check 3: GatewayClass ---
+# --- Check 3: GatewayClass (parameterized on --gateway-class) ---
 GATEWAY_CLASSES=()
+TRAEFIK_ADDON=null
 GKE_ADDON=null
 if is_skipped 3; then
   record_warn "gatewayclass (skipped)"
@@ -151,26 +175,90 @@ elif [[ $FAILED -eq 0 ]]; then
   if [[ -n "$GC_OUT" ]]; then
     # shellcheck disable=SC2206
     GATEWAY_CLASSES=($GC_OUT)
-    if [[ " ${GATEWAY_CLASSES[*]} " == *" gke-l7-global-external-managed "* ]]; then
-      GKE_ADDON=true
-      record_ok "gatewayclass gke-l7-global-external-managed present (${#GATEWAY_CLASSES[@]} classes total)"
+    if [[ " ${GATEWAY_CLASSES[*]} " == *" $GATEWAY_CLASS "* ]]; then
+      case "$TARGET_FAMILY" in
+        traefik) TRAEFIK_ADDON=true ;;
+        gke)     GKE_ADDON=true ;;
+      esac
+      record_ok "gatewayclass $GATEWAY_CLASS present (${#GATEWAY_CLASSES[@]} classes total)"
     else
-      GKE_ADDON=false
-      record_fail "gatewayclass gke-l7-global-external-managed not found — enable GKE Gateway add-on"
+      case "$TARGET_FAMILY" in
+        traefik)
+          TRAEFIK_ADDON=false
+          record_fail "gatewayclass $GATEWAY_CLASS not found — install Traefik v3.1+ (helm install traefik traefik/traefik --set providers.kubernetesGateway.enabled=true --set gateway.enabled=true)"
+          ;;
+        gke)
+          GKE_ADDON=false
+          record_fail "gatewayclass $GATEWAY_CLASS not found — enable GKE Gateway add-on (gcloud container clusters update --gateway-api=standard)"
+          ;;
+        *)
+          record_fail "gatewayclass $GATEWAY_CLASS not found — install the controller that provides this class"
+          ;;
+      esac
     fi
   else
-    GKE_ADDON=false
-    record_fail "gatewayclass no GatewayClass resources in cluster — enable GKE Gateway add-on"
+    record_fail "gatewayclass no GatewayClass resources in cluster"
   fi
 fi
 
-# --- Check 4: GKE policy CRDs ---
+# --- Check 3b: Traefik version probe (Traefik target only) ---
+TRAEFIK_VERSION=""
+if is_skipped 3b || [[ "$TARGET_FAMILY" != "traefik" ]]; then
+  :  # skip silently when not Traefik target
+elif [[ $FAILED -eq 0 ]]; then
+  # Try common label selectors for Traefik pods
+  TRAEFIK_IMG=$(kubectl get pods -A \
+    -l app.kubernetes.io/name=traefik \
+    -o jsonpath='{.items[0].spec.containers[0].image}' 2>/dev/null || echo "")
+  if [[ -z "$TRAEFIK_IMG" ]]; then
+    TRAEFIK_IMG=$(kubectl get pods -A \
+      -l app=traefik \
+      -o jsonpath='{.items[0].spec.containers[0].image}' 2>/dev/null || echo "")
+  fi
+  if [[ -n "$TRAEFIK_IMG" ]]; then
+    TRAEFIK_VERSION=$(echo "$TRAEFIK_IMG" | grep -oE 'v?[0-9]+\.[0-9]+\.[0-9]+' | head -1 | sed 's/^v//')
+    if [[ -n "$TRAEFIK_VERSION" ]]; then
+      # Compare: require v3.1+
+      MAJOR=$(echo "$TRAEFIK_VERSION" | cut -d. -f1)
+      MINOR=$(echo "$TRAEFIK_VERSION" | cut -d. -f2)
+      if [[ "$MAJOR" -ge 4 ]] || { [[ "$MAJOR" -eq 3 ]] && [[ "$MINOR" -ge 1 ]]; }; then
+        record_ok "traefik-version v$TRAEFIK_VERSION (>= v3.1 required for extensionRef)"
+      else
+        record_fail "traefik-version v$TRAEFIK_VERSION detected; v3.1+ required for Gateway API extensionRef support — upgrade with: helm upgrade traefik traefik/traefik --set image.tag=v3.1.6"
+      fi
+    else
+      record_warn "traefik-version could not parse version from image: $TRAEFIK_IMG"
+    fi
+  else
+    record_warn "traefik-version no Traefik pods found; unable to verify v3.1+ requirement"
+  fi
+fi
+
+# --- Check 4: Target-specific policy CRDs ---
+# Traefik CRDs
+MIDDLEWARE_CRD="false"
+SERVERSTRANSPORT_CRD="false"
+TLSOPTION_CRD="false"
+# GKE CRDs
 GCP_BP="false"
 HCP="false"
 GCP_GP="false"
 if is_skipped 4; then
   record_warn "policies (skipped)"
-else
+elif [[ "$TARGET_FAMILY" == "traefik" ]]; then
+  if kubectl get crd middlewares.traefik.io &>/dev/null; then MIDDLEWARE_CRD=true; fi
+  if kubectl get crd serverstransports.traefik.io &>/dev/null; then SERVERSTRANSPORT_CRD=true; fi
+  if kubectl get crd tlsoptions.traefik.io &>/dev/null; then TLSOPTION_CRD=true; fi
+  if [[ "$MIDDLEWARE_CRD" == "true" ]]; then
+    record_ok "policies middlewares.traefik.io CRD present"
+  else
+    record_fail "policies middlewares.traefik.io CRD missing — Traefik Helm chart installs it automatically; verify Traefik v3.1+ is installed"
+  fi
+  [[ "$SERVERSTRANSPORT_CRD" == "true" ]] \
+    || record_warn "policies serverstransports.traefik.io missing — migration will HALT later if proxy-*-timeout annotations detected"
+  [[ "$TLSOPTION_CRD" == "true" ]] \
+    || record_warn "policies tlsoptions.traefik.io missing — not required for v1.2 but future enhancements may need it"
+elif [[ "$TARGET_FAMILY" == "gke" ]]; then
   if kubectl get crd gcpbackendpolicies.networking.gke.io &>/dev/null; then GCP_BP=true; fi
   if kubectl get crd healthcheckpolicies.networking.gke.io &>/dev/null; then HCP=true; fi
   if kubectl get crd gcpgatewaypolicies.networking.gke.io &>/dev/null; then GCP_GP=true; fi
@@ -179,6 +267,8 @@ else
   else
     record_warn "policies GCPBackendPolicy CRD missing — migration will HALT later if CORS/timeout annotations are detected"
   fi
+else
+  record_warn "policies target family '$TARGET_FAMILY' has no provider CRDs to probe"
 fi
 
 # --- Check 5: namespaces ---
@@ -224,19 +314,33 @@ jq_classes=$(printf '%s\n' "${GATEWAY_CLASSES[@]}" | jq -R . | jq -s .)
 jq_warnings=$(printf '%s\n' "${WARNINGS[@]}" | jq -R . | jq -s '. | map(select(. != ""))')
 jq_halts=$(printf '%s\n' "${HALTS[@]}" | jq -R . | jq -s '. | map(select(. != ""))')
 
+# Quote the Traefik version or render null
+if [[ -n "$TRAEFIK_VERSION" ]]; then
+  TRAEFIK_VER_JSON="\"$TRAEFIK_VERSION\""
+else
+  TRAEFIK_VER_JSON="null"
+fi
+
 cat <<EOF
 {
+  "gatewayClass": "$GATEWAY_CLASS",
+  "targetFamily": "$TARGET_FAMILY",
   "context": "${CONTEXT:-unknown}",
   "cluster": "${CLUSTER:-unknown}",
   "server": "${SERVER:-unknown}",
   "project": "${PROJECT:-unknown}",
   "gatewayApiVersion": "$GATEWAY_API_VERSION",
   "gatewayClassesAvailable": $jq_classes,
+  "traefikVersion": $TRAEFIK_VER_JSON,
+  "traefikAddonEnabled": $TRAEFIK_ADDON,
   "gkeAddonEnabled": $GKE_ADDON,
   "policyCRDs": {
-    "gcpbackendpolicies": $GCP_BP,
-    "healthcheckpolicies": $HCP,
-    "gcpgatewaypolicies": $GCP_GP
+    "middlewares.traefik.io": $MIDDLEWARE_CRD,
+    "serverstransports.traefik.io": $SERVERSTRANSPORT_CRD,
+    "tlsoptions.traefik.io": $TLSOPTION_CRD,
+    "gcpbackendpolicies.networking.gke.io": $GCP_BP,
+    "healthcheckpolicies.networking.gke.io": $HCP,
+    "gcpgatewaypolicies.networking.gke.io": $GCP_GP
   },
   "namespaces": $NAMESPACE_JSON,
   "warnings": $jq_warnings,

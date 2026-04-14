@@ -57,6 +57,11 @@ Checks (in order):
     9.  tls-secret-coverage           — every source spec.tls[].secretName is referenced by a listener certificateRef
     10. dead-file-safety              — no dead files leaked into generated output
     11. ingress2gateway-second-opinion (optional, if installed)
+    12. middleware-coverage           — Traefik target only: if source has CORS or row-9c
+                                        annotations, verify the corresponding Middleware
+                                        CRDs are generated AND referenced by every HTTPRoute
+                                        via extensionRef filter. Passes trivially for GKE and
+                                        vanilla targets (those don't use Middleware).
 
 Dependencies: Python 3 stdlib + `yq` and `kustomize` on PATH.
 Optional:     `ingress2gateway` on PATH for check #11.
@@ -612,6 +617,125 @@ def check_tls_secret_coverage(source_built: Path, gateway_build: Path) -> dict:
     )
 
 
+def check_middleware_coverage(
+    source_built: Path, gateway_build: Path, service_build: Path,
+    target_family: str,
+) -> dict:
+    """Check 12: Traefik target + CORS annotations → at least one Middleware
+    of kind `headers` must exist AND every HTTPRoute that handles a backend
+    that was CORS-annotated must reference it via extensionRef filter.
+
+    Only runs when target_family == 'traefik'. Returns a pass-through "skipped"
+    check for other targets (GKE's CORS is handled via GCPBackendPolicy.targetRef,
+    which is check-6's responsibility; vanilla targets have no middleware to check).
+
+    This catches the InvalidKind / missing-extensionRef class of bug the
+    new Traefik branch introduces — where the skill emitted the Middleware
+    but forgot to reference it from one or more HTTPRoutes.
+    """
+    if target_family != "traefik":
+        return _check(
+            "middleware-coverage",
+            "pass",
+            f"skipped — target family '{target_family}' does not use Middleware CRDs",
+            severity="S3",
+        )
+
+    # Look at source for CORS signals
+    source_docs = _yq_ea_json(source_built)
+    has_cors = False
+    has_path_denylist = False
+    for doc in source_docs:
+        if doc.get("kind") != "Ingress":
+            continue
+        anns = (doc.get("metadata") or {}).get("annotations") or {}
+        if anns.get("nginx.ingress.kubernetes.io/enable-cors") == "true":
+            has_cors = True
+        snippet = anns.get("nginx.ingress.kubernetes.io/server-snippet", "")
+        if "location ~" in snippet and "return 404" in snippet:
+            has_path_denylist = True
+
+    if not has_cors and not has_path_denylist:
+        return _check(
+            "middleware-coverage",
+            "pass",
+            "source has no CORS or path-denylist annotations — no Traefik middleware expected",
+        )
+
+    # Scan the generated gateway + service builds for Middleware resources
+    all_docs = _yq_ea_json(gateway_build) + _yq_ea_json(service_build)
+    middlewares: dict[str, str] = {}  # name → kind-of-spec
+    for doc in all_docs:
+        if doc.get("apiVersion", "").startswith("traefik.io/") \
+           and doc.get("kind") == "Middleware":
+            md_name = (doc.get("metadata") or {}).get("name", "")
+            spec = doc.get("spec") or {}
+            # First spec field name is the middleware type (headers, redirectRegex, etc.)
+            spec_type = next(iter(spec), "unknown") if spec else "unknown"
+            middlewares[md_name] = spec_type
+
+    cors_middleware_found = any(v == "headers" for v in middlewares.values())
+    deny_middleware_found = any(v in ("redirectRegex", "plugin")
+                                for v in middlewares.values())
+
+    issues: list[str] = []
+    if has_cors and not cors_middleware_found:
+        issues.append("source has CORS annotations but no Traefik Middleware kind=headers found in generated output")
+    if has_path_denylist and not deny_middleware_found:
+        issues.append("source has row-9c path denylists but no Traefik Middleware kind=redirectRegex or plugin found")
+
+    # Check that every HTTPRoute with CORS-annotated backends has a filter
+    # referencing at least one Traefik Middleware.
+    if has_cors and cors_middleware_found:
+        route_missing_ref: list[str] = []
+        for doc in _yq_ea_json(service_build):
+            if doc.get("kind") != "HTTPRoute":
+                continue
+            route_name = (doc.get("metadata") or {}).get("name", "?")
+            route_ns = (doc.get("metadata") or {}).get("namespace", "?")
+            # Skip the tls-redirect route — it's not a service route
+            if route_name == "tls-redirect" or "redirect" in route_name:
+                continue
+            has_ext_ref = False
+            for rule in (doc.get("spec") or {}).get("rules", []) or []:
+                for f in rule.get("filters", []) or []:
+                    if f.get("type") == "ExtensionRef":
+                        ext = f.get("extensionRef") or {}
+                        if ext.get("group", "").startswith("traefik.io") \
+                           and ext.get("kind") == "Middleware":
+                            has_ext_ref = True
+                            break
+                if has_ext_ref:
+                    break
+            if not has_ext_ref:
+                route_missing_ref.append(f"{route_ns}/{route_name}")
+        if route_missing_ref:
+            issues.append(
+                f"{len(route_missing_ref)} HTTPRoute(s) missing Traefik Middleware extensionRef filter"
+            )
+
+    details = {
+        "middlewaresFound": middlewares,
+        "hasCors": has_cors,
+        "hasPathDenylist": has_path_denylist,
+    }
+    if issues:
+        return _check(
+            "middleware-coverage",
+            "fail",
+            f"{len(issues)} middleware coverage issue(s) for Traefik target",
+            severity="S1",
+            details=details,
+            mismatches=issues,
+        )
+    return _check(
+        "middleware-coverage",
+        "pass",
+        f"Traefik middleware coverage complete: CORS={cors_middleware_found}, path-denylist={deny_middleware_found}",
+        details=details,
+    )
+
+
 def check_dead_file_safety(
     source_root: Path, minion_overlay_dir: Path, service_build: Path,
 ) -> dict:
@@ -852,11 +976,23 @@ def main() -> int:
                         help="generated module (default: common.gateway)")
     parser.add_argument("--env", required=True,
                         help="environment to validate (dev/stg/prd)")
+    parser.add_argument("--gateway-class", default="traefik",
+                        help="target GatewayClass name (default: traefik). "
+                             "Used only to derive target family for check #12.")
     parser.add_argument("--no-second-opinion", action="store_true",
                         help="skip ingress2gateway cross-check")
     parser.add_argument("--tmp-dir", default="/tmp/gwm-validate",
                         help="where to stash build output")
     args = parser.parse_args()
+
+    # Derive target family from GatewayClass prefix (matches preflight script)
+    gc = args.gateway_class
+    if gc.startswith("traefik"):
+        target_family = "traefik"
+    elif gc.startswith("gke-l7-"):
+        target_family = "gke"
+    else:
+        target_family = "vanilla"
 
     # Verify prerequisites
     for tool in ("kustomize", "yq"):
@@ -933,6 +1069,12 @@ def main() -> int:
     checks.append(check_dead_file_safety(
         target_root, minion_overlay, minion_built,
     ))
+
+    # 12: middleware coverage (Traefik target only; no-op for others)
+    if source_built.is_file():
+        checks.append(check_middleware_coverage(
+            source_built, gateway_built, minion_built, target_family,
+        ))
 
     # 11: ingress2gateway second opinion (optional)
     soo_run = False
