@@ -370,6 +370,12 @@ install_antigravity() {
 
   local base="$HOME/.agents"
 
+  # --- Legacy cleanup ---
+  # Older versions of this script wrote workflow files under different
+  # filenames that no longer correspond to any source pipeline. Remove
+  # those stale leftovers before re-installing.
+  _antigravity_purge_legacy_workflows "$base"
+
   # 1. Rules
   mkdir -p "$base/rules"
   if [[ -f "$SKILL_PACK_DIR/.agents/rules/devops.md" ]]; then
@@ -423,6 +429,30 @@ install_antigravity() {
       copy_file "$prompt_file" "$base/workflows/${wf_name}.md" "workflow: $wf_name"
     done
   done
+}
+
+# Remove ~/.agents/workflows/ entries that no longer correspond to any
+# source pipeline. Each entry here is the legacy filename that an older
+# install script wrote and that current install runs no longer touch —
+# left behind, they look like real workflows but point at nothing.
+_antigravity_purge_legacy_workflows() {
+  local base="$1"
+  local stale=(
+    horus-new-module
+    zeus-health-check
+    zeus-onboard
+  )
+  local purged=0
+  for wf in "${stale[@]}"; do
+    if [[ -f "$base/workflows/${wf}.md" ]]; then
+      rm -f "$base/workflows/${wf}.md"
+      echo -e "  ${YELLOW}[purge]${NC} legacy workflow: $wf"
+      ((purged++)) || true
+    fi
+  done
+  if [[ $purged -gt 0 ]]; then
+    echo -e "  ${DIM}Removed $purged stale workflow(s) from previous installs${NC}"
+  fi
 }
 
 # --- Uninstall ---
@@ -531,9 +561,21 @@ do_uninstall() {
   for skill in "${skills[@]}"; do
     _rm_if_exists "$HOME/.agents/skills/$skill" "~/.agents/skills/$skill" && ((removed++)) || true
   done
-  # Workflows
-  local workflows=("horus-full" "horus-upgrade" "horus-security" "horus-validate" "horus-scaffold" "horus-cicd" "horus-health" "zeus-full" "zeus-pre-merge" "zeus-health" "zeus-review" "zeus-scaffold" "zeus-diagram" "zeus-status" "zeus-gateway-migrate" "shared-repo-detect" "shared-report-format" "shared-tool-check" "shared-help")
+  # Workflows — names match what install_antigravity actually writes
+  # (install uses the source filename verbatim, so `full-pipeline.md` →
+  # `horus-full-pipeline.md`, not `horus-full.md`).
+  local workflows=(
+    horus-cicd horus-full-pipeline horus-health horus-scaffold
+    horus-security horus-upgrade horus-validate
+    zeus-diagram zeus-full-pipeline zeus-gateway-migrate zeus-health
+    zeus-pre-merge zeus-review zeus-scaffold zeus-status
+    shared-help shared-repo-detect shared-report-format shared-tool-check
+  )
   for wf in "${workflows[@]}"; do
+    _rm_if_exists "$HOME/.agents/workflows/${wf}.md" "~/.agents/workflows/${wf}.md" && ((removed++)) || true
+  done
+  # Also clean up known legacy filenames that older installs left behind.
+  for wf in horus-new-module zeus-health-check zeus-onboard horus-full zeus-full; do
     _rm_if_exists "$HOME/.agents/workflows/${wf}.md" "~/.agents/workflows/${wf}.md" && ((removed++)) || true
   done
 

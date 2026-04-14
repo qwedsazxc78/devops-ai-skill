@@ -26,6 +26,7 @@
   "files": [
     "skills/",
     "prompts/",
+    "commands/",
     "scripts/",
     "docs/",
     ".claude/agents/",
