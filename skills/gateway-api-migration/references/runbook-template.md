@@ -8,7 +8,10 @@ per-hostname DNS cutover strategy below before executing.
 - Generated module: `{{generated_module}}`
 - Services migrated: `{{service_list}}`
 - Hostnames by env: `{{hostnames_per_env}}`
+- Target GatewayClass: `{{target_gateway_class}}`
+- Skill version: `{{skill_version}}`
 - Report: `docs/reports/gateway-migration/{{slug}}/report.md`
+- State: `docs/reports/gateway-migration/{{slug}}/state.yaml`
 
 ---
 
@@ -16,28 +19,72 @@ per-hostname DNS cutover strategy below before executing.
 
 Run once before any phase below.
 
-1. Review the manual-review items in the migration report:
+### 0.1 Review blockers from the report
 
-   ```
-   docs/reports/gateway-migration/{{slug}}/report.md  (Section 4)
-   ```
+Open the report at `docs/reports/gateway-migration/{{slug}}/report.md`
+and resolve every **S1** item in Section 9 (Risk register) before
+continuing. Do not skip this — S1 means "migration will likely not
+work if you proceed."
 
-2. Install Gateway API CRDs in target clusters if not already present:
+Also review Section 6 (Manual review required) to decide whether any
+stubbed annotation must be remediated *before* cutover rather than
+after. Typical blockers:
 
-   ```bash
-   kubectl apply -f \
-     https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.1.0/standard-install.yaml
-   ```
+- Row 9b `Set-Cookie` stub in a prod-critical auth flow.
+- Row 9c path denylist stub where the denied paths are actively being
+  attacked (check Cloud Logging for 404 rates on those paths).
 
-3. Install the GKE Gateway controller (if not already installed).
-   Verify with: `kubectl get gatewayclass`
+### 0.2 Install Gateway API CRDs (skip if Step 0b preflight confirmed them)
 
-4. Label target namespaces so HTTPRoutes can attach to the Gateway:
+```bash
+kubectl apply -f \
+  https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.1.0/standard-install.yaml
 
-   ```bash
-   kubectl label namespace {{target_namespaces}} --overwrite \
-     gateway-access=ingress-nginx
-   ```
+# Verify the CRD storage version is v1 (not v1alpha2/v1beta1):
+kubectl get crd gateways.gateway.networking.k8s.io \
+  -o jsonpath='{.spec.versions[?(@.storage)].name}'
+# Expect: v1
+```
+
+### 0.3 Enable the GKE Gateway controller (skip if Step 0b preflight confirmed it)
+
+```bash
+# Verify the GatewayClass exists:
+kubectl get gatewayclass gke-l7-global-external-managed
+# Expect: output with `ACCEPTED=True`
+
+# If missing, enable the add-on on the cluster (takes ~2 minutes):
+gcloud container clusters update {{cluster_name}} \
+  --region {{cluster_region}} \
+  --gateway-api=standard
+```
+
+### 0.4 Label target namespaces
+
+HTTPRoutes cannot attach to the Gateway until the namespace carries the
+label `gateway-access=ingress-nginx`. One command per target namespace
+(the exact list is in the report's **Section 7 — Per-hostname migration map**):
+
+```bash
+kubectl label namespace {{target_namespaces_space_separated}} --overwrite \
+  gateway-access=ingress-nginx
+```
+
+### 0.5 Preflight verification one-liner
+
+Before moving to Phase 1, run this verification. It must print `OK` for
+every check.
+
+```bash
+bash {{skill_path}}/scripts/check_cluster_preflight.sh \
+  --namespaces "{{target_namespaces_space_separated}}" \
+  --verify-only
+```
+
+Expected output: `OK context`, `OK crds`, `OK gatewayclass`, `OK policies`,
+`OK namespaces`. Any `FAIL` line means Phase 1 will not work — re-read
+the corresponding check in `references/preflight-checks.md` and fix
+before proceeding.
 
 ---
 
@@ -45,21 +92,58 @@ Run once before any phase below.
 
 The Gateway acquires an external IP but no DNS points at it yet.
 
-1. Sync the ArgoCD app for the generated Gateway module:
+1. Sync the ArgoCD app for the generated Gateway module (per env):
 
    ```bash
-   # example: argocd app sync common-gateway-dev
    argocd app sync {{generated_module}}-dev
+   argocd app sync {{generated_module}}-stg
+   argocd app sync {{generated_module}}-prd
    ```
 
 2. Wait for the Gateway to acquire an external IP:
 
    ```bash
-   kubectl get gateway common-gateway -n ingress-nginx -o wide
+   kubectl get gateway {{gateway_name}} -n {{master_namespace}} -o wide
+   kubectl get gateway {{gateway_name}} -n {{master_namespace}} \
+     -o jsonpath='{.status.addresses[0].value}'
    ```
 
-3. Record the new Gateway IP. Nothing points at it yet — this step is
-   safe to deploy and leave running alongside the existing NGINX stack.
+3. Verify Gateway conditions:
+
+   ```bash
+   kubectl describe gateway {{gateway_name}} -n {{master_namespace}} \
+     | grep -A2 Conditions
+   ```
+
+   Expected: `Programmed: True`, `Accepted: True`. If not, check
+   `kubectl describe` output for a reason code and consult
+   `references/gke-gateway-notes.md`.
+
+4. Record the new Gateway IP in the report's **Section 7** (Per-hostname
+   migration map, New Gateway IP column). Re-run the skill with
+   `--resume` to persist it to `state.yaml` automatically:
+
+   ```bash
+   *gateway-migrate {{master_module}} --resume
+   ```
+
+5. **ManagedCertificate provisioning wait (15–60 min).** If the Gateway
+   references any `ManagedCertificate` resources, they will sit in
+   `Provisioning` state until the domain points to the new Gateway IP
+   **and** GCP has validated ownership. Check with:
+
+   ```bash
+   kubectl get managedcertificate -n {{master_namespace}}
+   ```
+
+   Expected end state: `Status: Active`, `Domain Status: Active`. Do NOT
+   flip DNS for a hostname whose cert is still `Provisioning` unless you
+   accept that the first few minutes will serve a 502 while the cert
+   activates. The runbook's per-hostname `--resolve` test in Phase 3
+   bypasses this by testing the Gateway IP directly.
+
+6. Nothing points at the Gateway yet — this step is safe to deploy and
+   leave running alongside the existing NGINX stack indefinitely.
 
 ---
 
@@ -80,66 +164,170 @@ Both stacks serve the same hostnames; DNS has not changed.
    - **Old path**: DNS → ingress-nginx LB → minion Ingress
    - **New path**: reachable via Gateway IP only (no DNS change yet)
 
-3. Verify HTTPRoutes attached successfully:
+3. Verify every HTTPRoute attached successfully (one command per route —
+   the skill synthesises the full list in report **Section 14.2**):
 
    ```bash
-   kubectl get httproute -A
-   kubectl describe httproute <service-name> -n <namespace>
+   kubectl get httproute -A -o wide
+   kubectl get httproute <service> -n <namespace> \
+     -o jsonpath='{.status.parents[0].conditions[?(@.type=="Accepted")].status}'
+   # Expect: True
+   kubectl get httproute <service> -n <namespace> \
+     -o jsonpath='{.status.parents[0].conditions[?(@.type=="ResolvedRefs")].status}'
+   # Expect: True
    ```
 
-   All routes should show `Accepted: True` and `ResolvedRefs: True`.
+4. **Smoke test via `--resolve` before touching DNS.** For each
+   (env, hostname) in the report's Section 7, test the Gateway
+   directly without altering DNS:
+
+   ```bash
+   curl -vk --resolve <hostname>:443:<new-gateway-ip> https://<hostname>/
+   ```
+
+   The report's Section 14.3 contains a pre-filled command per
+   hostname. Expected: HTTP 200 (or the app's normal response for an
+   unauthenticated `/` request) with the correct TLS cert served.
+
+   If any hostname returns 5xx, do **not** proceed to Phase 3 for that
+   hostname. Common causes:
+   - HTTPRoute `ResolvedRefs: False` — backend Service name/port mismatch.
+   - `Accepted: False` — listener `sectionName` mismatch.
+   - `NotAllowedByListeners` — namespace missing the
+     `gateway-access=ingress-nginx` label (re-run Step 0.4).
 
 ---
 
 ## Phase 3 — Per-hostname DNS cutover (gradual, reversible)
 
 For each hostname in `{{hostnames_per_env}}`, start with the lowest-risk one
-(e.g. an internal dashboard) and proceed service by service.
+(e.g. an internal dashboard, non-revenue path, dev environment first).
+Proceed hostname by hostname — **never batch flip multiple hostnames at
+once.** The whole point of this phase is that failures are scoped to one
+hostname.
 
 For each hostname:
 
-a. **Test the new path directly** (before touching DNS):
+a. **Test the new path directly** (before touching DNS) — this is the
+   Phase 2 smoke test, but repeat it immediately before the DNS flip to
+   confirm nothing has regressed:
 
    ```bash
-   curl --resolve <hostname>:443:<new-gateway-ip> \
-        https://<hostname>
+   curl -vk --resolve <hostname>:443:<new-gateway-ip> https://<hostname>/
+   ```
+
+   Cert check (confirm the correct cert is being served):
+
+   ```bash
+   openssl s_client -connect <new-gateway-ip>:443 \
+     -servername <hostname> </dev/null 2>/dev/null \
+     | openssl x509 -noout -subject -issuer
    ```
 
 b. **Update the DNS A/AAAA record** to point at the new Gateway IP.
+   Keep the TTL low (≤60s) before the flip so the cutover happens
+   quickly if it needs to be reverted.
 
-c. **Wait** for DNS TTL + a monitoring soak (15 min minimum).
+c. **Wait** for DNS TTL + a monitoring soak. Minimum soak is 15 minutes
+   of production traffic with SLI monitoring. Concrete SLIs:
 
-d. **Check** error rates, latency, and certificate serving.
+   - **5xx rate** on new Gateway backend: must stay below 1% (or
+     whatever the old stack's 24h baseline was, whichever is higher).
+   - **p99 latency** on new Gateway backend: must stay within 2× the
+     old stack's 24h baseline.
+   - **Cert serving**: `openssl s_client -servername <hostname>` must
+     print the expected subject, not a default/fallback cert.
+   - **ManagedCertificate status** (if applicable): must be
+     `Status: Active`, never `Provisioning` or `FailedNotVisible`.
 
-e. **Decision**:
-   - If healthy: move to next hostname.
-   - If unhealthy: flip DNS back to the previous ingress-nginx LB IP.
-     The Phase 2 stack is still live — no data loss.
+d. **Decision**:
+   - If all SLIs green for 15 minutes → mark the row in report Section 12.1
+     as `switched`, move to next hostname.
+   - If any SLI red → flip DNS back to the previous ingress-nginx LB IP.
+     The Phase 2 stack is still live — no data loss. Mark the row in
+     the cutover checklist as `reverted` with a note of which SLI
+     triggered the revert.
 
-Repeat until all hostnames in all environments are cut over.
+Repeat until all hostnames in all environments are cut over. Then move
+to Phase 4 for the bake period.
 
 ---
 
 ## Phase 4 — Bake and clean up (after 1+ week stable)
 
-Only run after all hostnames have been stable on the new Gateway for at
-least one week.
+**This is the only destructive phase.** Only run after all hostnames
+have been stable on the new Gateway for at least one week with no
+regression on the SLIs listed in Phase 3.
 
-1. Unsync and delete the old master/minion ArgoCD apps:
+### 4.1 Cleanup checklist
 
-   ```bash
-   argocd app delete {{master_module}}-dev
-   argocd app delete {{master_module}}-stg
-   argocd app delete {{master_module}}-prd
-   ```
+- [ ] All rows in report Section 12.1 are `switched` (none `reverted`
+  or `pending`).
+- [ ] ManagedCertificate resources all `Status: Active`.
+- [ ] Grafana dashboards show 7 days of flat error rate and latency on
+  the new Gateway.
+- [ ] No on-call pages traced back to the migration in the past 7 days.
 
-2. Delete the `{{master_module}}/` module directory from the repo.
+If any of these are red, **do not run Phase 4 yet**. Investigate and
+wait another week.
 
-3. Remove minion `*-nginx-ingress.yaml` files from
-   `common.service/overlays/<env>/` and their entries from each
-   `kustomization.yaml`.
+### 4.2 Unsync and delete the old master/minion ArgoCD apps
 
-4. Open a PR, get review, merge.
+```bash
+argocd app delete {{master_module}}-dev
+argocd app delete {{master_module}}-stg
+argocd app delete {{master_module}}-prd
+```
+
+### 4.3 Remove the old module directory and minion Ingress files
+
+```bash
+# Delete the master module dir:
+git rm -r {{master_module}}/
+
+# Delete the minion *-nginx-ingress.yaml files (one command per env):
+{{minion_file_delete_commands}}
+```
+
+### 4.4 Remove minion references from common.service kustomization.yaml files
+
+For each env, remove the `*-nginx-ingress.yaml` entries from the
+`resources:` list:
+
+```bash
+{{minion_resource_remove_commands}}
+```
+
+### 4.5 Remove any DNS records pointing at the old ingress-nginx LB
+
+This is easy to forget. Find the old NGINX LB IP (record it before
+Phase 3 starts, or look it up from the pre-migration Grafana dashboard)
+and verify no hostname still resolves to it:
+
+```bash
+for host in {{hostnames_space_separated}}; do
+  dig +short "$host" A;
+done
+```
+
+Expected: every result is the **new Gateway IP**, never the old NGINX IP.
+
+### 4.6 Open cleanup PR
+
+```bash
+git checkout -b cleanup/gateway-api-migration-{{module_slug}}
+git add -A
+git commit -m "chore(ingress): remove legacy NGINX master/minion for {{master_module}}
+
+All hostnames migrated to Gateway API {{n_weeks_stable}} weeks ago.
+Monitored error rate + p99 flat; no regressions.
+
+Refs: docs/reports/gateway-migration/{{module_slug}}/report.md"
+git push origin cleanup/gateway-api-migration-{{module_slug}}
+```
+
+Open the PR, get review, merge. Post-merge, confirm ArgoCD syncs the
+deletions cleanly.
 
 ---
 

@@ -1,7 +1,20 @@
 # HTTPRoute template — filled in by gateway-api-migration skill per minion.
-# Variables: {{service}}, {{namespace}}, {{hostname}}, {{listener_name}},
-#            {{backend_name}}, {{backend_port}}, {{path_rules}},
-#            {{response_header_filters}}
+#
+# Substitution variables (set by scripts/build_report.py or inline by the skill):
+#   {{service}}              — minion's backend Service name (also used as HTTPRoute name)
+#   {{namespace}}            — minion's effective namespace
+#   {{hostname}}             — minion's declared host for this env
+#   {{gateway_name}}         — name of the generated Gateway resource (usually "common-gateway")
+#   {{gateway_namespace}}    — namespace of the Gateway (usually master's namespace, e.g. "ingress-nginx")
+#   {{listener_name}}        — Gateway listener name matching this hostname (must exist on the Gateway)
+#
+# Repeating blocks (the skill emits one copy per source path rule):
+#   {{rules_block}}          — expands to one `- matches: ... backendRefs: ...` entry per (path, pathType, backend) tuple
+#   {{response_header_filters}} — optional ResponseHeaderModifier block with X-* headers from master server-snippet (row 9a)
+#
+# The generated HTTPRoute MUST validate under `kustomize build` before
+# the skill proceeds to Step 4. `apiVersion` is always `v1` (GA); do
+# not emit `v1beta1` — see references/http-routing-guide.md.
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
@@ -12,18 +25,27 @@ spec:
   parentRefs:
     - group: gateway.networking.k8s.io
       kind: Gateway
-      name: common-gateway
-      namespace: ingress-nginx
+      name: {{gateway_name}}
+      namespace: {{gateway_namespace}}
       sectionName: {{listener_name}}
   hostnames:
     - {{hostname}}
   rules:
-    # {{path_rules}} expands to one entry per path rule in the source minion
+    # One entry per (path, pathType, backend) tuple from the source minion.
+    # PathType maps: Ingress `Prefix` → HTTPRoute `PathPrefix`,
+    #                Ingress `Exact`  → HTTPRoute `Exact`.
+    # `ImplementationSpecific` → keep literal value, flag in report.
+    #
+    # Example rule entry (repeated per path):
     - matches:
         - path:
-            type: PathPrefix
-            value: /
-      # {{response_header_filters}} expands to X-* headers from master's server-snippet (row 9a)
+            type: PathPrefix          # or Exact, per source pathType
+            value: /                  # from source `paths[].path`
+      # Optional response-header filter from master server-snippet (row 9a).
+      # The skill emits this block ONLY when the master Ingress had one of
+      # X-Content-Type-Options / X-XSS-Protection / X-Frame-Options in
+      # server-snippet annotation. Otherwise omit the `filters:` stanza.
+      #
       # filters:
       #   - type: ResponseHeaderModifier
       #     responseHeaderModifier:
@@ -35,5 +57,36 @@ spec:
       #         - name: X-Frame-Options
       #           value: SAMEORIGIN
       backendRefs:
-        - name: {{backend_name}}
-          port: {{backend_port}}
+        - group: ""
+          kind: Service
+          name: {{backend_name}}      # from source `backend.service.name`
+          port: {{backend_port}}      # numeric port; resolve from Service if source uses `port.name`
+          # weight: 1                 # omit unless doing traffic splitting; enables canaries later
+---
+# HTTP→HTTPS redirect HTTPRoute (generated once per Gateway when any
+# hostname has a port 80 listener). Lives alongside the service HTTPRoutes
+# in common.service/overlays/<env>/ and attaches to the `http` listener.
+# The redirect covers every hostname in one HTTPRoute; per-hostname copies
+# are unnecessary.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: tls-redirect
+  namespace: {{namespace}}
+spec:
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: {{gateway_name}}
+      namespace: {{gateway_namespace}}
+      sectionName: http
+  hostnames:
+    # {{all_hostnames}} expands to the full list of hostnames from this env
+    - {{hostname}}
+  rules:
+    - filters:
+        - type: RequestRedirect
+          requestRedirect:
+            scheme: https
+            port: 443
+            statusCode: 301

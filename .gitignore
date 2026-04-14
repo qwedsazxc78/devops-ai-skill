@@ -21,6 +21,11 @@ node_modules/
 package-lock.json
 pnpm-lock.yaml
 
+# Python (skill scripts are compiled ad-hoc by `python3 -m py_compile`)
+__pycache__/
+*.pyc
+*.pyo
+
 # Environment secrets
 .env
 .env.*
