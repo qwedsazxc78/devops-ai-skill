@@ -14,10 +14,16 @@
 #   ./check_cluster_preflight.sh                              # default --gateway-class traefik
 #   ./check_cluster_preflight.sh --gateway-class traefik      # explicit Traefik target
 #   ./check_cluster_preflight.sh --gateway-class gke-l7-global-external-managed
+#   ./check_cluster_preflight.sh --context <kubectl-context>  # don't change current context
 #   ./check_cluster_preflight.sh --namespaces "a b c"         # probe those namespaces
 #   ./check_cluster_preflight.sh --verify-only                # human OK/FAIL lines
 #   ./check_cluster_preflight.sh --skip-check 4               # skip policy-CRD check
 #   ./check_cluster_preflight.sh --offline                    # emit stub JSON, exit 0
+#
+# The --context flag is the safest way to probe a non-current cluster: it
+# scopes every kubectl call to the named context for this run only, without
+# touching the user's `kubectl config current-context` setting. Useful when
+# the active context is prod and you want to preflight dev.
 #
 # The --gateway-class flag controls which GatewayClass Check 3 looks for and
 # which CRD set Check 4 probes:
@@ -31,8 +37,9 @@
 
 set -uo pipefail
 
-VERSION="1.2.0"
+VERSION="1.2.1"
 GATEWAY_CLASS="traefik"  # default — matches SKILL.md v1.2.0
+KUBE_CONTEXT=""          # empty means "use kubectl current-context as-is"
 NAMESPACES=""
 VERIFY_ONLY=false
 OFFLINE=false
@@ -42,6 +49,7 @@ SKIP_CHECKS=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --gateway-class) GATEWAY_CLASS="$2"; shift 2 ;;
+    --context)       KUBE_CONTEXT="$2"; shift 2 ;;
     --namespaces)    NAMESPACES="$2"; shift 2 ;;
     --verify-only)   VERIFY_ONLY=true; shift ;;
     --offline)       OFFLINE=true; shift ;;
@@ -52,6 +60,60 @@ while [[ $# -gt 0 ]]; do
     *) echo "[preflight] unknown arg: $1" >&2; exit 3 ;;
   esac
 done
+
+# --- kubectl wrapper that honours --context without touching global state ---
+# All cluster probes go through this function instead of calling kubectl
+# directly. When --context is set, every call gets the same --context flag;
+# when it's empty, calls behave exactly like plain `kubectl ...`.
+kubectl_ctx() {
+  if [[ -n "$KUBE_CONTEXT" ]]; then
+    kubectl --context="$KUBE_CONTEXT" "$@"
+  else
+    kubectl "$@"
+  fi
+}
+
+# --- Run a kubectl probe and classify the outcome ---
+# Returns one of three states via stdout:
+#   ok:<output>    — command succeeded, output (possibly empty) follows
+#   forbidden:     — command failed with a 403 Forbidden / GCP IAM error
+#   missing:       — command failed because the resource truly doesn't exist
+#                    (CRD not installed, namespace doesn't exist, etc.)
+#   error:<msg>    — any other failure (network, malformed, etc.)
+#
+# The forbidden detection is the critical bit: GKE GCP IAM denies CRD/namespace
+# list operations with messages like:
+#   Error from server (Forbidden): ... is forbidden: User "..." cannot list ...
+#   ... requires one of ["container.namespaces.list"] permission(s) in Cloud IAM
+# Without this distinction the script would tell operators "install Traefik"
+# when the real fix is "grant container.viewer or equivalent IAM role."
+kubectl_probe() {
+  local out err rc
+  err=$(mktemp)
+  out=$(kubectl_ctx "$@" 2>"$err")
+  rc=$?
+  local stderr_content
+  stderr_content=$(<"$err")
+  rm -f "$err"
+  if [[ $rc -eq 0 ]]; then
+    printf 'ok:%s' "$out"
+    return 0
+  fi
+  if echo "$stderr_content" | grep -q -E 'Forbidden|forbidden|requires one of \[.+permission'; then
+    printf 'forbidden:%s' "$stderr_content"
+    return 0
+  fi
+  if echo "$stderr_content" | grep -q -E 'NotFound|not found|the server doesn'\''t have a resource type'; then
+    printf 'missing:%s' "$stderr_content"
+    return 0
+  fi
+  printf 'error:%s' "$stderr_content"
+  return 0
+}
+
+# --- Helper: peel off the "ok:" / "forbidden:" / "missing:" / "error:" prefix ---
+probe_state()  { echo "${1%%:*}"; }
+probe_value()  { echo "${1#*:}"; }
 
 # --- Determine target family from GatewayClass prefix ---
 case "$GATEWAY_CLASS" in
@@ -130,17 +192,39 @@ PROJECT=""
 if is_skipped 1; then
   record_warn "context (skipped)"
 else
-  if CONTEXT=$(kubectl config current-context 2>/dev/null) && [[ -n "$CONTEXT" ]]; then
-    if kubectl cluster-info --request-timeout=5s &>/dev/null; then
-      CLUSTER=$(kubectl config view --minify -o jsonpath='{.contexts[0].context.cluster}' 2>/dev/null || echo "")
-      SERVER=$(kubectl config view --minify -o jsonpath='{.clusters[0].cluster.server}' 2>/dev/null || echo "")
-      PROJECT=$(gcloud config get-value project 2>/dev/null || echo "unknown")
-      record_ok "context=$CONTEXT"
-    else
-      record_fail "context kubectl cluster-info unreachable within 5s"
-    fi
+  # When --context is passed, that's the authoritative target — don't fall
+  # back to the global current-context. When --context is empty, use whatever
+  # kubectl considers current.
+  if [[ -n "$KUBE_CONTEXT" ]]; then
+    CONTEXT="$KUBE_CONTEXT"
   else
-    record_fail "context no current-context set — run: kubectl config use-context <ctx>"
+    CONTEXT=$(kubectl config current-context 2>/dev/null || echo "")
+  fi
+  if [[ -n "$CONTEXT" ]]; then
+    # Try a low-permission probe first: `kubectl version` doesn't need any
+    # API permissions, just an apiserver TCP connection. This separates
+    # "can't reach cluster" from "can reach but auth-restricted".
+    VERSION_PROBE=$(kubectl_probe version --request-timeout=5s -o json)
+    case "$(probe_state "$VERSION_PROBE")" in
+      ok)
+        CLUSTER=$(kubectl_ctx config view -o jsonpath='{.contexts[?(@.name=="'"$CONTEXT"'")].context.cluster}' 2>/dev/null || echo "")
+        SERVER=$(kubectl_ctx config view -o jsonpath='{.clusters[?(@.name=="'"$CLUSTER"'")].cluster.server}' 2>/dev/null || echo "")
+        PROJECT=$(gcloud config get-value project 2>/dev/null || echo "unknown")
+        record_ok "context=$CONTEXT"
+        ;;
+      forbidden)
+        # Cluster reachable but every probe returns 403. Record as a soft
+        # failure: continue to other checks (so we surface ALL the forbidden
+        # cases at once instead of bailing on the first one), but the overall
+        # exit code reflects the failure.
+        record_fail "context $CONTEXT reachable but Cloud IAM denies basic API access. Grant roles/container.viewer (or container.developer) and re-run. The remaining checks may also fail with FORBIDDEN — those are not separate problems, just symptoms of the same missing IAM permission."
+        ;;
+      *)
+        record_fail "context kubectl version unreachable within 5s for context=$CONTEXT — network/auth/cluster down"
+        ;;
+    esac
+  else
+    record_fail "context no current-context set — run: kubectl config use-context <ctx>  OR pass --context <ctx>"
   fi
 fi
 
@@ -149,14 +233,19 @@ GATEWAY_API_VERSION="none"
 if is_skipped 2; then
   record_warn "crds (skipped)"
 elif [[ $FAILED -eq 0 ]]; then
-  GW_CRD_VER=$(kubectl get crd gateways.gateway.networking.k8s.io \
-    -o jsonpath='{.spec.versions[?(@.storage)].name}' 2>/dev/null || echo "")
-  HR_CRD_VER=$(kubectl get crd httproutes.gateway.networking.k8s.io \
-    -o jsonpath='{.spec.versions[?(@.storage)].name}' 2>/dev/null || echo "")
-  if [[ "$GW_CRD_VER" == "v1" && "$HR_CRD_VER" == "v1" ]]; then
+  GW_PROBE=$(kubectl_probe get crd gateways.gateway.networking.k8s.io \
+    -o jsonpath='{.spec.versions[?(@.storage)].name}')
+  HR_PROBE=$(kubectl_probe get crd httproutes.gateway.networking.k8s.io \
+    -o jsonpath='{.spec.versions[?(@.storage)].name}')
+  GW_STATE=$(probe_state "$GW_PROBE"); GW_CRD_VER=$(probe_value "$GW_PROBE")
+  HR_STATE=$(probe_state "$HR_PROBE"); HR_CRD_VER=$(probe_value "$HR_PROBE")
+
+  if [[ "$GW_STATE" == "forbidden" || "$HR_STATE" == "forbidden" ]]; then
+    record_fail "crds CANNOT VERIFY — Cloud IAM denies CRD list. Grant roles/container.viewer or container.developer to the kubectl user. (See https://cloud.google.com/kubernetes-engine/docs/how-to/iam)"
+  elif [[ "$GW_STATE" == "ok" && "$HR_STATE" == "ok" && "$GW_CRD_VER" == "v1" && "$HR_CRD_VER" == "v1" ]]; then
     GATEWAY_API_VERSION="v1"
     record_ok "crds gateway=v1 httproute=v1"
-  elif [[ -n "$GW_CRD_VER" && -n "$HR_CRD_VER" ]]; then
+  elif [[ "$GW_STATE" == "ok" && "$HR_STATE" == "ok" && -n "$GW_CRD_VER" && -n "$HR_CRD_VER" ]]; then
     GATEWAY_API_VERSION="$GW_CRD_VER"
     record_warn "crds storage version is $GW_CRD_VER — skill emits v1; upgrade with standard-install.yaml"
   else
@@ -171,8 +260,11 @@ GKE_ADDON=null
 if is_skipped 3; then
   record_warn "gatewayclass (skipped)"
 elif [[ $FAILED -eq 0 ]]; then
-  GC_OUT=$(kubectl get gatewayclass -o jsonpath='{.items[*].metadata.name}' 2>/dev/null || echo "")
-  if [[ -n "$GC_OUT" ]]; then
+  GC_PROBE=$(kubectl_probe get gatewayclass -o jsonpath='{.items[*].metadata.name}')
+  GC_STATE=$(probe_state "$GC_PROBE"); GC_OUT=$(probe_value "$GC_PROBE")
+  if [[ "$GC_STATE" == "forbidden" ]]; then
+    record_fail "gatewayclass CANNOT VERIFY — Cloud IAM denies gatewayclass list. Grant container.thirdPartyObjects.list (or roles/container.viewer)."
+  elif [[ "$GC_STATE" == "ok" && -n "$GC_OUT" ]]; then
     # shellcheck disable=SC2206
     GATEWAY_CLASSES=($GC_OUT)
     if [[ " ${GATEWAY_CLASSES[*]} " == *" $GATEWAY_CLASS "* ]]; then
@@ -207,11 +299,11 @@ if is_skipped 3b || [[ "$TARGET_FAMILY" != "traefik" ]]; then
   :  # skip silently when not Traefik target
 elif [[ $FAILED -eq 0 ]]; then
   # Try common label selectors for Traefik pods
-  TRAEFIK_IMG=$(kubectl get pods -A \
+  TRAEFIK_IMG=$(kubectl_ctx get pods -A \
     -l app.kubernetes.io/name=traefik \
     -o jsonpath='{.items[0].spec.containers[0].image}' 2>/dev/null || echo "")
   if [[ -z "$TRAEFIK_IMG" ]]; then
-    TRAEFIK_IMG=$(kubectl get pods -A \
+    TRAEFIK_IMG=$(kubectl_ctx get pods -A \
       -l app=traefik \
       -o jsonpath='{.items[0].spec.containers[0].image}' 2>/dev/null || echo "")
   fi
@@ -243,30 +335,59 @@ TLSOPTION_CRD="false"
 GCP_BP="false"
 HCP="false"
 GCP_GP="false"
+# Helper: probe a single CRD; return "true" / "false" / "forbidden"
+crd_state() {
+  local probe
+  probe=$(kubectl_probe get crd "$1" -o jsonpath='{.metadata.name}')
+  case "$(probe_state "$probe")" in
+    ok)        echo "true" ;;
+    forbidden) echo "forbidden" ;;
+    *)         echo "false" ;;
+  esac
+}
+
 if is_skipped 4; then
   record_warn "policies (skipped)"
 elif [[ "$TARGET_FAMILY" == "traefik" ]]; then
-  if kubectl get crd middlewares.traefik.io &>/dev/null; then MIDDLEWARE_CRD=true; fi
-  if kubectl get crd serverstransports.traefik.io &>/dev/null; then SERVERSTRANSPORT_CRD=true; fi
-  if kubectl get crd tlsoptions.traefik.io &>/dev/null; then TLSOPTION_CRD=true; fi
-  if [[ "$MIDDLEWARE_CRD" == "true" ]]; then
-    record_ok "policies middlewares.traefik.io CRD present"
-  else
-    record_fail "policies middlewares.traefik.io CRD missing — Traefik Helm chart installs it automatically; verify Traefik v3.1+ is installed"
-  fi
-  [[ "$SERVERSTRANSPORT_CRD" == "true" ]] \
-    || record_warn "policies serverstransports.traefik.io missing — migration will HALT later if proxy-*-timeout annotations detected"
-  [[ "$TLSOPTION_CRD" == "true" ]] \
-    || record_warn "policies tlsoptions.traefik.io missing — not required for v1.2 but future enhancements may need it"
+  MW_STATE=$(crd_state middlewares.traefik.io)
+  ST_STATE=$(crd_state serverstransports.traefik.io)
+  TO_STATE=$(crd_state tlsoptions.traefik.io)
+
+  case "$MW_STATE" in
+    true)
+      MIDDLEWARE_CRD=true
+      record_ok "policies middlewares.traefik.io CRD present"
+      ;;
+    forbidden)
+      MIDDLEWARE_CRD="forbidden"
+      record_fail "policies CANNOT VERIFY middlewares.traefik.io — Cloud IAM denies CRD list. Grant roles/container.viewer (or container.developer) before assuming Traefik is missing."
+      ;;
+    *)
+      MIDDLEWARE_CRD=false
+      record_fail "policies middlewares.traefik.io CRD missing — Traefik Helm chart installs it automatically; verify Traefik v3.1+ is installed"
+      ;;
+  esac
+  case "$ST_STATE" in
+    true)      SERVERSTRANSPORT_CRD=true ;;
+    forbidden) SERVERSTRANSPORT_CRD="forbidden"; record_warn "policies CANNOT VERIFY serverstransports.traefik.io (IAM forbidden)" ;;
+    *)         SERVERSTRANSPORT_CRD=false; record_warn "policies serverstransports.traefik.io missing — migration will HALT later if proxy-*-timeout annotations detected" ;;
+  esac
+  case "$TO_STATE" in
+    true)      TLSOPTION_CRD=true ;;
+    forbidden) TLSOPTION_CRD="forbidden" ;;
+    *)         TLSOPTION_CRD=false; record_warn "policies tlsoptions.traefik.io missing — not required for v1.2 but future enhancements may need it" ;;
+  esac
 elif [[ "$TARGET_FAMILY" == "gke" ]]; then
-  if kubectl get crd gcpbackendpolicies.networking.gke.io &>/dev/null; then GCP_BP=true; fi
-  if kubectl get crd healthcheckpolicies.networking.gke.io &>/dev/null; then HCP=true; fi
-  if kubectl get crd gcpgatewaypolicies.networking.gke.io &>/dev/null; then GCP_GP=true; fi
-  if [[ "$GCP_BP" == "true" ]]; then
-    record_ok "policies GCPBackendPolicy CRD present"
-  else
-    record_warn "policies GCPBackendPolicy CRD missing — migration will HALT later if CORS/timeout annotations are detected"
-  fi
+  GCP_BP_STATE=$(crd_state gcpbackendpolicies.networking.gke.io)
+  HCP_STATE=$(crd_state healthcheckpolicies.networking.gke.io)
+  GCP_GP_STATE=$(crd_state gcpgatewaypolicies.networking.gke.io)
+  case "$GCP_BP_STATE" in
+    true)      GCP_BP=true; record_ok "policies GCPBackendPolicy CRD present" ;;
+    forbidden) GCP_BP="forbidden"; record_fail "policies CANNOT VERIFY GCPBackendPolicy — Cloud IAM denies CRD list" ;;
+    *)         GCP_BP=false; record_warn "policies GCPBackendPolicy CRD missing — migration will HALT later if CORS/timeout annotations are detected" ;;
+  esac
+  [[ "$HCP_STATE" == "true" ]] && HCP=true || HCP="$HCP_STATE"
+  [[ "$GCP_GP_STATE" == "true" ]] && GCP_GP=true || GCP_GP="$GCP_GP_STATE"
 else
   record_warn "policies target family '$TARGET_FAMILY' has no provider CRDs to probe"
 fi
@@ -280,14 +401,21 @@ elif [[ -n "$NAMESPACES" ]]; then
   for ns in $NAMESPACES; do
     EXISTS="false"
     LABELED="false"
-    if kubectl get namespace "$ns" &>/dev/null; then
-      EXISTS="true"
-      LBL=$(kubectl get namespace "$ns" -o jsonpath='{.metadata.labels.gateway-access}' 2>/dev/null || echo "")
-      [[ "$LBL" == "ingress-nginx" ]] && LABELED="true"
-      record_ok "namespaces $ns (labeled=$LABELED)"
-    else
-      record_warn "namespaces $ns does not exist yet"
-    fi
+    NS_PROBE=$(kubectl_probe get namespace "$ns" -o jsonpath='{.metadata.labels.gateway-access}')
+    case "$(probe_state "$NS_PROBE")" in
+      ok)
+        EXISTS="true"
+        LBL=$(probe_value "$NS_PROBE")
+        [[ "$LBL" == "ingress-nginx" ]] && LABELED="true"
+        record_ok "namespaces $ns (labeled=$LABELED)"
+        ;;
+      forbidden)
+        record_warn "namespaces $ns CANNOT VERIFY — Cloud IAM denies namespace get/list"
+        ;;
+      *)
+        record_warn "namespaces $ns does not exist yet"
+        ;;
+    esac
     TMP_NS="$TMP_NS\"$ns\":{\"exists\":$EXISTS,\"labeled\":$LABELED},"
   done
   NAMESPACE_JSON="{${TMP_NS%,}}"
@@ -310,7 +438,29 @@ if $VERIFY_ONLY; then
 fi
 
 # --- Build JSON output ---
-jq_classes=$(printf '%s\n' "${GATEWAY_CLASSES[@]}" | jq -R . | jq -s .)
+# Convert per-CRD state variables (which may hold true / false / "forbidden")
+# into JSON-safe literals: bare booleans for true/false, quoted strings
+# otherwise.
+to_json_literal() {
+  case "$1" in
+    true|false|null) echo "$1" ;;
+    *) echo "\"$1\"" ;;
+  esac
+}
+MIDDLEWARE_CRD_JSON=$(to_json_literal "$MIDDLEWARE_CRD")
+SERVERSTRANSPORT_CRD_JSON=$(to_json_literal "$SERVERSTRANSPORT_CRD")
+TLSOPTION_CRD_JSON=$(to_json_literal "$TLSOPTION_CRD")
+GCP_BP_JSON=$(to_json_literal "$GCP_BP")
+HCP_JSON=$(to_json_literal "$HCP")
+GCP_GP_JSON=$(to_json_literal "$GCP_GP")
+
+# bash 3.2 unbound-variable guard: an empty array cannot be expanded with [@]
+# under `set -u`. Use printf with a default to materialise the empty list.
+if [[ "${#GATEWAY_CLASSES[@]}" -eq 0 ]]; then
+  jq_classes='[]'
+else
+  jq_classes=$(printf '%s\n' "${GATEWAY_CLASSES[@]}" | jq -R . | jq -s .)
+fi
 jq_warnings=$(printf '%s\n' "${WARNINGS[@]}" | jq -R . | jq -s '. | map(select(. != ""))')
 jq_halts=$(printf '%s\n' "${HALTS[@]}" | jq -R . | jq -s '. | map(select(. != ""))')
 
@@ -335,12 +485,12 @@ cat <<EOF
   "traefikAddonEnabled": $TRAEFIK_ADDON,
   "gkeAddonEnabled": $GKE_ADDON,
   "policyCRDs": {
-    "middlewares.traefik.io": $MIDDLEWARE_CRD,
-    "serverstransports.traefik.io": $SERVERSTRANSPORT_CRD,
-    "tlsoptions.traefik.io": $TLSOPTION_CRD,
-    "gcpbackendpolicies.networking.gke.io": $GCP_BP,
-    "healthcheckpolicies.networking.gke.io": $HCP,
-    "gcpgatewaypolicies.networking.gke.io": $GCP_GP
+    "middlewares.traefik.io": $MIDDLEWARE_CRD_JSON,
+    "serverstransports.traefik.io": $SERVERSTRANSPORT_CRD_JSON,
+    "tlsoptions.traefik.io": $TLSOPTION_CRD_JSON,
+    "gcpbackendpolicies.networking.gke.io": $GCP_BP_JSON,
+    "healthcheckpolicies.networking.gke.io": $HCP_JSON,
+    "gcpgatewaypolicies.networking.gke.io": $GCP_GP_JSON
   },
   "namespaces": $NAMESPACE_JSON,
   "warnings": $jq_warnings,

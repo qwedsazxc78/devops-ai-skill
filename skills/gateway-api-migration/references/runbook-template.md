@@ -114,15 +114,22 @@ documentation. The skill only emits standard Gateway API resources for
 unknown targets; provider-specific policy CRDs (CORS, rate limiting)
 are deferred to manual review per the report's Risk Register.
 
-### 0.4 Label target namespaces
+### 0.4 Label target namespaces — INCLUDING the Gateway's own namespace
 
 HTTPRoutes cannot attach to the Gateway until the namespace carries the
-label `gateway-access=ingress-nginx`. One command per target namespace
-(the exact list is in the report's **Section 7 — Per-hostname migration map**):
+label `gateway-access=ingress-nginx`. **This includes the Gateway's own
+namespace** (`{{master_namespace}}`), because the HTTP→HTTPS
+`tls-redirect` HTTPRoute lives there. Without the label on
+`{{master_namespace}}`, the redirect silently won't attach and port 80
+traffic gets dropped — the most common "I deployed it but http://
+returns nothing" failure mode of this migration.
+
+One command, all target namespaces (the exact list is in the report's
+**Section 7 — Per-hostname migration map**, plus the Gateway namespace):
 
 ```bash
-kubectl label namespace {{target_namespaces_space_separated}} --overwrite \
-  gateway-access=ingress-nginx
+kubectl label namespace {{master_namespace}} {{target_namespaces_space_separated}} \
+  --overwrite gateway-access=ingress-nginx
 ```
 
 ### 0.5 Preflight verification one-liner
