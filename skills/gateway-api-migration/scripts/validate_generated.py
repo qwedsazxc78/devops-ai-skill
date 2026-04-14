@@ -292,21 +292,60 @@ def check_httproute_parentref_name(
     )
 
 
-def check_source_hostname_coverage(
-    source_built: Path, gateway_build: Path,
-) -> dict:
-    """Check 5: every source master hostname appears as a listener hostname."""
-    source_docs = _yq_ea_json(source_built)
-    gw_docs = _yq_ea_json(gateway_build)
+def _compute_active_source_hostnames(
+    source_built: Path, service_build: Path,
+) -> tuple[set[str], set[str]]:
+    """Return (active_hostnames, orphan_hostnames) derived from source + service.
 
-    source_hosts: set[str] = set()
-    for doc in source_docs:
+    A hostname is *active* if the source master declares it AND at least one
+    legacy minion (kind: Ingress) in the service build routes to it.
+
+    An *orphan* hostname is declared by the master but has no minion routing —
+    these are intentionally skipped by the skill when `--include-orphan-hosts`
+    is not set (Q3=b default in v1.2). Downstream checks should not flag
+    orphans as missing coverage.
+    """
+    master_hosts: set[str] = set()
+    for doc in _yq_ea_json(source_built):
         if doc.get("kind") != "Ingress":
             continue
         for rule in (doc.get("spec") or {}).get("rules", []) or []:
             host = rule.get("host")
             if host:
-                source_hosts.add(host.lower())
+                master_hosts.add(host.lower())
+
+    minion_hosts: set[str] = set()
+    for doc in _yq_ea_json(service_build):
+        # Only the legacy Ingress docs, not the new HTTPRoutes.
+        if doc.get("kind") != "Ingress":
+            continue
+        for rule in (doc.get("spec") or {}).get("rules", []) or []:
+            # Minions have paths; masters are host-only. Skip docs that look
+            # like masters even if they landed in the service build.
+            if not (rule.get("http") or {}).get("paths"):
+                continue
+            host = rule.get("host")
+            if host:
+                minion_hosts.add(host.lower())
+
+    active = master_hosts & minion_hosts
+    orphans = master_hosts - minion_hosts
+    return active, orphans
+
+
+def check_source_hostname_coverage(
+    source_built: Path, gateway_build: Path, service_build: Path,
+) -> dict:
+    """Check 5: every **active** source hostname appears as a listener hostname.
+
+    "Active" means: declared by the master AND routed by at least one legacy
+    minion. Orphan hostnames (declared on master, no minion) are intentionally
+    skipped when `--include-orphan-hosts` is not set (Q3=b in the plan). They
+    are reported in the details but do not fail this check.
+    """
+    gw_docs = _yq_ea_json(gateway_build)
+
+    active, orphans = _compute_active_source_hostnames(source_built, service_build)
 
     listener_hosts: set[str] = set()
     for doc in gw_docs:
@@ -317,28 +356,29 @@ def check_source_hostname_coverage(
             if host:
                 listener_hosts.add(host.lower())
 
-    missing = sorted(source_hosts - listener_hosts)
+    missing = sorted(active - listener_hosts)
+    details = {
+        "activeHostCount":   len(active),
+        "orphanHostCount":   len(orphans),
+        "orphanHosts":       sorted(orphans),
+        "listenerHostCount": len(listener_hosts),
+    }
 
     if missing:
         return _check(
             "source-hostname-coverage",
             "fail",
-            f"{len(missing)}/{len(source_hosts)} source hostnames missing from Gateway listeners",
+            f"{len(missing)}/{len(active)} active source hostnames missing from Gateway listeners",
             severity="S1",
-            details={
-                "sourceHostCount": len(source_hosts),
-                "listenerHostCount": len(listener_hosts),
-            },
+            details=details,
             mismatches=missing,
         )
     return _check(
         "source-hostname-coverage",
         "pass",
-        f"all {len(source_hosts)} source hostnames covered by Gateway listeners",
-        details={
-            "sourceHostCount": len(source_hosts),
-            "listenerHostCount": len(listener_hosts),
-        },
+        f"all {len(active)} active source hostnames covered "
+        f"({len(orphans)} orphan host(s) intentionally skipped)",
+        details=details,
     )
 
 
@@ -564,20 +604,38 @@ def check_namespace_consistency(
     )
 
 
-def check_tls_secret_coverage(source_built: Path, gateway_build: Path) -> dict:
-    """Check 9: every source spec.tls[].secretName is referenced by a
-    listener certificateRefs entry."""
+def check_tls_secret_coverage(
+    source_built: Path, gateway_build: Path, service_build: Path,
+) -> dict:
+    """Check 9: every source spec.tls[].secretName for an **active** hostname
+    is referenced by a listener certificateRefs entry.
+
+    TLS secrets for orphan hostnames are correctly not referenced — their
+    listeners were skipped by the generator. Filter those out before diffing.
+    """
     source_docs = _yq_ea_json(source_built)
     gw_docs = _yq_ea_json(gateway_build)
 
+    active, orphans = _compute_active_source_hostnames(source_built, service_build)
+
+    # Build hostname → secretName map from source, keeping only active hosts.
     source_secrets: set[str] = set()
+    orphan_secrets: set[str] = set()
     for doc in source_docs:
         if doc.get("kind") != "Ingress":
             continue
         for tls in (doc.get("spec") or {}).get("tls", []) or []:
             name = tls.get("secretName")
-            if name:
+            if not name:
+                continue
+            hosts = [h.lower() for h in (tls.get("hosts") or [])]
+            # A tls entry may cover multiple hostnames; if ANY of them is
+            # active, the secret must be referenced. If ALL are orphans,
+            # the secret is intentionally unused.
+            if any(h in active for h in hosts) or not hosts:
                 source_secrets.add(name)
+            if all(h in orphans for h in hosts) and hosts:
+                orphan_secrets.add(name)
 
     listener_cert_refs: set[str] = set()
     for doc in gw_docs:
@@ -586,34 +644,34 @@ def check_tls_secret_coverage(source_built: Path, gateway_build: Path) -> dict:
         for listener in (doc.get("spec") or {}).get("listeners", []) or []:
             tls = listener.get("tls") or {}
             for ref in tls.get("certificateRefs", []) or []:
-                # We ignore kind — any match counts. The kind check belongs to a
-                # separate schema-level validation.
                 name = ref.get("name")
                 if name:
                     listener_cert_refs.add(name)
 
-    # Source secret names often include a `dev-` prefix; generated certs may
-    # keep the same or drop the env prefix. We treat exact match as pass and
-    # record approximate matches as WARN.
     missing = sorted(source_secrets - listener_cert_refs)
+
+    details = {
+        "activeSecretCount":  len(source_secrets),
+        "orphanSecretCount":  len(orphan_secrets),
+        "orphanSecrets":      sorted(orphan_secrets),
+        "listenerRefCount":   len(listener_cert_refs),
+    }
 
     if missing:
         return _check(
             "tls-secret-coverage",
             "warn",  # warn rather than fail — env-prefix differences are legitimate
-            f"{len(missing)}/{len(source_secrets)} source TLS secret names not in listener certRefs",
+            f"{len(missing)}/{len(source_secrets)} active-hostname TLS secrets not in listener certRefs",
             severity="S2",
-            details={
-                "sourceSecretCount": len(source_secrets),
-                "listenerRefCount": len(listener_cert_refs),
-                "missing": missing[:10],
-            },
+            details={**details, "missing": missing[:10]},
             mismatches=missing,
         )
     return _check(
         "tls-secret-coverage",
         "pass",
-        f"all {len(source_secrets)} source TLS secret names referenced by listeners",
+        f"all {len(source_secrets)} active-hostname TLS secrets referenced by listeners "
+        f"({len(orphan_secrets)} orphan-host secrets intentionally skipped)",
+        details=details,
     )
 
 
@@ -826,7 +884,13 @@ def check_ingress2gateway_second_opinion(
     source_built: Path, service_build: Path, gateway_build: Path,
 ) -> dict | None:
     """Check 11 (optional): cross-check backend coverage and hostname coverage
-    against the upstream ingress2gateway tool."""
+    against the upstream ingress2gateway tool.
+
+    Filters i2g's hostname set to active hostnames only (excluding orphan
+    hosts that the skill intentionally skipped). Otherwise the second opinion
+    always disagrees with us on the orphan-host count, which is expected
+    divergence, not a real miss.
+    """
     if not shutil.which("ingress2gateway"):
         return _check(
             "ingress2gateway-second-opinion",
@@ -906,8 +970,14 @@ def check_ingress2gateway_second_opinion(
                     if name and port is not None:
                         our_backends.add((name, int(port)))
 
-    host_missing = sorted(i2g_hostnames - our_hostnames)
-    host_extra   = sorted(our_hostnames - i2g_hostnames)
+    # Filter i2g's hostname set to active hostnames only — orphan hosts in
+    # i2g's output are expected divergence, not a real miss.
+    active, orphans = _compute_active_source_hostnames(source_built, service_build)
+    i2g_active = {h for h in i2g_hostnames if h in active}
+    i2g_orphan = {h for h in i2g_hostnames if h in orphans}
+
+    host_missing = sorted(i2g_active - our_hostnames)
+    host_extra   = sorted(our_hostnames - i2g_active)
     bk_missing   = sorted(i2g_backends - our_backends)
     bk_extra     = sorted(our_backends - i2g_backends)
 
@@ -928,16 +998,18 @@ def check_ingress2gateway_second_opinion(
             self_signed_hosts.append(m.group(1))
 
     details = {
-        "i2gHostCount":       len(i2g_hostnames),
-        "ourHostCount":       len(our_hostnames),
-        "i2gBackendCount":    len(i2g_backends),
-        "ourBackendCount":    len(our_backends),
-        "i2gOnlyHosts":       host_missing,
-        "skillOnlyHosts":     host_extra,
-        "i2gOnlyBackends":    [f"{n}:{p}" for n, p in bk_missing],
-        "skillOnlyBackends":  [f"{n}:{p}" for n, p in bk_extra],
-        "i2gUnsupported":     sorted(set(unsupported_annotations)),
-        "i2gSelfSignedWarns": sorted(set(self_signed_hosts)),
+        "i2gHostCount":        len(i2g_hostnames),
+        "i2gActiveHostCount":  len(i2g_active),
+        "i2gOrphanHostCount":  len(i2g_orphan),
+        "ourHostCount":        len(our_hostnames),
+        "i2gBackendCount":     len(i2g_backends),
+        "ourBackendCount":     len(our_backends),
+        "i2gOnlyActiveHosts":  host_missing,
+        "skillOnlyHosts":      host_extra,
+        "i2gOnlyBackends":     [f"{n}:{p}" for n, p in bk_missing],
+        "skillOnlyBackends":   [f"{n}:{p}" for n, p in bk_extra],
+        "i2gUnsupported":      sorted(set(unsupported_annotations)),
+        "i2gSelfSignedWarns":  sorted(set(self_signed_hosts)),
     }
 
     # Classify status
@@ -954,7 +1026,8 @@ def check_ingress2gateway_second_opinion(
     return _check(
         "ingress2gateway-second-opinion",
         "pass",
-        f"cross-check clean — our hosts ⊇ i2g hosts ({len(our_hostnames)} ⊇ {len(i2g_hostnames)}), "
+        f"cross-check clean — our hosts ⊇ i2g active hosts "
+        f"({len(our_hostnames)} ⊇ {len(i2g_active)}, {len(i2g_orphan)} orphans excluded), "
         f"our backends ⊇ i2g backends ({len(our_backends)} ⊇ {len(i2g_backends)})",
         details=details,
     )
@@ -1047,13 +1120,13 @@ def main() -> int:
 
     # 5: source hostname coverage (only if source build succeeded)
     if source_built.is_file() and source_built.stat().st_size > 0:
-        checks.append(check_source_hostname_coverage(source_built, gateway_built))
+        checks.append(check_source_hostname_coverage(source_built, gateway_built, minion_built))
         # 6: backend coverage
         checks.append(check_source_backend_coverage(source_built, minion_built))
         # 7: path coverage
         checks.append(check_path_coverage(source_built, minion_built))
         # 9: TLS secret coverage
-        checks.append(check_tls_secret_coverage(source_built, gateway_built))
+        checks.append(check_tls_secret_coverage(source_built, gateway_built, minion_built))
     else:
         checks.append(_check(
             "source-hostname-coverage", "warn",
