@@ -90,6 +90,12 @@ TOOLS=(
   # Zeus (GitOps) — Recommended
   "yamllint|zeus|recommended|||pip install yamllint|"
   "kubeconform|zeus|recommended|brew install kubeconform|||scoop install kubeconform"
+  # ingress2gateway — upstream Kubernetes SIG-Network tool.
+  # Used by gateway-api-migration skill Step 4c (second opinion) AND
+  # Step 4d validator (scripts/validate_generated.py check #11). Missing tool
+  # → validator falls back to offline-only checks. Fallback install via `go`
+  # is handled by get_install_cmd() below when no system package manager is
+  # available. Source: https://github.com/kubernetes-sigs/ingress2gateway
   "ingress2gateway|zeus|recommended|brew install ingress2gateway|||"
   "kube-score|zeus|recommended|brew install kube-score|||"
   "kube-linter|zeus|recommended|brew install kube-linter|||"
@@ -133,6 +139,19 @@ check_tool() {
   fi
 }
 
+# Known-good `go install` paths for tools that only ship via Homebrew or via
+# `go install` upstream. Used as a fallback when the platform package manager
+# has no entry for a tool (Linux without Homebrew, for example). Bash 3.2
+# (default on macOS) has no associative arrays, so this is a plain function.
+get_go_install_path() {
+  case "$1" in
+    ingress2gateway) echo "github.com/kubernetes-sigs/ingress2gateway@latest" ;;
+    kube-score)      echo "github.com/zegl/kube-score/cmd/kube-score@latest" ;;
+    kubeconform)     echo "github.com/yannh/kubeconform/cmd/kubeconform@latest" ;;
+    *) echo "" ;;
+  esac
+}
+
 get_install_cmd() {
   local entry="$1"
   IFS='|' read -r name category tier brew_cmd apt_cmd pip_cmd winget_cmd <<< "$entry"
@@ -161,6 +180,17 @@ get_install_cmd() {
       echo "scoop install ${name}" && return ;;
   esac
 
+  # `go install` fallback: Go-native tools that don't have platform package
+  # manager entries can still be installed via `go install <path>@latest` if
+  # Go is on PATH. This is how the upstream ingress2gateway repo recommends
+  # non-Homebrew installation.
+  local go_path
+  go_path=$(get_go_install_path "$name")
+  if [[ -n "$go_path" ]] && command -v go &>/dev/null; then
+    echo "go install $go_path"
+    return
+  fi
+
   # No valid install command available — return empty
   echo ""
 }
@@ -173,6 +203,13 @@ get_install_hint() {
   [[ -n "$brew_cmd" ]] && echo "$brew_cmd (needs Homebrew)" && return
   [[ -n "$winget_cmd" ]] && echo "$winget_cmd (needs winget)" && return
   [[ -n "$pip_cmd" ]] && echo "uv tool install ${pip_cmd##pip install } (needs uv or pip)" && return
+  # Go-native tools: surface the upstream go install path
+  local go_path
+  go_path=$(get_go_install_path "$name")
+  if [[ -n "$go_path" ]]; then
+    echo "go install $go_path (needs Go toolchain)"
+    return
+  fi
   echo "see https://github.com/search?q=${name} for install instructions"
 }
 

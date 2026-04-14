@@ -63,6 +63,7 @@ re-deriving the same logic every run wastes tokens and introduces variance.
 | `scripts/classify_ingress.py` | Step 1 | Classify Ingress docs (input: YAML files — built overlays preferred, raw fallback) |
 | `scripts/pair_minions.py` | Step 1 | Pair minions with masters, detect orphans and ambiguity |
 | `scripts/inventory_annotations.py` | Step 2 | Three-bucket inventory (translated/stubbed/unknown) with file:line provenance |
+| `scripts/validate_generated.py` | Step 4d | 11 semantic checks on generated artifacts + optional `ingress2gateway` second-opinion cross-check |
 | `scripts/build_report.py` | Step 5 | Render `references/report-template.md` from `state.yaml` |
 
 **Input mode: built vs raw.** Steps 1 and 2 prefer **built-overlay mode** —
@@ -740,32 +741,59 @@ Count each class and persist to
 `state.yaml.steps.4c.divergenceBreakdown`. `needsReview > 0` → WARN,
 never HALT.
 
-### 4d. Semantic diff (new in v1.1 — mandatory)
+### 4d. Semantic diff — `scripts/validate_generated.py` (mandatory)
 
-Two deterministic checks that catch real bugs early:
-
-1. **Listener coverage** — for every HTTPRoute generated in Phase 3B,
-   verify `parentRefs[].sectionName` matches a listener in
-   `state.yaml.topology.listeners[]`. Any mismatch → HALT (the
-   generated module will fail at attachment time otherwise).
-
-2. **Path coverage** — for every minion's original paths
-   `spec.rules[].http.paths[].path`, verify the generated HTTPRoute
-   has a matching `matches[].path.value` with the same `pathType`.
-   Missing paths → HALT. Extra paths → WARN (the skill may have
-   legitimately normalised, but surface it).
+Delegate all semantic validation to `scripts/validate_generated.py`. The
+script runs 11 checks against the generated artifacts, emits structured
+JSON, and returns exit 0 (`pass`/`warn`) or exit 1 (`fail`).
 
 ```bash
-# Pseudo-check: extract paths from source minion and generated HTTPRoute
-yq '.spec.rules[].http.paths[].path' common.service/overlays/dev/argocd-nginx-ingress.yaml > /tmp/src-paths.txt
-yq '.spec.rules[].matches[].path.value' common.service/overlays/dev/argocd-httproute.yaml > /tmp/gen-paths.txt
-diff -u /tmp/src-paths.txt /tmp/gen-paths.txt
+python3 scripts/validate_generated.py \
+  --target-root      /path/to/target/gitops/repo \
+  --module           common.ingress \
+  --minion-module    common.service \
+  --generated-module common.gateway \
+  --env              dev \
+  > docs/reports/gateway-migration/<slug>/step4d.json
 ```
 
-Persist results to `state.yaml.steps.4d.listenerCoverage` and
-`steps.4d.pathCoverage`.
+**Checks run (see script docstring for full details):**
 
-**Gate:** HALT on 4a or 4d failure; WARN on 4b/4c.
+1. `kustomize-build-gateway` — `kustomize build <gateway>/overlays/<env>` exits 0
+2. `kustomize-build-service` — `kustomize build <service>/overlays/<env>` exits 0
+3. `listener-coverage` — every HTTPRoute `sectionName` resolves to a Gateway listener
+4. `httproute-parentref-name` — every `parentRefs[].name` matches a real Gateway
+5. `source-hostname-coverage` — every source master hostname appears in a Gateway listener
+6. `source-backend-coverage` — every source minion backend Service is in a generated HTTPRoute `backendRefs[]`
+7. `path-coverage` — every source path+pathType appears in a generated HTTPRoute `matches[]` (with `ImplementationSpecific /` → `PathPrefix /` normalization)
+8. `namespace-consistency` — every HTTPRoute's namespace matches its source minion's namespace
+9. `tls-secret-coverage` — every source `spec.tls[].secretName` is referenced by a listener `certificateRefs[]`
+10. `dead-file-safety` — dead files (on disk but not referenced by any overlay `kustomization.yaml`) don't leak into built output
+11. `ingress2gateway-second-opinion` *(optional, if `ingress2gateway` is on PATH)* — cross-check our generated hostnames and backends against the upstream tool; our set must be a superset (we're allowed to emit extras like the tls-redirect HTTPRoute, ResponseHeaderModifier filters, and GCPBackendPolicy that ingress2gateway doesn't produce)
+
+**Output consumption.** Parse the JSON:
+
+- `overall: "fail"` → **HALT**, do not proceed to Step 5. Read
+  `checks[].mismatches` for the failing entries and either fix the
+  generated artifacts (`--resume` Step 3) or update the source Ingress
+  if the failure reveals a pre-existing problem in the source.
+- `overall: "warn"` → continue to Step 5. Each `warn` check becomes a
+  **risk register** entry (Section 9 in the report) at the severity the
+  check declares.
+- `overall: "pass"` → continue to Step 5. No risk register entries from
+  step 4d.
+
+Persist the full JSON into `state.yaml.steps["4d"]` for the report to
+consume.
+
+**Optional: skip the second opinion** (for faster runs without
+ingress2gateway):
+
+```bash
+python3 scripts/validate_generated.py ... --no-second-opinion
+```
+
+**Gate:** HALT on 4a or 4d failure; WARN on 4b/4c/4d-warn.
 
 ## Step 5 — Render report
 
