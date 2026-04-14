@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.0] - 2026-04-14
+
+### Added
+
+- 新增 `/devops:gateway-api-migration` 斜線指令 — 直接進入 Gateway API
+  migration pipeline 的捷徑，無需先呼叫 `/devops:zeus` 再下 `*gateway-migrate`。
+  Silently 套用 Zeus 的 Critical Rules 與 Error Recovery，跳過問候與
+  `*help` 選單，直接執行 `prompts/zeus/gateway-migrate.md`。
+- `commands/zeus.md` 在 Skills 表格與新增的「Direct skill entry points」
+  區段交叉連結至新指令，明確兩條入口共用同一 pipeline 與 skill。
+
+### Fixed
+
+- **Claude Code 重複註冊**：`scripts/install-global.sh` 過去同時做
+  「直接複製到 `~/.claude/{skills,agents,prompts}/`」與「plugin 快取
+  註冊」兩條路徑，造成每個 devops skill/agent 同時以裸名與 `devops:`
+  命名空間出現兩次（10 個 skill + 2 個 agent + 3 個 prompts 目錄受影響）。
+  改為 plugin-only 模式，並新增 `_claude_purge_legacy_direct_install()`
+  在每次安裝時清除舊有副本，讓既有使用者升級時自動修復。
+
 ## [1.7.0] - 2026-04-13
 
 ### Added
@@ -180,6 +200,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Bilingual documentation (EN + 繁體中文)
 
 <!-- Links -->
+[1.8.0]: https://github.com/qwedsazxc78/devops-ai-skill/compare/v1.7.0...v1.8.0
 [1.7.0]: https://github.com/qwedsazxc78/devops-ai-skill/compare/v1.6.0...v1.7.0
 [1.6.0]: https://github.com/qwedsazxc78/devops-ai-skill/compare/v1.5.0...v1.6.0
 [1.5.0]: https://github.com/qwedsazxc78/devops-ai-skill/compare/v1.4.1...v1.5.0
