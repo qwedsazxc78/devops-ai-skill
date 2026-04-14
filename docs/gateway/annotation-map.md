@@ -1,30 +1,38 @@
-# NGINX Ingress → GKE Gateway API Annotation Map
+# NGINX Ingress → Gateway API Annotation Map
 
 Canonical translation table for `*gateway-migrate`. Each row represents a
 deterministic decision the converter makes every run. Single source of truth —
 the skill's `references/annotation-map.md` symlinks here.
 
+**Dual-target.** Since skill v1.2.0 the map supports two targets: the default
+**Traefik** path (`--gateway-class traefik*`) and the GKE Gateway path
+(`--gateway-class gke-l7-*`). Every row below has per-target guidance. The
+skill branches on the `--gateway-class` prefix and emits whichever column
+applies. Rows that are identical across targets (e.g., row 1 setting
+`gatewayClassName`, the TLS listener rows, the basic hostname/path/backend
+mapping) have a single `both` column.
+
 ---
 
 ## Translation table
 
-| # | Annotation | Category | GKE Gateway translation | Converter action |
-|---|---|---|---|---|
-| 1 | `kubernetes.io/ingress.class: nginx` | portable | `Gateway.spec.gatewayClassName: gke-l7-global-external-managed` | drop from resource, set on Gateway |
-| 2 | `cert-manager.io/cluster-issuer: <x>` | portable | Preserved on `Certificate` resource referenced by Gateway listener | preserve; emit Certificate CR |
-| 3 | `networking.gke.io/managed-certificates: a,b,c` | portable-GKE | Split by comma; each name becomes a `listener.tls.certificateRefs[kind=ManagedCertificate]` entry | one listener per hostname group; keep existing ManagedCertificate resources |
-| 4 | `nginx.ingress/mergeable-ingress-type: master` | drop-info | No equivalent needed; HTTPRoutes merge natively | drop with INFO record |
-| 5 | `nginx.ingress.kubernetes.io/enable-cors: "true"` | convertible | `GCPBackendPolicy.spec.cors` enabled | emit one GCPBackendPolicy per affected Service |
-| 6 | `nginx.ingress.kubernetes.io/cors-allow-origin: "*"` | convertible | `GCPBackendPolicy.spec.cors.allowOrigins: ["*"]` | merge into policy from #5 |
-| 7 | `nginx.ingress.kubernetes.io/cors-allow-methods` | convertible | `GCPBackendPolicy.spec.cors.allowMethods: [...]` | split comma-string, normalize |
-| 8 | `nginx.ingress.kubernetes.io/cors-allow-headers` | convertible | `GCPBackendPolicy.spec.cors.allowHeaders: [...]` | split comma-string, normalize |
-| 9a | `server-snippet` — `X-Content-Type-Options`, `X-XSS-Protection`, `X-Frame-Options` response headers | split-category (auto) | `HTTPRoute.spec.rules[].filters[].responseHeaderModifier.add` | auto-convert; loss-free |
-| 9b | `server-snippet` — `add_header Set-Cookie "..."` with no cookie name | split-category (stub) | No direct equivalent; likely legacy bug | TODO stub + Manual Review entry |
-| 9c | `server-snippet` — `location ~ .../ { return 404; }` path denylists | split-category (stub) | Cloud Armor security policy territory | TODO stub + Manual Review entry with Cloud Armor pointer |
-| 10 | `nginx.org/proxy-{connect,read,send}-timeout` | convertible-lossy | `GCPBackendPolicy.spec.timeoutSec` (single value) | emit `timeoutSec = max(read, send, connect)`, WARN in report |
-| 11 | `spec.tls[].hosts` + `spec.tls[].secretName` | portable | One `listener` per hostname group with matching `certificateRefs` | preserve Secret names exactly |
-| 12 | `spec.rules[].host` (host-only, no paths) | portable | One HTTPRoute per hostname, single `PathPrefix /` rule, `parentRef` on the hostname's listener | one-to-one mapping |
-| 13 | `spec.rules[].http.paths[].backend.service` | portable | `HTTPRoute.spec.rules[].backendRefs[]` with same Service name + port | preserve; HALT if Service not found in module |
+| # | Annotation | Category | Traefik target (default) | GKE target (opt-in) | Converter action |
+|---|---|---|---|---|---|
+| 1 | `kubernetes.io/ingress.class: nginx` | portable | `Gateway.spec.gatewayClassName: traefik` (or `--gateway-class` override) | `Gateway.spec.gatewayClassName: gke-l7-global-external-managed` (or `--gateway-class` override) | drop from resource, set on Gateway |
+| 2 | `cert-manager.io/cluster-issuer: <x>` | portable | **drop-info** — cert-manager continues to populate the Secrets referenced by `listener.tls.certificateRefs[kind=Secret]`; no new Certificate CR emitted | Same as Traefik path when `spec.tls[].secretName` is present. If the source also had `networking.gke.io/managed-certificates`, that takes precedence for GKE. | preserve existing cert-manager setup |
+| 3 | `networking.gke.io/managed-certificates: a,b,c` | portable-GKE | **drop-info** — Traefik does not use `ManagedCertificate`. WARN in the report that the annotation listed certs that won't be referenced. | split by comma; each name → `listener.tls.certificateRefs[kind=ManagedCertificate]` | preserve or drop depending on target |
+| 4 | `nginx.ingress/mergeable-ingress-type: master\|minion` | drop-info | drop — HTTPRoutes merge natively via `parentRef` | same | drop with INFO record |
+| 5 | `nginx.ingress.kubernetes.io/enable-cors: "true"` | convertible | **1× `Middleware` kind: headers**, namespace-scoped to each target (shared via `filters[].extensionRef`) | **N× `GCPBackendPolicy.spec.cors`**, one per backend Service | emit CORS middleware(s) — see §CORS below |
+| 6 | `nginx.ingress.kubernetes.io/cors-allow-origin: "*"` | convertible | `Middleware.spec.headers.accessControlAllowOriginList: ["*"]` | merge into `GCPBackendPolicy.spec.cors.allowOrigins` from #5 | merge into policy from #5 |
+| 7 | `nginx.ingress.kubernetes.io/cors-allow-methods` | convertible | `Middleware.spec.headers.accessControlAllowMethods: [...]` | `GCPBackendPolicy.spec.cors.allowMethods: [...]` | split comma-string, normalize |
+| 8 | `nginx.ingress.kubernetes.io/cors-allow-headers` | convertible | `Middleware.spec.headers.accessControlAllowHeaders: [...]` | `GCPBackendPolicy.spec.cors.allowHeaders: [...]` | split comma-string, normalize |
+| 9a | `server-snippet` — `X-Content-Type-Options`, `X-XSS-Protection`, `X-Frame-Options` response headers | split-category (auto) | `HTTPRoute.spec.rules[].filters[].responseHeaderModifier.add` | same | auto-convert; loss-free, both targets |
+| 9b | `server-snippet` — `add_header Set-Cookie "..."` with no cookie name | split-category (stub) | No direct equivalent; TODO stub + Manual Review entry | same | emit stub, non-blocking |
+| 9c | `server-snippet` — `location ~ .../ { return 404; }` path denylists | split-category (stub→auto under Traefik) | **1× `Middleware` kind: redirectRegex** returning 404 for matching paths. Plugin-based alternative (`blockpath`) emitted as commented-out option. NO longer a stub. | **still a stub** — Cloud Armor territory; TODO comment with Cloud Armor pointer | Traefik: emit middleware; GKE: emit stub |
+| 10 | `nginx.org/proxy-{connect,read,send}-timeout` | convertible-lossy | **`ServersTransport.spec.forwardingTimeouts.{dialTimeout,responseHeaderTimeout,idleConnTimeout}`** — preserves the 3 separate values (less lossy than GKE!) | `GCPBackendPolicy.spec.timeoutSec = max(read, send, connect)` (collapsed to one value) | Traefik: preserve granularity; GKE: collapse with WARN |
+| 11 | `spec.tls[].hosts` + `spec.tls[].secretName` | portable | One `listener` per hostname group with `certificateRefs[kind=Secret]` | same (also supports `kind: ManagedCertificate` if the row-3 annotation listed the host) | preserve Secret names exactly |
+| 12 | `spec.rules[].host` (host-only, no paths) | portable | One HTTPRoute per hostname, single `PathPrefix /` rule, `parentRef` on the hostname's listener | same | one-to-one mapping |
+| 13 | `spec.rules[].http.paths[].backend.service` | portable | `HTTPRoute.spec.rules[].backendRefs[]` with same Service name + port | same | preserve; HALT if Service not found in module |
 
 ---
 
@@ -155,15 +163,97 @@ paths will **not** be blocked until the Cloud Armor policy is applied.
 
 ---
 
+## CORS translation detail (rows 5–8)
+
+**Traefik target**: CORS is a single `Middleware` of kind `headers`, shared
+across every HTTPRoute that needs CORS via `filters[].extensionRef`. One
+middleware per *target namespace* (because Traefik resolves `extensionRef`
+against the HTTPRoute's own namespace by default). For a module with 11
+backends across 7 namespaces, the skill emits **7 Middleware resources**
+(one per namespace), each with identical CORS config.
+
+```yaml
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: common-cors
+  namespace: <httproute-namespace>
+spec:
+  headers:
+    accessControlAllowOriginList: ["*"]
+    accessControlAllowMethods: [PUT, GET, POST, OPTIONS]
+    accessControlAllowHeaders: [DNT, X-CustomHeader, ...]
+    accessControlMaxAge: 100
+    addVaryHeader: true
+```
+
+HTTPRoute filter:
+
+```yaml
+rules:
+  - filters:
+      - type: ExtensionRef
+        extensionRef:
+          group: traefik.io
+          kind: Middleware
+          name: common-cors
+    # ...
+```
+
+**GKE target**: CORS attaches to backend Services via `GCPBackendPolicy`, not
+to the Gateway or HTTPRoute. Every backend Service that needs CORS gets its
+own `GCPBackendPolicy` resource, because the policy's `targetRef` points at
+one Service at a time. For a module with 11 backends, the skill emits **11
+GCPBackendPolicy resources**.
+
+The one-to-many expansion is the key trade-off called out in every GKE-target
+report. Traefik's middleware pattern sidesteps it by allowing sharing
+across HTTPRoutes.
+
+## Path-denylist translation detail (row 9c)
+
+**Traefik target**: `location ~ ... { return 404; }` becomes a `Middleware` of
+kind `redirectRegex` whose replacement path triggers a 404 (Traefik doesn't
+have a first-class "return 404" middleware; this is the clean plugin-free
+workaround). The skill also emits a commented-out alternative using the
+`blockpath` Yaegi plugin for operators who have it installed in Traefik's
+static config.
+
+```yaml
+# Default — plugin-free, regex-only
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: block-sensitive-paths
+  namespace: <target-namespace>
+spec:
+  redirectRegex:
+    regex: "^(.*/)(\\.ht|\\.env|\\.git|\\.svn|\\.bak|\\.sql|\\.log)$"
+    replacement: "/__blocked_by_gateway_migrate__"
+    permanent: false
+```
+
+HTTPRoutes that need the protection reference this middleware via the same
+`ExtensionRef` pattern as CORS. Under Traefik, **row 9c is no longer a stub**
+— it's fully auto-converted.
+
+**GKE target**: still a stub with a Cloud Armor pointer. Cloud Armor is the
+correct home for path-based WAF rules in GCP, but requires out-of-band setup
+that the skill can't automate. Operators run `gcloud compute security-policies
+create` manually and attach via `GCPBackendPolicy.spec.securityPolicy.name`.
+
 ## Trade-offs called out in every report
 
 1. A module migrated with TODO stubs can `kustomize build` cleanly but be
    *functionally incomplete*. Validation checks syntax, not semantics.
 
 2. Per-hostname listeners can produce large Gateway resources (a 12-hostname
-   module produces up to 24 listeners — one HTTP + one HTTPS per host).
+   module produces up to 24 listeners — one HTTP + one HTTPS per host). Both
+   targets share this limitation. Wildcard consolidation is a v2 feature.
 
-3. CORS is attached to Services via `GCPBackendPolicy`, not to the Gateway or
-   the HTTPRoute. An Ingress-level CORS annotation with 8 backends becomes 8
-   `GCPBackendPolicy` resources. Reports must surface this "one-to-many"
-   expansion.
+3. **CORS scaling**: under Traefik, one Middleware per namespace. Under GKE,
+   one `GCPBackendPolicy` per backend Service. Traefik target is typically
+   3–5× fewer files for modules with many backends.
+
+4. **Path denylists**: under Traefik, auto-converted. Under GKE, always a
+   manual-review stub requiring Cloud Armor setup.

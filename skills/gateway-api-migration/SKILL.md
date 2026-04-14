@@ -1,18 +1,21 @@
 ---
 name: gateway-api-migration
 description: >
-  Migrates Kustomize modules using NGINX Ingress to Gateway API resources,
-  targeting GKE Gateway (gke-l7-global-external-managed). Handles master/minion
+  Migrates Kustomize modules using NGINX Ingress to Gateway API resources.
+  Dual-target: default Traefik (GatewayClass=traefik), opt-in GKE Gateway
+  (--gateway-class gke-l7-global-external-managed). Handles master/minion
   topology (common.ingress/ + common.service/) as the primary case, with
   standalone Ingress as a fallback. Performs cluster-side preflight (CRDs,
-  GatewayClass, policy CRDs), deterministic discovery/analysis via bundled
-  scripts, two-phase conversion with atomic rollback from full file backups,
-  semantic diff of path and listener coverage, and renders a comprehensive
-  report covering per-hostname mapping, TLS map, annotation inventory
-  (translated/stubbed/unknown), risk register, cutover checklist, verification
-  commands, and rollback procedures. Never modifies the master source; performs
-  idempotent in-place edits only to common.service/overlays/<env>/kustomization.yaml.
-version: "1.1.0"
+  GatewayClass, policy CRDs, Traefik version probe on Traefik targets),
+  deterministic discovery/analysis via bundled scripts, two-phase conversion
+  with atomic rollback from full file backups, semantic diff of path and
+  listener coverage, plus an ingress2gateway second-opinion cross-check.
+  Renders a comprehensive report covering per-hostname mapping, TLS map,
+  annotation inventory (translated/stubbed/unknown), risk register, cutover
+  checklist, verification commands, and rollback procedures. Never modifies
+  the master source; performs idempotent in-place edits only to
+  common.service/overlays/<env>/kustomization.yaml.
+version: "1.2.0"
 ---
 
 # Gateway API Migration Skill
@@ -39,15 +42,16 @@ Read these as needed — do not preload them all.
 
 | File | When to read |
 |---|---|
-| `references/annotation-map.md` | Step 2, whenever an annotation needs classification |
+| `references/annotation-map.md` | Step 2, whenever an annotation needs classification. Table has per-target columns (Traefik default, GKE opt-in). |
 | `references/master-minion-topology.md` | Step 1, only if discovery finds an unusual topology |
-| `references/gke-gateway-notes.md` | Step 0b, and Step 3A when picking a GatewayClass |
+| `references/traefik-gateway-notes.md` | Step 0b, and Step 3A when target is `traefik*` (the default) |
+| `references/gke-gateway-notes.md` | Step 0b, and Step 3A when target is `gke-l7-*` |
 | `references/http-routing-guide.md` | Step 3A/3B, when generating HTTPRoute/Gateway YAML |
 | `references/ingress2gateway-integration.md` | Step 4c, only if second opinion is enabled |
-| `references/preflight-checks.md` | Step 0b (always) |
+| `references/preflight-checks.md` | Step 0b (always) — check 3 and 4 are parameterized on `--gateway-class` |
 | `references/manual-review-patterns.md` | Step 5, when writing Section 6 entries |
 | `references/report-template.md` | Step 5 — the authoritative report shape |
-| `references/runbook-template.md` | Step 6 — the operator-facing cutover runbook |
+| `references/runbook-template.md` | Step 6 — the operator-facing cutover runbook (install steps branch on target) |
 | `references/httproute-template.yaml` | Step 3B, per minion |
 
 ## Bundled scripts
@@ -81,13 +85,37 @@ Triggered explicitly by `*gateway-migrate` from Zeus. Not auto-triggered.
 ## Invocation forms
 
 ```
-*gateway-migrate                                 # interactive discovery mode
-*gateway-migrate <module-path>                   # explicit target
-*gateway-migrate <module-path> --resume          # resume from state.yaml
-*gateway-migrate <module-path> --force           # bypass never-clobber on target
-*gateway-migrate <module-path> --offline         # skip Step 0b cluster checks
-*gateway-migrate <module-path> --skip-preflight <n>  # skip individual preflight check N
+*gateway-migrate                                      # interactive discovery mode
+*gateway-migrate <module-path>                        # explicit target, default --gateway-class traefik
+*gateway-migrate <module-path> --resume               # resume from state.yaml
+*gateway-migrate <module-path> --force                # bypass never-clobber on target
+*gateway-migrate <module-path> --offline              # skip Step 0b cluster checks
+
+# GatewayClass selection (dual-target):
+*gateway-migrate <module-path> --gateway-class traefik
+*gateway-migrate <module-path> --gateway-class traefik-external
+*gateway-migrate <module-path> --gateway-class gke-l7-global-external-managed
+*gateway-migrate <module-path> --gateway-class gke-l7-rilb
+
+# Preflight and generation controls:
+*gateway-migrate <module-path> --skip-preflight <n>   # skip individual preflight check N
+*gateway-migrate <module-path> --include-orphan-hosts # emit listeners for hosts without minions
 ```
+
+**Default target:** `traefik`. The skill emits Traefik-specific CRDs
+(`Middleware`, `ServersTransport`) when the target prefix is `traefik*`,
+GKE-specific CRDs (`GCPBackendPolicy`, `HealthCheckPolicy`) when the prefix
+is `gke-l7-*`, and neither when some other GatewayClass name is passed
+(vanilla Gateway API only, provider-specific policies deferred to manual
+review). See `references/annotation-map.md` for the per-target translation
+matrix.
+
+**Orphan-host listeners:** by default the skill only emits Gateway listeners
+for hostnames with an attached minion. Orphan hosts (master declares a
+host but no minion routes it) are recorded in the report's Section 3.2
+with a note that their listener was skipped. Pass `--include-orphan-hosts`
+to emit listeners for them anyway — useful when you plan to deploy the
+service soon and want the listener ready.
 
 ## Artifacts produced
 
@@ -500,6 +528,16 @@ Atomic: write everything to `common.gateway.tmp/` first, rename to
 `common.gateway/` on success. Any failure before the rename → remove
 the temp directory, no partial state.
 
+**Resolve the target class up front.** Read `state.yaml.header.target_gateway_class`
+(set from `--gateway-class`, default `traefik`). The rest of Phase 3A
+branches on the target prefix:
+- `traefik*` → emit Traefik CRDs (Middleware, ServersTransport). Read
+  `references/traefik-gateway-notes.md` for resource shapes.
+- `gke-l7-*` → emit GKE CRDs (GCPBackendPolicy, optional ManagedCertificate
+  refs). Read `references/gke-gateway-notes.md` for resource shapes.
+- anything else → vanilla Gateway API only; no provider-specific policy
+  files. Record in risk register that policies were skipped.
+
 1. **`common.gateway/base/kustomization.yaml`**:
 
    ```yaml
@@ -508,21 +546,25 @@ the temp directory, no partial state.
    namespace: ingress-nginx  # from master's namespace
    resources:
      - gateway.yaml
-     # - gcpbackendpolicy-<svc>.yaml  (one per service with CORS)
-     # - certificate-<host>.yaml      (one per host with cert-manager annotation)
+     # Target-specific policy files, only if applicable to this migration:
+     # - middleware-cors.yaml          (Traefik target + source has CORS)
+     # - middleware-block-paths.yaml   (Traefik target + source has row-9c denylists)
+     # - gcpbackendpolicy-<svc>.yaml   (GKE target + source has CORS/timeouts)
    ```
 
 2. **`common.gateway/base/gateway.yaml`** — one `Gateway` resource,
-   `gatewayClassName: gke-l7-global-external-managed` (from Step 0b's
-   `gatewayClassesAvailable` — override only if the user passed a
-   non-default class).
+   `gatewayClassName` set from `state.yaml.header.target_gateway_class`.
 
-   Per hostname, generate:
+   Per hostname in the master's `spec.rules[].host`, **skip orphan hosts
+   by default** (hosts that have no matching minion — see `orphanHosts[]`
+   in state.yaml). Emit the listener only if `--include-orphan-hosts` is set.
+
+   For each hostname that WILL have a listener:
    - One **HTTPS listener** (port 443), `tls.mode: Terminate`,
-     `certificateRefs` populated from master's
-     `networking.gke.io/managed-certificates` annotation (for
-     `kind: ManagedCertificate`) or `spec.tls[].secretName` (for
-     `kind: Secret` — cert-manager case).
+     `certificateRefs` populated from `spec.tls[].secretName` (always
+     `kind: Secret` for Traefik; for GKE also supports `kind: ManagedCertificate`
+     if the `networking.gke.io/managed-certificates` annotation listed
+     the host).
    - One **HTTP listener** (port 80), no TLS, used only by the
      RequestRedirect route below.
    - Both listeners: `allowedRoutes.namespaces.from: Selector`,
@@ -533,23 +575,75 @@ the temp directory, no partial state.
      — Step 4d will cross-check every HTTPRoute's `sectionName` against
      this list.
 
-3. **`common.gateway/base/gcpbackendpolicy-<svc>.yaml`** — one per
-   service with CORS or lossy timeout annotations (rows 5–8, 10 in
-   `annotation-map.md`). Populate from the analyze step's output.
-   Skip entirely for services with no matching annotation.
+3. **Target-specific policy files** — choose ONE branch:
 
-4. **`common.gateway/base/certificate-<host>.yaml`** — cert-manager
-   case only. One `Certificate` per host that had a
-   `cert-manager.io/cluster-issuer` annotation on the master. The
-   `spec.secretName` matches the master's `spec.tls[].secretName`. The
-   annotation moves to `metadata.annotations` on the Certificate.
+   **3.Traefik — when target prefix is `traefik*`:**
 
-5. **`common.gateway/base/redirect-httproute.yaml`** — **this is new
-   in v1.1 and fixes a bug.** A single HTTPRoute attached to every
-   `http-<host>` listener with a `RequestRedirect` filter scheme=https
-   port=443 statusCode=301. Without this file, the Gateway listens on
-   port 80 but silently drops HTTP traffic — a common migration
-   regression.
+   a. **`common.gateway/overlays/<env>/middleware-cors.yaml`** (or in each
+      minion namespace under `common.service/overlays/<env>/` — see §CORS
+      in `annotation-map.md` for the cross-namespace discussion). Only
+      emit if the source had CORS annotations (rows 5–8). One Middleware
+      of kind `headers` per target namespace:
+
+      ```yaml
+      apiVersion: traefik.io/v1alpha1
+      kind: Middleware
+      metadata:
+        name: common-cors
+        namespace: <target-ns>
+      spec:
+        headers:
+          accessControlAllowOriginList: [<from row 6>]
+          accessControlAllowMethods:     [<from row 7>]
+          accessControlAllowHeaders:     [<from row 8>]
+          accessControlMaxAge: 100
+          addVaryHeader: true
+      ```
+
+   b. **`common.gateway/overlays/<env>/middleware-block-paths.yaml`** —
+      only if the source had row-9c path denylists. Single Middleware of
+      kind `redirectRegex`:
+
+      ```yaml
+      apiVersion: traefik.io/v1alpha1
+      kind: Middleware
+      metadata:
+        name: block-sensitive-paths
+        namespace: <target-ns>
+      spec:
+        redirectRegex:
+          regex: "<combined regex from source location ~ patterns>"
+          replacement: "/__blocked_by_gateway_migrate__"
+          permanent: false
+      # Plugin-based alternative (requires blockpath plugin in Traefik static config):
+      # spec:
+      #   plugin:
+      #     blockpath:
+      #       regex: [...]
+      ```
+
+   c. **No GCPBackendPolicy, no Certificate resources.** cert-manager
+      Secrets already exist from the source Ingress's `spec.tls[].secretName`.
+
+   **3.GKE — when target prefix is `gke-l7-*`:**
+
+   a. **`common.gateway/base/gcpbackendpolicy-<svc>.yaml`** — one per
+      backend Service with CORS or lossy timeout annotations (rows 5–8,
+      10). N files for N backends with these annotations.
+
+   b. **`common.gateway/base/certificate-<host>.yaml`** — cert-manager
+      case only. One `Certificate` per host that had a
+      `cert-manager.io/cluster-issuer` annotation on the master.
+
+   c. **Row 9c path denylists remain stubs** — emit `# TODO(gateway-migrate)`
+      comments pointing at `references/manual-review-patterns.md` and
+      Cloud Armor. Manual review required.
+
+4. **`common.gateway/base/redirect-httproute.yaml`** — **target-agnostic**.
+   A single HTTPRoute attached to every `http-<host>` listener with a
+   `RequestRedirect` filter scheme=https port=443 statusCode=301. Without
+   this file, the Gateway listens on port 80 but silently drops HTTP
+   traffic — a common migration regression.
 
    Template:
 
@@ -578,7 +672,7 @@ the temp directory, no partial state.
                statusCode: 301
    ```
 
-6. **`common.gateway/overlays/{dev,stg,prd}/kustomization.yaml`**:
+5. **`common.gateway/overlays/{dev,stg,prd}/kustomization.yaml`**:
 
    ```yaml
    apiVersion: kustomize.config.k8s.io/v1beta1
@@ -586,28 +680,32 @@ the temp directory, no partial state.
    namespace: ingress-nginx
    resources:
      - ../../base
-   patches:
-     - path: gateway.patch.yaml
+     - gateway.yaml
+     - redirect-httproute.yaml
+     # Traefik target only, if applicable:
+     # - middleware-cors.yaml
+     # - middleware-block-paths.yaml
    ```
 
-7. **`common.gateway/overlays/<env>/gateway.patch.yaml`** — per-env
+6. **`common.gateway/overlays/<env>/gateway.patch.yaml`** — per-env
    listener config (different hostnames per env, different
-   ManagedCertificate refs). JSON-6902-style or strategic-merge,
-   whichever the source repo prefers.
+   certificate refs). Only used for the base/overlay split pattern —
+   for dev-first runs, the full Gateway lives in the overlay directly.
 
-8. **`common.gateway/argocd/<env>.yaml`** — copy
+7. **`common.gateway/argocd/<env>.yaml`** — copy
    `common.ingress/argocd/<env>.yaml` (if it exists), rewrite
    `metadata.name` → `<name>-gateway`, rewrite `spec.source.path` →
    `common.gateway/overlays/<env>`. If the source has no sibling
    `argocd/` dir, emit a TODO stub in the report's Section 9 (Risk
    register, S2) asking the user to create the ArgoCD app manually.
 
-9. **`common.gateway/MIGRATION.md`** — copy
+8. **`common.gateway/MIGRATION.md`** — copy
    `references/runbook-template.md`, substitute
    `{{master_module}}`, `{{generated_module}}`, `{{target_namespaces}}`,
    `{{hostnames_per_env}}`, `{{service_list}}`, `{{target_gateway_class}}`,
    `{{skill_version}}`, `{{gateway_name}}`, `{{master_namespace}}`,
-   `{{cluster_name}}`, `{{cluster_region}}`.
+   `{{cluster_name}}`, `{{cluster_region}}`. Phase 0 install steps branch
+   on target (Traefik helm install vs GKE add-on enable).
 
 Record every generated file in `state.yaml.steps.3A.generated[]`
 with `path`, `sha256`, `size`.
@@ -635,9 +733,24 @@ For each `(env, pair)` from `state.yaml.topology.pairs[]`:
      `rules[]`. Preserve `pathType`:
      - `Prefix` → `PathPrefix`
      - `Exact` → `Exact`
-     - `ImplementationSpecific` → keep source value, flag in report
+     - `ImplementationSpecific` with path `/` → `PathPrefix /` (documented
+       semantic equivalence; see `references/http-routing-guide.md`)
+     - `ImplementationSpecific` with non-`/` path → HALT and require manual
+       resolution — the validator's path-coverage check will catch this
    - If the master had row 9a security headers in `server-snippet`,
      add the `responseHeaderModifier` filter.
+   - **Target-specific filters:** add `extensionRef` filters based on the
+     target GatewayClass:
+     - **Traefik target**: if CORS annotations present on master → add
+       `filters: [{type: ExtensionRef, extensionRef: {group: traefik.io, kind: Middleware, name: common-cors}}]`.
+       If row-9c path denylists present → also add a filter pointing at
+       the `block-sensitive-paths` middleware. Both middlewares must live
+       in the **HTTPRoute's own namespace** (not ingress-nginx) because
+       Traefik resolves `extensionRef` against the route's namespace.
+     - **GKE target**: no HTTPRoute filters for CORS — CORS attaches via
+       `GCPBackendPolicy.targetRef` at the Service level (generated in
+       Phase 3A.3.GKE).
+     - **Other targets**: no provider filters.
 
 2. **Write to** `common.service/overlays/<env>/<service>-httproute.yaml`.
 
@@ -916,11 +1029,12 @@ On `--resume`, the skill:
 Required top-level fields:
 
 - `schemaVersion: 2`
-- `skillVersion: "1.1.0"`
+- `skillVersion: "1.2.0"`
 - `module: <master-module-name>`
 - `moduleSlug: <slug-for-paths>`
 - `topology: master-minion | standalone | master-only | none`
-- `targetGatewayClass: gke-l7-global-external-managed`
+- `targetGatewayClass`: the value passed via `--gateway-class` (default `traefik`)
+- `targetFamily`: derived — one of `traefik` | `gke` | `vanilla` (based on the class prefix)
 - `generatedModule: common.gateway`
 - `createdAt`, `updatedAt`: ISO 8601 timestamps
 - `status`: `in_progress | discovering | analyzing | converting | validating | rendering | completed | failed | aborted`
@@ -964,7 +1078,7 @@ Required top-level fields:
 
 ## Principle: never surprise the user
 
-Four invariants the skill maintains no matter what:
+Five invariants the skill maintains no matter what:
 
 1. **The master source is never modified.** `common.ingress/` is
    read-only. The skill only modifies `common.service/overlays/*/`
@@ -989,3 +1103,13 @@ Four invariants the skill maintains no matter what:
    references — so the skill never tries to migrate code that
    Kustomize wouldn't apply. Raw-file mode is retained as a fallback
    for standalone repos without an `overlays/` structure.
+5. **Dual-target without magic.** The default GatewayClass is `traefik`.
+   A user can switch to GKE Gateway with `--gateway-class gke-l7-*`
+   or to any other GatewayClass by passing its name. The skill emits
+   provider-specific policy CRDs (`Middleware` for Traefik,
+   `GCPBackendPolicy` for GKE) only when the target family is one the
+   skill knows how to handle. For unknown GatewayClasses the skill
+   emits vanilla Gateway API resources only and records in the risk
+   register which annotations became deferred manual review items.
+   Switching targets is a one-argument change — no separate pipelines,
+   no separate commands.

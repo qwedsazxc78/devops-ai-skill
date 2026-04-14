@@ -78,7 +78,7 @@ the repo. Catching it here saves a cleanup round.
 
 ---
 
-## Check 3 — GKE Gateway add-on enabled (GatewayClass visible)
+## Check 3 — Target GatewayClass visible (parameterized on `--gateway-class`)
 
 **Probe:**
 
@@ -86,20 +86,40 @@ the repo. Catching it here saves a cleanup round.
 kubectl get gatewayclass -o jsonpath='{.items[*].metadata.name}'
 ```
 
-**Pass condition:** output contains `gke-l7-global-external-managed` (the
-default target for the skill). WARN if only `gke-l7-rilb` is present
-(internal LB — the skill still targets external by default).
+**Pass condition:** output contains the GatewayClass name passed via
+`--gateway-class <name>` (default: `traefik`).
 
-**Failure mode:** HALT with
+| `--gateway-class` value | Pass condition |
+|---|---|
+| `traefik` (default) | `traefik` present, and the Traefik controller pod is Running |
+| `traefik-external`, `traefik-internal`, `traefik-*` | the exact name present |
+| `gke-l7-global-external-managed` (default GKE) | `gke-l7-global-external-managed` present. WARN if only `gke-l7-rilb` is present |
+| any other name | the exact name present |
+
+**Failure mode:** HALT with a message specific to the detected target:
 
 ```
-[HALT] GKE Gateway controller not installed or add-on disabled.
-  Cause: no gatewayclass named 'gke-l7-global-external-managed' found.
-  Fix:   Enable the GKE Gateway controller add-on on your cluster.
-         GKE: https://cloud.google.com/kubernetes-engine/docs/how-to/deploying-gateways
-         Or: gcloud container clusters update <cluster> \
-             --update-addons=GcePersistentDiskCsiDriver=ENABLED
-         Then wait ~2 minutes for the GatewayClass to become available.
+[HALT] GatewayClass '<name>' not found in cluster.
+  Cause: The skill was invoked with --gateway-class <name> but no such
+         GatewayClass exists on the cluster.
+
+  For Traefik targets:
+    Install Traefik v3.1+ with Gateway API support:
+      helm repo add traefik https://traefik.github.io/charts
+      helm install traefik traefik/traefik \
+        --namespace traefik --create-namespace \
+        --set providers.kubernetesGateway.enabled=true \
+        --set gateway.enabled=true \
+        --set image.tag=v3.1.6
+    Verify: kubectl get gatewayclass traefik
+
+  For GKE targets:
+    Enable the GKE Gateway controller add-on on your cluster:
+      gcloud container clusters update <cluster> --region <region> \
+        --gateway-api=standard
+    Wait ~2 minutes, verify: kubectl get gatewayclass gke-l7-global-external-managed
+
+  Then re-run *gateway-migrate.
 ```
 
 The most common cause of a failed migration is applying generated
@@ -108,11 +128,74 @@ Nothing blocks creation of the Kubernetes objects, but traffic never flows
 because no controller reconciles them. Detecting this here avoids a
 post-deploy "why isn't anything happening?" session.
 
----
+### Check 3b — Traefik version probe (Traefik targets only)
 
-## Check 4 — GKE policy CRDs present
+When the target is Traefik, also probe the controller pod's image version.
+Traefik **v3.1+** is required for Gateway API `extensionRef` filter support
+against custom CRDs (which the skill uses heavily for Middleware
+attachment).
 
 **Probe:**
+
+```bash
+kubectl get pods -A -l app.kubernetes.io/name=traefik \
+  -o jsonpath='{.items[0].spec.containers[0].image}' 2>/dev/null \
+  | grep -oE 'v?[0-9]+\.[0-9]+\.[0-9]+'
+```
+
+**Pass condition:** version ≥ 3.1.0. WARN if version parsing fails
+(non-standard image tag) and continue.
+
+**Failure mode:** HALT if Traefik <3.1.0 is detected:
+
+```
+[HALT] Traefik v<found> detected; v3.1+ required for extensionRef support.
+  Fix: Upgrade Traefik to v3.1 or later:
+       helm upgrade traefik traefik/traefik -n traefik --set image.tag=v3.1.6
+```
+
+---
+
+## Check 4 — Target-specific policy CRDs present
+
+The CRD set probed depends on `--gateway-class`.
+
+### 4a — Traefik targets
+
+When `--gateway-class` starts with `traefik`, probe Traefik's CRDs:
+
+```bash
+kubectl get crd middlewares.traefik.io \
+  -o jsonpath='{.metadata.name}' 2>/dev/null || true
+kubectl get crd serverstransports.traefik.io \
+  -o jsonpath='{.metadata.name}' 2>/dev/null || true
+kubectl get crd tlsoptions.traefik.io \
+  -o jsonpath='{.metadata.name}' 2>/dev/null || true
+```
+
+**Pass condition:**
+- `middlewares.traefik.io` present → required for CORS + path-denylist + any
+  HTTPRoute `extensionRef` target. HALT if missing.
+- `serverstransports.traefik.io` present → required only if the source Ingress
+  had `proxy-*-timeout` annotations (row 10). Conditional HALT.
+- `tlsoptions.traefik.io` optional → WARN only if missing (used for future
+  listener-level TLS config).
+
+**Failure mode (conditional HALT on middlewares.traefik.io missing):**
+
+```
+[HALT] Traefik Middleware CRD missing; migration requires it for CORS and
+       path-denylist translations.
+  Fix: Install Traefik v3.1+:
+       helm install traefik traefik/traefik -n traefik --create-namespace \
+         --set providers.kubernetesGateway.enabled=true \
+         --set image.tag=v3.1.6
+       The Helm chart installs all Traefik CRDs automatically.
+```
+
+### 4b — GKE targets
+
+When `--gateway-class` starts with `gke-l7-`, probe GKE policy CRDs:
 
 ```bash
 kubectl get crd gcpbackendpolicies.networking.gke.io \
@@ -137,9 +220,10 @@ absent so the report can flag them.
          Verify the add-on is enabled on the cluster.
 ```
 
-The conditionality matters: a migration that doesn't need CORS or timeouts
-doesn't need `GCPBackendPolicy`, so a missing CRD is fine. Flagging it
-unconditionally would cause spurious halts on simple Ingress manifests.
+The conditionality matters for both targets: a migration that doesn't need
+CORS/timeouts/path-denylists doesn't need the provider-specific CRDs, so a
+missing CRD is fine. Flagging it unconditionally would cause spurious halts
+on simple Ingress manifests.
 
 ---
 
