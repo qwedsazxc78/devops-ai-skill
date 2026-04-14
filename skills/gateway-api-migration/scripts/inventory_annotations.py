@@ -104,8 +104,23 @@ _SECURITY_HEADERS = {
 }
 
 _ADD_HEADER_RE = re.compile(r"add_header\s+([^\s]+)\s+", re.IGNORECASE)
+
+# Match any `location ~ <pattern> { ... return 404 ... }` block. The real-world
+# shape has other directives between the opening `{` and `return 404` — most
+# commonly `deny all;`, sometimes `access_log off;`, `error_log ...;`, etc. —
+# so the body matcher is `[^}]*?` (lazy, any non-}) rather than `\s*`. Without
+# this, a block like
+#
+#     location ~ \.(ht|env)$ {
+#       deny all;
+#       return 404;
+#     }
+#
+# silently does not match and the migration report omits a manual-review item.
+# Uses findall() (not search()) in _classify_snippet so every location block
+# in a snippet becomes its own report entry.
 _LOCATION_DENY_RE = re.compile(
-    r"location\s+~\s+.+\{\s*return\s+404",
+    r"location\s+~\s+[^{]+\{[^}]*?return\s+404",
     re.IGNORECASE | re.DOTALL,
 )
 
@@ -141,7 +156,9 @@ def _classify_snippet(value: str) -> list[dict]:
                 "stubbed": True,
             })
 
-    if _LOCATION_DENY_RE.search(value):
+    # One entry per location block — a master can declare several denylists
+    # (e.g., one for file extensions, one for path prefixes).
+    for _ in _LOCATION_DENY_RE.findall(value):
         results.append({
             "pattern": "9c-path-denylist",
             "category": "split-category (stub)",
