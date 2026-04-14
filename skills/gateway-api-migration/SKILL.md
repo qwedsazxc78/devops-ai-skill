@@ -60,10 +60,18 @@ re-deriving the same logic every run wastes tokens and introduces variance.
 | Script | Used by | Purpose |
 |---|---|---|
 | `scripts/check_cluster_preflight.sh` | Step 0b | kubectl/GatewayClass/CRD/namespace checks, JSON out |
-| `scripts/classify_ingress.py` | Step 1 | Classify Ingress docs as master/minion/standalone/foreign |
+| `scripts/classify_ingress.py` | Step 1 | Classify Ingress docs (input: YAML files — built overlays preferred, raw fallback) |
 | `scripts/pair_minions.py` | Step 1 | Pair minions with masters, detect orphans and ambiguity |
 | `scripts/inventory_annotations.py` | Step 2 | Three-bucket inventory (translated/stubbed/unknown) with file:line provenance |
 | `scripts/build_report.py` | Step 5 | Render `references/report-template.md` from `state.yaml` |
+
+**Input mode: built vs raw.** Steps 1 and 2 prefer **built-overlay mode** —
+`kustomize build <overlay>` first, classify the rendered Ingress docs. This
+avoids false-positive "orphan minion" halts on repos that use base templates
+with placeholder hostnames, and automatically excludes dead files (YAML on
+disk that no `kustomization.yaml` references). If no overlays structure is
+detected (standalone Ingress repo, Helm-only repo, etc.), the skill falls
+back to **raw-file mode** and records the mode in `state.yaml.discovery.mode`.
 
 ## Activation
 
@@ -177,36 +185,118 @@ repo. The discovery is delegated to `scripts/classify_ingress.py` (one
 Ingress per line of JSONL output) followed by `scripts/pair_minions.py`
 (which consumes the JSONL and produces the pairing report).
 
-### 1.1 Find every Ingress file
+### 1.1 Build each overlay, then classify the rendered output
+
+**Classify what Kustomize actually applies, not what the repo has on disk.**
+For any repo using overlays with base templates, the raw source files contain
+placeholder hostnames (`base-mlflow.awoo.org`) that get overridden in each
+overlay via patches. A classifier that reads raw files will:
+
+1. See the placeholder hostnames as literal values.
+2. Fail to pair those placeholders with master hostnames (because no master
+   declares `base-mlflow.awoo.org` — only the overlay-patched `dev-mlflow`,
+   `stg-mlflow`, `prd-mlflow`).
+3. HALT with a spurious "orphan minion" error.
+
+The correct behaviour is to run `kustomize build` on each overlay first and
+classify the **rendered** Ingress documents. This also automatically excludes
+dead files (files on disk that no `kustomization.yaml` references), because
+Kustomize doesn't include them in the build output.
+
+**Step 1.1a — Enumerate overlays.** Find every `kustomization.yaml` in a
+directory named `overlays/<env>/` under `common.ingress/` or `common.service/`.
+The enclosing directory two levels up is the *module root*; the `<env>` segment
+is the *environment name*.
 
 ```bash
-# Grep for all YAML files that declare kind: Ingress.
-# `-l` for file list; `-r` for recursive. `-I` skips binaries.
-grep -rIl "^kind: Ingress$" . \
-  --include="*.yaml" --include="*.yml" \
-  > /tmp/ingress-files.txt
+mkdir -p /tmp/gwm/built
+
+# Find every overlay kustomization.yaml under common.ingress/ and common.service/
+find common.ingress common.service -type f -name kustomization.yaml \
+  -path "*/overlays/*" > /tmp/gwm/overlays.txt
+
+# Parse module root + env name from each path
+while read -r kf; do
+  env=$(basename "$(dirname "$kf")")
+  overlay=$(dirname "$kf")
+  echo "$overlay"
+  echo "$env"
+done < /tmp/gwm/overlays.txt
 ```
 
-**Why grep for `^kind: Ingress$`**: `-rl` for quick listing. The `^...$`
-anchor avoids matching comment lines or field values that happen to
-contain the string "Ingress".
+**Step 1.1b — Build each overlay and extract Ingress docs.** Pipe the built
+output through `yq ea '[select(.kind == "Ingress")] | .[] | split_doc'` to
+isolate the Ingress documents (discarding every other `kind:`).
+
+```bash
+while read -r overlay; do
+  module=$(echo "$overlay" | awk -F/ '{print $1}')
+  env=$(basename "$overlay")
+  out=/tmp/gwm/built/${module}-${env}.yaml
+  if kustomize build "$overlay" 2>/dev/null \
+       | yq ea '[select(.kind == "Ingress")] | .[] | split_doc' - > "$out"; then
+    echo "built: $out"
+  else
+    echo "[WARN] kustomize build failed for $overlay"
+  fi
+done < <(awk -F/ '{print $1 "/" $2 "/" $3 "/" $4}' /tmp/gwm/overlays.txt | sort -u)
+
+ls /tmp/gwm/built/
+```
+
+**Fallback (non-Kustomize repos):** If the repo has no `overlays/*` structure,
+or all `kustomize build` calls produce zero Ingress docs, fall back to raw
+file discovery and record `state.yaml.discovery.mode: "raw-fallback"`:
+
+```bash
+grep -rIl "^kind: Ingress$" . \
+  --include="*.yaml" --include="*.yml" \
+  > /tmp/gwm/ingress-files.txt
+```
+
+Record in `state.yaml.discovery.mode`: `"built"` (normal path) or
+`"raw-fallback"` (no overlays structure detected). Raw-fallback is a
+legitimate mode for standalone Ingress repos; it's not an error.
 
 ### 1.2 Classify each Ingress
 
+Feed the built YAML files (or the raw-fallback file list) into
+`classify_ingress.py`. One JSONL line per Ingress document.
+
 ```bash
-python3 scripts/classify_ingress.py $(cat /tmp/ingress-files.txt) \
-  > /tmp/classifications.jsonl
+# Built mode (recommended)
+python3 scripts/classify_ingress.py /tmp/gwm/built/*.yaml \
+  > /tmp/gwm/classifications.jsonl
+
+# Raw-fallback mode (only if Step 1.1 fell back)
+python3 scripts/classify_ingress.py $(cat /tmp/gwm/ingress-files.txt) \
+  > /tmp/gwm/classifications.jsonl
 ```
 
-Each line of output is a JSON object with `classification`, `reason`,
-`hosts`, `hasPaths`, `hasTls`, `mergeableIngressType`, and the full
-annotations map. The classification values are **master**, **minion**,
-**standalone**, **foreign** (non-nginx class — skipped by migration),
-and **unknown**.
+Each line is a JSON object with `classification`, `reason`, `hosts`,
+`hasPaths`, `hasTls`, `mergeableIngressType`, and the full annotations map.
+Classification values: **master**, **minion**, **standalone**, **foreign**
+(non-nginx class — skipped by migration), **unknown**.
 
-Record `foreign` classifications in `state.yaml.discovery.foreign[]`.
-They don't participate in the migration, but a user may want to know
-their repo has non-nginx Ingresses left around.
+Record `foreign` classifications in `state.yaml.discovery.foreign[]`. They
+don't participate in the migration, but a user may want to know their repo
+has non-nginx Ingresses left around (e.g., a service already migrated to
+`gce` class).
+
+**Why this matters in practice.** In built mode, dead files (source YAML on
+disk but not referenced by any overlay's `resources:` list) are
+automatically excluded — Kustomize doesn't include them in the build, so
+the classifier never sees them. The `state.yaml.discovery.deadFiles[]`
+diagnostic should be populated by comparing the raw file list against
+the set of files actually built, for reporting:
+
+```bash
+# Optional diagnostic: find files that exist on disk but weren't built
+grep -rIl "^kind: Ingress$" common.service \
+  --include="*.yaml" > /tmp/gwm/raw-files.txt
+# dead files = raw files whose basename doesn't appear in any built output
+# (implementation-dependent; the report surfaces them as a WARN in Section 9)
+```
 
 ### 1.3 Pair minions with masters
 
@@ -258,9 +348,24 @@ Two parallel tracks: annotation inventory and backend resolution.
 
 ### 2.1 Annotation inventory (three buckets)
 
+Inventory the **built overlays** from Step 1.1b, not the raw files. This keeps
+the file set aligned with what Kustomize actually applies — any annotation
+that only exists in a dead file (on disk but not referenced by any overlay)
+is correctly excluded. Base-to-overlay annotation variance is also
+automatically handled because each overlay is already patched by the time
+inventory runs.
+
 ```bash
-python3 scripts/inventory_annotations.py --files-from /tmp/ingress-files.txt \
-  > /tmp/annotations.json
+ls /tmp/gwm/built/*.yaml > /tmp/gwm/inventory-input.txt
+python3 scripts/inventory_annotations.py --files-from /tmp/gwm/inventory-input.txt \
+  > /tmp/gwm/annotations.json
+```
+
+If Step 1.1 fell back to raw mode, use the raw file list instead:
+
+```bash
+python3 scripts/inventory_annotations.py --files-from /tmp/gwm/ingress-files.txt \
+  > /tmp/gwm/annotations.json
 ```
 
 The script produces `translated`, `translatedLossy`, `stubbed`, `unknown`,
@@ -308,24 +413,30 @@ Write results to `state.yaml.backends[]`. Each entry:
 
 ### 2.3 Per-overlay annotation variance check
 
-For each env overlay, compare the annotations on the rendered Ingress
-(via `kustomize build <overlay>`) against the base Ingress. Any
-annotation that differs only in an overlay (e.g., `cors-allow-origin`
-set only in `prd`) is a **variance finding**:
+When Step 1.1 ran in built mode, each overlay was already rendered
+independently and its fully-patched annotations are in the bucketed inventory
+from Step 2.1 — so variance across envs is naturally visible *by
+file of origin* in `state.yaml.annotations.*[].file`. The skill's job at
+this step is to diff the translated-annotation sets across the env masters
+and surface any asymmetry:
 
 ```bash
-for env in dev stg prd; do
-  kustomize build "common.ingress/overlays/$env" \
-    | yq ea 'select(.kind == "Ingress") | .metadata.annotations' - \
-    > "/tmp/anns-$env.yaml"
-done
-diff -u /tmp/anns-dev.yaml /tmp/anns-prd.yaml || true
+jq -r '.translated + .translatedLossy + .stubbed
+       | map(select(.file | test("common-ingress-"))) 
+       | group_by(.file)
+       | map({file: .[0].file, keys: [.[].annotation] | unique})' \
+  /tmp/gwm/annotations.json > /tmp/gwm/master-anns-per-env.json
 ```
 
-Record any diffs in `state.yaml.annotations.overlayVariance[]` and
-surface them in the report's Section 9 (Risk register) as severity
-`S2`. The generated module will still be correct, but the reviewer
-needs to know an overlay had a non-obvious difference.
+Compare the `keys` arrays across envs. Any annotation present in one env
+but missing in another is a **variance finding**. Record in
+`state.yaml.annotations.overlayVariance[]` and surface as **S2** in the
+risk register. Equally valuable: differences in *host counts* between env
+masters — record those too (e.g., "dev master declares 14 hosts; stg and
+prd declare 12 — 2 hosts advertised only in dev").
+
+When Step 1.1 fell back to raw mode (no overlays structure), skip this
+sub-step — there is no overlay to diff against.
 
 ### 2.4 Summary to user
 
@@ -795,9 +906,14 @@ Required top-level fields:
   - `os`: `uname -a` one-liner
   - `operator`: from `git config user.email` or `$USER`
 - `discovery`:
-  - `files[]`: list of Ingress file paths scanned
+  - `mode`: `"built"` (kustomize build → classify) or `"raw-fallback"` (no overlays)
+  - `overlays[]`: in built mode, list of (module, env, built-output-path) tuples
+  - `files[]`: list of Ingress file paths scanned (in raw-fallback mode) OR
+    the built YAML files (in built mode)
   - `classifications[]`: full `classify_ingress.py` output
   - `foreign[]`: non-nginx Ingresses (skipped but recorded)
+  - `deadFiles[]`: files on disk that exist but no overlay's `kustomization.yaml`
+    references them (only populated in built mode)
 - `topology`:
   - `pairs[]`: from `pair_minions.py`
   - `listeners[]`: each listener the generated Gateway will emit
@@ -820,7 +936,7 @@ Required top-level fields:
 
 ## Principle: never surprise the user
 
-Three invariants the skill maintains no matter what:
+Four invariants the skill maintains no matter what:
 
 1. **The master source is never modified.** `common.ingress/` is
    read-only. The skill only modifies `common.service/overlays/*/`
@@ -835,3 +951,13 @@ Three invariants the skill maintains no matter what:
    `git commit` themselves. This is the main escape hatch — an operator
    who wants to abandon the migration just closes the session without
    committing.
+4. **What Kustomize applies is what the skill analyzes.** Step 1.1
+   builds each overlay with `kustomize build` and classifies the
+   rendered Ingress documents, not the raw source files. This avoids
+   false-positive orphan-minion halts caused by base-template
+   placeholder hostnames (e.g., `base-mlflow.awoo.org` that never
+   appears in any master). It also automatically excludes dead
+   files — YAML on disk that no overlay's `kustomization.yaml`
+   references — so the skill never tries to migrate code that
+   Kustomize wouldn't apply. Raw-file mode is retained as a fallback
+   for standalone repos without an `overlays/` structure.

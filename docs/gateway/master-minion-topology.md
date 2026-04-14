@@ -106,3 +106,36 @@ across two modules.
 - Gateway listener must set `allowedRoutes.namespaces.from: Selector` with label selector `gateway-access: ingress-nginx`.
 - User must label target namespaces with `kubectl label namespace <ns> gateway-access=ingress-nginx` before HTTPRoutes attach — the skill surfaces this command in the runbook.
 - No `ReferenceGrant` needed: each HTTPRoute's `backendRefs[]` are same-namespace (the backend Service lives in the same namespace as the HTTPRoute).
+
+## Classify rendered output, not raw files
+
+The classification rules above operate on **one Ingress resource at a time**.
+When the source repo uses Kustomize overlays, the skill must apply those rules
+to the *rendered* output of `kustomize build <overlay>`, not to the raw YAML
+files on disk. Three reasons:
+
+1. **Base templates carry placeholder hostnames.** A file like
+   `common.service/base/mlflow-nginx-ingress.yaml` often declares a fake
+   host such as `base-mlflow.awoo.org` that every overlay overrides to
+   the real per-env value (`dev-mlflow.awoo.org`, `stg-mlflow.awoo.org`,
+   etc.) via patches. A classifier that reads the raw base file will see
+   the placeholder and fail to pair it with any master — producing a
+   spurious "orphan minion" halt.
+2. **Dead files on disk are real.** Services get deprecated or renamed,
+   leaving stale `*-nginx-ingress.yaml` files under `common.service/` that
+   no `kustomization.yaml` references. Kustomize silently ignores them,
+   but a raw-file grep will pick them up. Classifying rendered output
+   automatically excludes them.
+3. **Per-env annotation variance is already resolved.** Each overlay's
+   rendered Ingress has all patches applied, so `cors-allow-origin` set
+   only in prd (via a patch) is visible in the prd render but absent
+   from dev/stg renders — exactly the signal the annotation inventory
+   needs to flag as variance.
+
+The skill's Step 1.1 implements this: it enumerates every overlay under
+`common.ingress/` and `common.service/`, runs `kustomize build` on each,
+extracts the Ingress documents with `yq ea 'select(.kind == "Ingress")'`,
+and feeds those rendered files to `classify_ingress.py`. Raw-file mode
+remains available as a fallback for repos without an overlays structure
+(standalone Ingress, Helm-only, etc.) — the skill records the mode used
+in `state.yaml.discovery.mode`.
