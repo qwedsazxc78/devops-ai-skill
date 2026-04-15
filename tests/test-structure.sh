@@ -869,12 +869,13 @@ else
     fail "skills/gateway-api-migration/SKILL.md missing"
 fi
 
-# All 8 Step sections present
+# All 9 Step sections present — 0, 0b, 1..7 (Step 0b added in v1.1.0 for
+# cluster preflight; see SKILL.md and references/preflight-checks.md).
 step_count=$(grep -c "^## Step " "$ROOT_DIR/skills/gateway-api-migration/SKILL.md" 2>/dev/null || echo 0)
-if [ "$step_count" -eq 8 ]; then
-    pass "SKILL.md has all 8 Step sections (0-7)"
+if [ "$step_count" -eq 9 ]; then
+    pass "SKILL.md has all 9 Step sections (0, 0b, 1-7)"
 else
-    fail "SKILL.md has $step_count Step sections, expected 8"
+    fail "SKILL.md has $step_count Step sections, expected 9 (0, 0b, 1-7)"
 fi
 
 # All reference symlinks resolve
