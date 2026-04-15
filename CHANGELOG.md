@@ -5,6 +5,48 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.0] - 2026-04-15
+
+### Added
+
+- **gateway-api-migration v1.2.0 — dual-target Traefik (default) + GKE Gateway (opt-in)**
+  - New `--gateway-class <name>` flag (default `traefik`). Skill emits provider-specific CRDs based on prefix: Traefik `Middleware` / `ServersTransport` for `traefik*`; GKE `GCPBackendPolicy` / `HealthCheckPolicy` for `gke-l7-*`; vanilla Gateway API only for any other class.
+  - New `--include-orphan-hosts` flag — by default, hostnames advertised on the master with no minion routing them are skipped (smaller Gateway, cleaner output).
+  - New `references/traefik-gateway-notes.md` — Traefik-specific reference (CRDs, helm install, Middleware patterns for CORS and path denylist, cert-manager integration, debugging tips).
+  - `references/annotation-map.md` upgraded to a per-target matrix. Critical differences:
+    - Row 9c path denylists are auto-converted to `Middleware kind: redirectRegex` under Traefik (no longer a manual-review stub). Plugin-based alternative emitted as commented-out option.
+    - CORS rows (5–8) become a single shared `Middleware kind: headers` per namespace under Traefik (vs N per-backend GCPBackendPolicy under GKE).
+    - Row 10 (proxy-*-timeout) becomes a `ServersTransport` under Traefik with all 3 timeout fields preserved (vs collapsed to a single `timeoutSec` under GKE).
+  - SKILL.md Step 0b cluster preflight + Step 4d semantic diff are both target-aware.
+- **gateway-api-migration v1.1.0 — Step 1.1 built-overlay default, full enrichment, Step 4d validator**
+  - Step 1.1 now uses `kustomize build` to render each overlay before classifying Ingress documents. Closes a long-standing blind spot where base templates with placeholder hostnames caused false-positive "orphan minion" halts. Dead files on disk that no `kustomization.yaml` references are also automatically excluded.
+  - 5 new bundled scripts: `check_cluster_preflight.sh`, `classify_ingress.py`, `pair_minions.py`, `inventory_annotations.py`, `build_report.py`. Pure deterministic logic moved out of the model's natural-language re-derivation.
+  - New `scripts/validate_generated.py` — Step 4d semantic validator. 12 checks: kustomize-build (gateway/service), listener-coverage, httproute-parentref-name, source-hostname-coverage (active hostnames only — orphans intentionally excluded), source-backend-coverage, path-coverage (with `ImplementationSpecific /` → `PathPrefix /` normalization), namespace-consistency, tls-secret-coverage (active secrets), dead-file-safety, ingress2gateway-second-opinion (cross-authority cross-check), middleware-coverage (Traefik target only).
+  - New `references/preflight-checks.md` documents the 6 cluster-side checks. Now target-aware.
+  - New `references/report-template.md` — 18-section operator report template.
+  - Runbook template expanded with phase-by-phase SLI-based soak criteria, ManagedCertificate provisioning waits, target-aware Phase 0.3 install steps (helm install Traefik vs gcloud `--gateway-api=standard`).
+  - State YAML schema bumped to v2: adds `skillVersion`, `targetGatewayClass`, `targetFamily`, `gitSha`, `runId`, `backups[]` (full file contents — fixes a v1.0 rollback bug), `cutover[]`, `validatorOutput`, per-step started/finished timestamps.
+- **release-validate is now actively used as a release gate.** This release was validated by it and it caught two real bugs (see Fixed below).
+
+### Fixed
+
+- **gateway-api-migration: rollback-from-SHA256 was unrecoverable.** Phase 3B claimed to back up `kustomization.yaml` via SHA256 hash and restore on build failure — but a hash is one-way; the script could not actually reconstruct content. Now backs up full file content under `docs/reports/gateway-migration/<slug>/backups/`. The hash is kept for tamper detection only.
+- **gateway-api-migration: Step 3A declared an HTTP listener on port 80 but never generated the redirect HTTPRoute.** Result: generated Gateways would silently drop port-80 traffic. Now generates a `tls-redirect` HTTPRoute attached to every `http-*` listener with a `RequestRedirect` filter.
+- **gateway-api-migration: row 9c path-denylist regex `_LOCATION_DENY_RE` missed `location ~ ... { deny all; return 404; }` blocks** because it required `{` to be followed immediately by whitespace and then `return 404`, which excluded the common case of `deny all;` between them. Six manual-review items were silently dropped per run. Regex updated to `[^}]*?return\s+404` and `search()` replaced with `findall()` so each location block becomes its own report entry.
+- **gateway-api-migration: validator's `source-hostname-coverage` and `tls-secret-coverage` falsely flagged orphan hostnames as missing.** Validator now computes the *active* hostname set (master ∩ minions) and only requires coverage for those.
+- **gateway-api-migration: validator's `path-coverage` failed on `pathType: ImplementationSpecific` with path `/`.** This is a common nginx-ingress pattern that's semantically equivalent to `PathPrefix /` in Gateway API. Validator now applies the documented normalization rule and only fails on non-trivial `ImplementationSpecific` paths that genuinely require manual review.
+- **gateway-api-migration: `check_cluster_preflight.sh` confused "Cloud IAM 403 Forbidden" with "resource missing"**, so a user without `roles/container.viewer` would be told to "install Traefik" or "create namespaces" when the real fix is an IAM grant. New `kubectl_probe()` wrapper classifies kubectl results into `ok` / `forbidden` / `missing` / `error`. Forbidden cases now produce `CANNOT VERIFY — Cloud IAM denies ...` messages with explicit IAM remediation. Discovered by running the preflight against a real production-adjacent cluster.
+- **gateway-api-migration: runbook Phase 0.4 forgot to include the master's own namespace in the `kubectl label namespace` command.** The `tls-redirect` HTTPRoute lives in `ingress-nginx` (the Gateway's namespace), so without that label the redirect HTTPRoute would silently fail to attach and port-80 traffic would be dropped. Master namespace is now the first entry in the label list, plus a verification `for` loop.
+- **release: npm pack tarball leaked Python `__pycache__/*.cpython-<ver>.pyc` files.** Adding Python scripts to a skill triggers ad-hoc bytecode generation; `.gitignore` correctly excluded them but `pnpm pack` doesn't read `.gitignore`. New `.npmignore` excludes `__pycache__/`, `*.pyc`, `*.pyo`, `*.tgz`, OS clutter. Tarball file count dropped from 150 to 148, and the 2 `.pyc` files (cpython-3.14 specific, useless for users on any other Python version) no longer ship.
+- **release: 9 platform-facing files described `*gateway-migrate` as "GKE Gateway API"-only.** The v1.2.0 Traefik retrofit was applied to `SKILL.md` / scripts / references but never propagated to the platform descriptions. Updated 16 stale references across `AGENTS.md`, `GEMINI.md`, `README.md`, `docs/PROJECT.md`, `.claude/agents/zeus.md`, `.gemini/agents/zeus.md`, `commands/gateway-api-migration.md`, `commands/zeus.md`, and `.gemini/commands/devops/pipelines/zeus-gateway-migrate.toml`. All 9 files now mention Traefik default + GKE opt-in. Caught by `release-validate` Phase 2.
+
+### Changed
+
+- `gateway-api-migration` skill internal version bumped 1.0.0 → 1.1.0 → **1.2.0**.
+- `check_cluster_preflight.sh` script version 1.1.0 → **1.2.1**, added `--gateway-class` and `--context` flags. The `--context` flag scopes kubectl probes to a named context for one run only — never modifies the user's global current-context setting.
+- `references/master-minion-topology.md` adds a new section "Classify rendered output, not raw files".
+- The skill's "never surprise the user" principle expanded from 4 to 5 invariants. New invariant 5: "Dual-target without magic — switching targets is a one-argument change, no separate pipelines."
+
 ## [1.8.0] - 2026-04-14
 
 ### Added
@@ -200,6 +242,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Bilingual documentation (EN + 繁體中文)
 
 <!-- Links -->
+[1.9.0]: https://github.com/qwedsazxc78/devops-ai-skill/compare/v1.8.0...v1.9.0
 [1.8.0]: https://github.com/qwedsazxc78/devops-ai-skill/compare/v1.7.0...v1.8.0
 [1.7.0]: https://github.com/qwedsazxc78/devops-ai-skill/compare/v1.6.0...v1.7.0
 [1.6.0]: https://github.com/qwedsazxc78/devops-ai-skill/compare/v1.5.0...v1.6.0
