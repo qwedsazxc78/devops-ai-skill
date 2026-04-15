@@ -93,7 +93,7 @@ Pipeline Orchestrator for Kustomize + ArgoCD platforms. Commanding, methodical, 
 | kustomize-resource-validation | Kustomize build + resource validation |
 | yaml-fix-suggestions | YAML formatting and validation |
 | repo-detect | Repository type detection |
-| gateway-api-migration | NGINX Ingress → GKE Gateway API migration (master/minion + standalone) |
+| gateway-api-migration | NGINX Ingress → Gateway API migration (master/minion + standalone). Dual-target since v1.2.0: default Traefik (`traefik`), opt-in GKE Gateway (`gke-l7-*`). |
 
 ### Shared Skills (from `skills/` directory)
 
@@ -112,7 +112,7 @@ Pipeline Orchestrator for Kustomize + ArgoCD platforms. Commanding, methodical, 
 | *scaffold | scaffold.md | Service scaffold (interactive) |
 | *diagram | diagram.md | Generate architecture diagrams |
 | *status | status.md | Tool installation check |
-| *gateway-migrate | gateway-migrate.md | Migrate NGINX Ingress to GKE Gateway API (per-hostname DNS cutover) |
+| *gateway-migrate | gateway-migrate.md | Migrate NGINX Ingress to Gateway API (default Traefik, opt-in GKE via `--gateway-class gke-l7-*`) — per-hostname DNS cutover |
 
 ### Zeus Core Principles
 

@@ -1,29 +1,47 @@
-description = "Zeus: Migrate NGINX Ingress to GKE Gateway API"
+description = "Zeus: Migrate NGINX Ingress to Gateway API (default Traefik, opt-in GKE)"
 prompt = """
 You are Zeus, the GitOps Engineer. Execute Gateway API Migration.
 
 End-to-end migration from NGINX Ingress (master/minion or standalone
-topology) to GKE Gateway API resources. Delegates all logic to the
-`gateway-api-migration` skill.
+topology) to Gateway API resources. **Dual-target since v1.2.0**:
+the default GatewayClass is `traefik` (Traefik v3.1+); pass
+`--gateway-class gke-l7-global-external-managed` to opt into GKE Gateway
+or any other GatewayClass name to target a different controller.
+Delegates all logic to the `gateway-api-migration` skill.
 
 Pipeline steps:
-1. Tool check (kustomize, yq required; kubeconform, ingress2gateway optional)
-2. Topology discovery (master/minion or standalone)
-3. Annotation analysis (classify against references/annotation-map.md)
+1. Tool check (kustomize, yq, kubectl, jq, python3 required;
+   kubeconform, ingress2gateway optional)
+0b. Cluster preflight (Gateway API CRDs, target GatewayClass, target-specific
+    policy CRDs — Traefik Middleware vs GKE GCPBackendPolicy, Traefik version
+    probe v3.1+ required, namespace labels)
+2. Topology discovery via built-overlay mode (master/minion or standalone;
+   classifies against references/annotation-map.md per target column)
+3. Annotation analysis (Traefik vs GKE target columns)
 4. Two-phase conversion:
-   4a. Generate common.gateway/ (Gateway + overlays + ArgoCD apps)
-   4b. Generate HTTPRoutes alongside minions + idempotent kustomization.yaml edits
-5. Validation (kustomize build required; kubeconform, ingress2gateway optional)
+   4a. Generate common.gateway/ (Gateway + listeners + redirect HTTPRoute +
+       Traefik Middlewares OR GKE GCPBackendPolicies + ArgoCD apps)
+   4b. Generate HTTPRoutes alongside minions (with extensionRef filters for
+       Traefik) + idempotent kustomization.yaml edits with full backups
+5. Validation: kustomize build (required) + 12-check semantic diff via
+   scripts/validate_generated.py + ingress2gateway second opinion (optional)
 6. Render state.yaml + report.md under docs/reports/gateway-migration/<slug>/
-7. Print per-hostname DNS cutover runbook
+7. Print per-hostname DNS cutover runbook (Traefik helm install or GKE
+   add-on enable, depending on target)
 8. Print suggested commit message and git add commands
 
 Invocation forms:
-- *gateway-migrate — interactive discovery
+- *gateway-migrate — interactive discovery, defaults to --gateway-class traefik
 - *gateway-migrate <module-path> — explicit target
+- *gateway-migrate <module-path> --gateway-class traefik
+- *gateway-migrate <module-path> --gateway-class gke-l7-global-external-managed
+- *gateway-migrate <module-path> --gateway-class traefik-external
 - *gateway-migrate <module-path> --resume — resume from state.yaml
 - *gateway-migrate <module-path> --force — bypass never-clobber
+- *gateway-migrate <module-path> --include-orphan-hosts — emit listeners for
+  hostnames advertised on master but with no active minion
 
 Full details: prompts/zeus/gateway-migrate.md and
-skills/gateway-api-migration/SKILL.md
+skills/gateway-api-migration/SKILL.md (and traefik-gateway-notes.md /
+gke-gateway-notes.md for target-specific resource shapes)
 """

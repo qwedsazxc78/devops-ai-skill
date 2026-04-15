@@ -44,7 +44,7 @@ Read skill definitions from `skills/` directory:
 - `kustomize-resource-validation` — Kustomize build + validation
 - `yaml-fix-suggestions` — YAML formatting
 - `repo-detect` — Repository type detection
-- `gateway-api-migration` — NGINX Ingress → GKE Gateway API conversion (invoked by `*gateway-migrate`)
+- `gateway-api-migration` — NGINX Ingress → Gateway API conversion (dual-target: default Traefik, opt-in GKE Gateway via `--gateway-class gke-l7-*`; invoked by `*gateway-migrate`)
 
 ## Pipelines
 

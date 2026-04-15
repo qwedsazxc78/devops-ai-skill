@@ -233,7 +233,7 @@ One-command installer supporting macOS (Homebrew), Linux (apt/snap), Windows (wi
 | `*scaffold` | Service scaffold (interactive) |
 | `*diagram` | Generate architecture diagrams |
 | `*status` | Tool installation check |
-| `*gateway-migrate` | NGINX Ingress → GKE Gateway API migration (master/minion or standalone) |
+| `*gateway-migrate` | NGINX Ingress → Gateway API migration (default Traefik, opt-in GKE via `--gateway-class gke-l7-*`; master/minion or standalone) |
 
 ## Skills
 
@@ -248,13 +248,13 @@ All skills follow the [Open Agent Skills](https://agentskills.io/specification) 
 | cicd-enhancer | Horus | CI/CD pipeline improvement |
 | kustomize-resource-validation | Zeus | Kustomize build + validation |
 | yaml-fix-suggestions | Zeus | YAML formatting |
-| gateway-api-migration | Zeus | NGINX Ingress → GKE Gateway API migration with state tracking |
+| gateway-api-migration | Zeus | NGINX Ingress → Gateway API migration with state tracking. Dual-target since v1.2.0: default Traefik, opt-in GKE Gateway. |
 | repo-detect | Both | Repository type detection |
 | release-validate | Shared | Release readiness validation |
 
 ## Example: NGINX → Gateway API Migration
 
-The `*gateway-migrate` pipeline migrates an NGINX Ingress GitOps repo to GKE Gateway API resources. It handles the common **master/minion** topology where:
+The `*gateway-migrate` pipeline migrates an NGINX Ingress GitOps repo to Gateway API resources. **Dual-target since v1.2.0**: the default GatewayClass is `traefik` (Traefik v3.1+), and `--gateway-class gke-l7-global-external-managed` opts into GKE Gateway. Both targets share the same pipeline; the skill emits provider-specific CRDs (Traefik `Middleware` / `ServersTransport`, or GKE `GCPBackendPolicy` / `HealthCheckPolicy`) only when the target family is one it knows. It handles the common **master/minion** topology where:
 
 - `common.ingress/` declares hosts + TLS (the "master")
 - `common.service/overlays/<env>/<svc>-nginx-ingress.yaml` declares paths + backends per service (the "minions")

@@ -1,9 +1,12 @@
-# gateway-api-migration — NGINX Ingress → GKE Gateway API
+# gateway-api-migration — NGINX Ingress → Gateway API (Traefik default, GKE opt-in)
 
 Direct-entry slash command for the one-time migration from NGINX Ingress
-(master/minion or standalone) to GKE Gateway API. Equivalent to invoking
-Zeus and running `*gateway-migrate` — same pipeline, same skill, same
-safety rules, but without the Zeus greeting and `*help` menu.
+(master/minion or standalone) to Gateway API. **Dual-target since v1.2.0**:
+the default GatewayClass is `traefik` (Traefik v3.1+); pass
+`--gateway-class gke-l7-global-external-managed` (or any other class
+prefix) to opt into GKE Gateway or other controllers. Equivalent to
+invoking Zeus and running `*gateway-migrate` — same pipeline, same skill,
+same safety rules, but without the Zeus greeting and `*help` menu.
 
 ## Activation
 

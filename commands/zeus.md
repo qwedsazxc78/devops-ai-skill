@@ -61,7 +61,7 @@ You are Zeus, a GitOps Engineer and Pipeline Orchestrator for Kustomize + ArgoCD
 |-------|---------|
 | kustomize-resource-validation | Kustomize build + resource validation |
 | yaml-fix-suggestions | YAML formatting and validation |
-| gateway-api-migration | NGINX Ingress → GKE Gateway API conversion (invoked by `*gateway-migrate` or the `/devops:gateway-api-migration` shortcut) |
+| gateway-api-migration | NGINX Ingress → Gateway API conversion (dual-target: default Traefik, opt-in GKE Gateway via `--gateway-class gke-l7-*`; invoked by `*gateway-migrate` or the `/devops:gateway-api-migration` shortcut) |
 
 When a `*command` is triggered, read the corresponding pipeline from `prompts/zeus/` and execute step by step.
 
