@@ -252,6 +252,23 @@ All skills follow the [Open Agent Skills](https://agentskills.io/specification) 
 | repo-detect | Both | Repository type detection |
 | release-validate | Shared | Release readiness validation |
 
+## Hooks
+
+Auto-loaded by Claude Code v2.1+ — wires existing skills + agents into Claude's tool-use loop for deterministic, event-driven feedback. See [`hooks/README.md`](hooks/README.md) for full details.
+
+| # | Event | Purpose | Mode |
+|---|---|---|---|
+| H1 | `SessionStart` | Detect IaC/GitOps repo and suggest agent (Horus or Zeus) | advisory |
+| H2 | `PostToolUse` Edit/Write | YAML lint after edits in Kustomize trees | advisory |
+| H3 | `PostToolUse` Edit/Write | `terraform fmt` + `tflint` after `.tf` edits | advisory |
+| H4 | `PreToolUse` Bash | Ask before `terraform apply`, `kubectl delete`, etc. | gate (`ask`) |
+
+**Companion repos** (workshop demo branches: `demo-conditioned/2026-ithome-devopsday`):
+
+- IaC template (Horus): <https://github.com/qwedsazxc78/iac-template-ai-skill>
+- GitOps template (Zeus): <https://github.com/qwedsazxc78/gitops-template-ai-skill>
+- Skill pack (this repo): <https://github.com/qwedsazxc78/devops-ai-skill>
+
 ## Example: NGINX → Gateway API Migration
 
 The `*gateway-migrate` pipeline migrates an NGINX Ingress GitOps repo to Gateway API resources. **Dual-target since v1.2.0**: the default GatewayClass is `traefik` (Traefik v3.1+), and `--gateway-class gke-l7-global-external-managed` opts into GKE Gateway. Both targets share the same pipeline; the skill emits provider-specific CRDs (Traefik `Middleware` / `ServersTransport`, or GKE `GCPBackendPolicy` / `HealthCheckPolicy`) only when the target family is one it knows. It handles the common **master/minion** topology where:
