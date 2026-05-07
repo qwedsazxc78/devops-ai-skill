@@ -39,7 +39,8 @@
     "GEMINI.md",
     "VERSION",
     "CHANGELOG.md",
-    "README.md"
+    "README.md",
+    "install.bat"
   ],
   "scripts": {
     "test": "bash tests/test-structure.sh && bash tests/test-setup-scripts.sh",
@@ -51,6 +52,8 @@
     "setup:codex": "bash scripts/setup/setup-codex.sh",
     "setup:gemini": "bash scripts/setup/setup-gemini.sh",
     "setup:antigravity": "bash scripts/setup/setup-antigravity.sh",
+    "setup:win": "powershell -ExecutionPolicy Bypass -NoProfile -File scripts/install-global.ps1",
+    "setup:win:tools": "powershell -ExecutionPolicy Bypass -NoProfile -File scripts/install-tools.ps1 install",
     "version:check": "bash scripts/version-check.sh",
     "version:consistency": "bash scripts/version-consistency.sh",
     "version:bump": "bash scripts/version-bump.sh",

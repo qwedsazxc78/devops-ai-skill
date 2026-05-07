@@ -29,7 +29,9 @@
 
 ### 全局安装（推荐）
 
-一次安装，所有项目共用，无需 per-repo 设置：
+一次安装，所有项目共用，无需 per-repo 设置。
+
+**macOS / Linux：**
 
 ```bash
 git clone https://github.com/qwedsazxc78/devops-ai-skill.git
@@ -37,7 +39,21 @@ cd devops-ai-skill
 bash scripts/install-global.sh          # 自动检测已安装的 CLI
 ```
 
-自动检测 Claude Code / Codex CLI / Gemini CLI / Antigravity，安装至对应全局路径。
+**Windows（一键安装）：**
+
+```powershell
+git clone https://github.com/qwedsazxc78/devops-ai-skill.git
+cd devops-ai-skill
+.\install.bat                            # 交互式菜单：skills / tools / both
+```
+
+或非交互执行：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\install-global.ps1
+```
+
+自动检测 Claude Code / Codex CLI / Gemini CLI / Antigravity，安装至对应全局路径。Windows 脚本针对 PowerShell 5.1（Windows 10 / 11 内置），不需要 Git Bash 或 WSL。
 
 ![全局安装](guide/01-install-global-run.png)
 
@@ -45,6 +61,8 @@ bash scripts/install-global.sh          # 自动检测已安装的 CLI
 
 <details>
 <summary><strong>全局安装选项</strong></summary>
+
+**macOS / Linux：**
 
 ```bash
 bash scripts/install-global.sh --all            # 强制安装全部平台
@@ -55,6 +73,20 @@ bash scripts/install-global.sh --antigravity    # 仅 Antigravity
 bash scripts/install-global.sh --status         # 查看安装状态
 bash scripts/install-global.sh --uninstall      # 移除全局安装
 ```
+
+**Windows（PowerShell）：**
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\install-global.ps1 -All
+powershell -ExecutionPolicy Bypass -File scripts\install-global.ps1 -Claude
+powershell -ExecutionPolicy Bypass -File scripts\install-global.ps1 -Codex
+powershell -ExecutionPolicy Bypass -File scripts\install-global.ps1 -Gemini
+powershell -ExecutionPolicy Bypass -File scripts\install-global.ps1 -Antigravity
+powershell -ExecutionPolicy Bypass -File scripts\install-global.ps1 -Status
+powershell -ExecutionPolicy Bypass -File scripts\install-global.ps1 -Uninstall
+```
+
+或在 repo 根目录双击 `install.bat`，使用交互式菜单（skills / tools / both / status / uninstall）。
 
 </details>
 
@@ -74,7 +106,7 @@ bash scripts/install-global.sh                # 重跑安装（自动跳过未�
 <details>
 <summary><strong>Per-repo 安装（传统方式）</strong></summary>
 
-在你的项目根目录执行：
+在你的项目根目录执行（仅 macOS / Linux，使用 symlink）：
 
 ```bash
 git clone https://github.com/qwedsazxc78/devops-ai-skill.git
@@ -92,6 +124,8 @@ bash devops-ai-skill/scripts/setup.sh --antigravity
 # 移除所有安装
 bash devops-ai-skill/scripts/setup.sh --uninstall
 ```
+
+> **Windows 用户：** Per-repo 流程依赖 Unix symlink（在 Windows 需要管理员或开发者模式）。请改用 **全局安装**（`install.bat`），同样四平台齐全且不需要管理员权限。
 
 </details>
 
@@ -145,7 +179,9 @@ npx skills update
 
 ## 工具安装
 
-一键安装所有必要工具，支持 macOS (Homebrew)、Linux (apt/snap)、Windows (winget/choco/scoop)、Python (uv/pip)：
+一键安装所有必要工具，支持 macOS (Homebrew)、Linux (apt/snap)、Windows (winget/choco/scoop)、Python (uv/pip)。
+
+**macOS / Linux：**
 
 ```bash
 # 交互模式：检查 + 提示安装
@@ -161,6 +197,18 @@ npx skills update
 ./scripts/install-tools.sh install horus   # IaC 工具
 ./scripts/install-tools.sh install zeus    # GitOps 工具
 ```
+
+**Windows（PowerShell，原生 — 不需要 Git Bash 或 WSL）：**
+
+```powershell
+.\scripts\install-tools.ps1
+.\scripts\install-tools.ps1 check
+.\scripts\install-tools.ps1 install
+.\scripts\install-tools.ps1 install horus
+.\scripts\install-tools.ps1 install zeus
+```
+
+或在 repo 根目录双击 `install.bat`，选择 `[2] Tools`。需要 `winget`（Windows 10 1809+ / Windows 11 内置）或 `choco` / `scoop`。
 
 ### 共用工具
 

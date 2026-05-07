@@ -74,9 +74,14 @@ After installation, verify DevOps tools:
 **In Claude Code:**
 Use the tool check pipeline or read `prompts/shared/tool-check.md`
 
-**In any terminal:**
+**In any terminal (macOS / Linux):**
 ```bash
 bash scripts/install-tools.sh
+```
+
+**Windows (PowerShell):**
+```powershell
+.\scripts\install-tools.ps1
 ```
 
 ### Version Management
@@ -105,6 +110,8 @@ git tag -l "v*" --sort=-version:refname
 
 Instead of per-repo symlinks, install skills and agents **globally** so they are available across ALL projects.
 
+**macOS / Linux:**
+
 ```bash
 # Auto-detect installed CLIs and install
 bash scripts/install-global.sh
@@ -116,6 +123,23 @@ bash scripts/install-global.sh --gemini
 bash scripts/install-global.sh --antigravity
 bash scripts/install-global.sh --all
 ```
+
+**Windows (PowerShell, native — no Git Bash / WSL needed):**
+
+```powershell
+# One-click interactive menu
+.\install.bat
+
+# Or non-interactive
+powershell -ExecutionPolicy Bypass -File scripts\install-global.ps1
+powershell -ExecutionPolicy Bypass -File scripts\install-global.ps1 -Claude
+powershell -ExecutionPolicy Bypass -File scripts\install-global.ps1 -Codex
+powershell -ExecutionPolicy Bypass -File scripts\install-global.ps1 -Gemini
+powershell -ExecutionPolicy Bypass -File scripts\install-global.ps1 -Antigravity
+powershell -ExecutionPolicy Bypass -File scripts\install-global.ps1 -All
+```
+
+The `.ps1` scripts target PowerShell 5.1, which is built into every Windows 10 / 11 / Server 2016+ machine. The Per-repo Install path (`setup.sh` with symlinks) is **not** supported on Windows because Unix symlinks require Administrator or Developer Mode — use Global Install instead.
 
 #### Global paths per platform
 
@@ -141,9 +165,18 @@ bash scripts/install-global.sh
 
 #### Status & Uninstall
 
+**macOS / Linux:**
+
 ```bash
 bash scripts/install-global.sh --status     # Check what's installed where
 bash scripts/install-global.sh --uninstall   # Remove all global installations
+```
+
+**Windows:**
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\install-global.ps1 -Status
+powershell -ExecutionPolicy Bypass -File scripts\install-global.ps1 -Uninstall
 ```
 
 ### As Git Submodule

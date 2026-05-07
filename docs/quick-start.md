@@ -21,10 +21,20 @@ You only need:
 
 ## Step 1: Install the Skill Pack (1 min)
 
+**macOS / Linux:**
+
 ```bash
 git clone https://github.com/qwedsazxc78/devops-ai-skill.git
 cd devops-ai-skill
 bash scripts/install-global.sh
+```
+
+**Windows (one-click):**
+
+```powershell
+git clone https://github.com/qwedsazxc78/devops-ai-skill.git
+cd devops-ai-skill
+.\install.bat                      # Interactive menu — choose [1] Skills
 ```
 
 Done when you see `Global install complete!`
@@ -132,6 +142,8 @@ The agent tells you which tools are missing during execution. You can also insta
 ![Tool Status](guide/04-install-tools-status.png)
 ![Horus Tools](guide/05-install-tools-horus.png)
 
+**macOS / Linux:**
+
 ```bash
 # Interactive: confirm each install
 ./scripts/install-tools.sh
@@ -139,6 +151,14 @@ The agent tells you which tools are missing during execution. You can also insta
 # One-click install for your agent
 ./scripts/install-tools.sh install horus   # Terraform + Helm tools
 ./scripts/install-tools.sh install zeus    # Kustomize + GitOps tools
+```
+
+**Windows:**
+
+```powershell
+.\scripts\install-tools.ps1
+.\scripts\install-tools.ps1 install horus
+.\scripts\install-tools.ps1 install zeus
 ```
 
 ## FAQ
@@ -161,10 +181,21 @@ claude    # Start agent (or gemini/codex), type *health
 
 ### Q: Windows?
 
-Use Git Bash, WSL, or MSYS2:
+Native PowerShell install — no Git Bash, no WSL:
 
 ```powershell
-# Git Bash (recommended)
+# One-click (interactive menu)
+.\install.bat
+
+# Or non-interactive
+powershell -ExecutionPolicy Bypass -File scripts\install-global.ps1
+powershell -ExecutionPolicy Bypass -File scripts\install-tools.ps1 install
+```
+
+Targets PowerShell 5.1, which ships built-in on every Windows 10 / 11 / Server 2016+ box. If you do prefer bash on Windows, Git Bash and WSL still work with the `.sh` scripts:
+
+```bash
+# Git Bash
 bash scripts/install-global.sh
 
 # WSL

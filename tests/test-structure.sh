@@ -940,6 +940,103 @@ for md in CLAUDE.md AGENTS.md GEMINI.md docs/PROJECT.md; do
 done
 
 # ============================================
+# SECTION 18: Windows Native Install
+# ============================================
+section "Windows Native Install"
+
+# install.bat exists at repo root
+if [ -f "$ROOT_DIR/install.bat" ]; then
+    pass "install.bat exists at repo root"
+    if grep -q "scripts\\\\install-global.ps1" "$ROOT_DIR/install.bat"; then
+        pass "install.bat references scripts\\install-global.ps1"
+    else
+        fail "install.bat does not reference install-global.ps1"
+    fi
+    if grep -q "scripts\\\\install-tools.ps1" "$ROOT_DIR/install.bat"; then
+        pass "install.bat references scripts\\install-tools.ps1"
+    else
+        fail "install.bat does not reference install-tools.ps1"
+    fi
+else
+    fail "install.bat missing at repo root"
+fi
+
+# install-global.ps1 exists and references all 4 platforms
+ps1_global="$ROOT_DIR/scripts/install-global.ps1"
+if [ -f "$ps1_global" ]; then
+    pass "scripts/install-global.ps1 exists"
+    for platform_dir in "\\.claude" "\\.codex" "\\.gemini" "\\.agents"; do
+        if grep -q "$platform_dir" "$ps1_global"; then
+            pass "install-global.ps1 references $platform_dir path"
+        else
+            fail "install-global.ps1 missing $platform_dir reference"
+        fi
+    done
+    # Parity: every CLI flag in the bash version exists as a -Switch in the ps1
+    # (bash 3.2 compatible — no ${flag^} expansion)
+    sh_global="$ROOT_DIR/scripts/install-global.sh"
+    if [ -f "$sh_global" ]; then
+        for pair in "claude:Claude" "codex:Codex" "gemini:Gemini" "antigravity:Antigravity" "uninstall:Uninstall" "status:Status" "all:All"; do
+            sh_flag="${pair%%:*}"
+            ps_flag="${pair##*:}"
+            if grep -qE "\[switch\]\\\$$ps_flag" "$ps1_global"; then
+                pass "install-global.ps1 has -$ps_flag switch matching --$sh_flag"
+            else
+                fail "install-global.ps1 missing -$ps_flag switch (--$sh_flag in bash)"
+            fi
+        done
+    fi
+    # Drift-control header present
+    if head -10 "$ps1_global" | grep -q "1:1 port of scripts/install-global.sh"; then
+        pass "install-global.ps1 has drift-control header"
+    else
+        fail "install-global.ps1 missing drift-control header"
+    fi
+else
+    fail "scripts/install-global.ps1 missing"
+fi
+
+# install-tools.ps1 exists and uses native Windows package managers
+ps1_tools="$ROOT_DIR/scripts/install-tools.ps1"
+if [ -f "$ps1_tools" ]; then
+    pass "scripts/install-tools.ps1 exists"
+    for pm in winget choco scoop; do
+        if grep -qi "$pm" "$ps1_tools"; then
+            pass "install-tools.ps1 references $pm"
+        else
+            fail "install-tools.ps1 missing $pm reference"
+        fi
+    done
+    # Drift-control header present
+    if head -10 "$ps1_tools" | grep -q "1:1 port of scripts/install-tools.sh"; then
+        pass "install-tools.ps1 has drift-control header"
+    else
+        fail "install-tools.ps1 missing drift-control header"
+    fi
+else
+    fail "scripts/install-tools.ps1 missing"
+fi
+
+# package.json exposes setup:win entries
+if [ -f "$ROOT_DIR/package.json" ]; then
+    if grep -q '"setup:win":' "$ROOT_DIR/package.json"; then
+        pass "package.json has setup:win script"
+    else
+        fail "package.json missing setup:win script"
+    fi
+    if grep -q '"setup:win:tools":' "$ROOT_DIR/package.json"; then
+        pass "package.json has setup:win:tools script"
+    else
+        fail "package.json missing setup:win:tools script"
+    fi
+    if grep -q '"install.bat"' "$ROOT_DIR/package.json"; then
+        pass "package.json files whitelist includes install.bat"
+    else
+        fail "package.json files whitelist missing install.bat"
+    fi
+fi
+
+# ============================================
 # SUMMARY
 # ============================================
 echo ""

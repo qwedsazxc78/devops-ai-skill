@@ -29,7 +29,9 @@ English | [繁體中文](docs/README.zh-TW.md) | [简体中文](docs/README.zh-C
 
 ### Global Install (recommended)
 
-Install once, available across ALL projects:
+Install once, available across ALL projects.
+
+**macOS / Linux:**
 
 ```bash
 git clone https://github.com/qwedsazxc78/devops-ai-skill.git
@@ -37,7 +39,21 @@ cd devops-ai-skill
 bash scripts/install-global.sh          # Auto-detect installed CLIs
 ```
 
-Auto-detects Claude Code / Codex CLI / Gemini CLI / Antigravity and installs to their global config paths.
+**Windows (one-click):**
+
+```powershell
+git clone https://github.com/qwedsazxc78/devops-ai-skill.git
+cd devops-ai-skill
+.\install.bat                            # Interactive menu: skills / tools / both
+```
+
+Or non-interactive on Windows:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\install-global.ps1
+```
+
+All paths auto-detect Claude Code / Codex CLI / Gemini CLI / Antigravity and install to their global config paths. The Windows scripts target PowerShell 5.1 (built-in on Windows 10/11) — no Git Bash, no WSL, no extra dependencies.
 
 ![Global Install](docs/guide/01-install-global-run.png)
 
@@ -45,6 +61,8 @@ Auto-detects Claude Code / Codex CLI / Gemini CLI / Antigravity and installs to 
 
 <details>
 <summary><strong>Global Install Options</strong></summary>
+
+**macOS / Linux:**
 
 ```bash
 bash scripts/install-global.sh --all            # Force all platforms
@@ -55,6 +73,20 @@ bash scripts/install-global.sh --antigravity    # Antigravity only
 bash scripts/install-global.sh --status         # Check install status
 bash scripts/install-global.sh --uninstall      # Remove global installs
 ```
+
+**Windows (PowerShell):**
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\install-global.ps1 -All
+powershell -ExecutionPolicy Bypass -File scripts\install-global.ps1 -Claude
+powershell -ExecutionPolicy Bypass -File scripts\install-global.ps1 -Codex
+powershell -ExecutionPolicy Bypass -File scripts\install-global.ps1 -Gemini
+powershell -ExecutionPolicy Bypass -File scripts\install-global.ps1 -Antigravity
+powershell -ExecutionPolicy Bypass -File scripts\install-global.ps1 -Status
+powershell -ExecutionPolicy Bypass -File scripts\install-global.ps1 -Uninstall
+```
+
+Or use `install.bat` from the repo root for an interactive menu (skills / tools / both / status / uninstall).
 
 </details>
 
@@ -74,7 +106,7 @@ bash scripts/install-global.sh                # Re-run (skips unchanged files)
 <details>
 <summary><strong>Per-repo Install (legacy)</strong></summary>
 
-Run from your project root:
+Run from your project root (macOS / Linux only — uses symlinks):
 
 ```bash
 git clone https://github.com/qwedsazxc78/devops-ai-skill.git
@@ -89,6 +121,8 @@ bash devops-ai-skill/scripts/setup.sh --gemini
 bash devops-ai-skill/scripts/setup.sh --antigravity
 bash devops-ai-skill/scripts/setup.sh --uninstall
 ```
+
+> **Windows users:** the per-repo flow relies on Unix symlinks (require Administrator or Developer Mode on Windows). Use **Global Install** (`install.bat`) instead — it gives you all four platforms with no admin rights required.
 
 </details>
 
@@ -142,7 +176,9 @@ npx skills update
 
 ## Tool Installation
 
-One-command installer supporting macOS (Homebrew), Linux (apt/snap), Windows (winget/choco/scoop), and Python (uv/pip):
+One-command installer supporting macOS (Homebrew), Linux (apt/snap), Windows (winget/choco/scoop), and Python (uv/pip).
+
+**macOS / Linux:**
 
 ```bash
 # Interactive: check + prompt install
@@ -159,15 +195,24 @@ One-command installer supporting macOS (Homebrew), Linux (apt/snap), Windows (wi
 ./scripts/install-tools.sh install zeus    # GitOps tools
 ```
 
-> **Windows users**: Run via Git Bash, WSL, or MSYS2. The script auto-detects your package manager (winget / Chocolatey / Scoop):
->
-> ```powershell
-> # Git Bash (recommended)
-> bash scripts/install-tools.sh
->
-> # WSL
-> wsl bash scripts/install-tools.sh
-> ```
+**Windows (PowerShell, native — no Git Bash / WSL needed):**
+
+```powershell
+# Interactive: check + prompt install
+.\scripts\install-tools.ps1
+
+# Check tool status only
+.\scripts\install-tools.ps1 check
+
+# Install all missing tools
+.\scripts\install-tools.ps1 install
+
+# Install tools for a specific agent
+.\scripts\install-tools.ps1 install horus
+.\scripts\install-tools.ps1 install zeus
+```
+
+Or double-click `install.bat` from the repo root and choose `[2] Tools`. Requires `winget` (built into Windows 10 1809+ / Windows 11) or `choco` / `scoop`.
 
 ### Shared Tools
 

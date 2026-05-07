@@ -21,6 +21,8 @@
 
 ## Step 1：安裝 Skill Pack（1 分鐘）
 
+**macOS / Linux：**
+
 ```bash
 # 下載
 git clone https://github.com/qwedsazxc78/devops-ai-skill.git
@@ -28,6 +30,14 @@ cd devops-ai-skill
 
 # 全域安裝（自動偵測你的 AI CLI）
 bash scripts/install-global.sh
+```
+
+**Windows（一鍵安裝）：**
+
+```powershell
+git clone https://github.com/qwedsazxc78/devops-ai-skill.git
+cd devops-ai-skill
+.\install.bat                      # 互動式選單，選 [1] Skills
 ```
 
 看到 `Global install complete!` 就完成了。
@@ -120,6 +130,8 @@ Agent 在執行過程中會告訴你缺少哪些工具，你也可以一次安�
 ![工具狀態檢查](guide/04-install-tools-status.png)
 ![Horus 工具安裝](guide/05-install-tools-horus.png)
 
+**macOS / Linux：**
+
 ```bash
 # 互動模式：逐一確認安裝
 ./scripts/install-tools.sh
@@ -127,6 +139,14 @@ Agent 在執行過程中會告訴你缺少哪些工具，你也可以一次安�
 # 一鍵安裝你的 Agent 所需工具
 ./scripts/install-tools.sh install horus   # Terraform + Helm 工具
 ./scripts/install-tools.sh install zeus    # Kustomize + GitOps 工具
+```
+
+**Windows：**
+
+```powershell
+.\scripts\install-tools.ps1
+.\scripts\install-tools.ps1 install horus
+.\scripts\install-tools.ps1 install zeus
 ```
 
 ## 常見問題
@@ -149,10 +169,21 @@ claude    # 啟動 Agent（或 gemini/codex），輸入 *health
 
 ### Q: 我用 Windows，怎麼辦？
 
-用 Git Bash、WSL 或 MSYS2 執行安裝腳本：
+原生 PowerShell 安裝，不需要 Git Bash 或 WSL：
 
 ```powershell
-# Git Bash（推薦）
+# 一鍵安裝（互動式選單）
+.\install.bat
+
+# 或非互動執行
+powershell -ExecutionPolicy Bypass -File scripts\install-global.ps1
+powershell -ExecutionPolicy Bypass -File scripts\install-tools.ps1 install
+```
+
+針對 PowerShell 5.1（Windows 10 / 11 / Server 2016+ 內建），開箱即用。如果你還是偏好用 bash，Git Bash 與 WSL 仍可搭配 `.sh` 腳本：
+
+```bash
+# Git Bash
 bash scripts/install-global.sh
 
 # WSL
