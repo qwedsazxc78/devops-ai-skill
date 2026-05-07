@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.10.0] - 2026-05-07
+
+### Added
+
+- **Native Windows install — no Git Bash, no WSL.** Two new PowerShell scripts plus a one-click `install.bat` launcher at the repo root.
+  - `install.bat` — interactive menu (skills / tools / both / status / uninstall). Resolves PowerShell host (`pwsh.exe` preferred, falls back to `powershell.exe`), passes `-ExecutionPolicy Bypass -NoProfile`. Double-clickable from File Explorer.
+  - `scripts/install-global.ps1` — 1:1 port of `install-global.sh`. Same flags (`-All`, `-Claude`, `-Codex`, `-Gemini`, `-Antigravity`, `-Status`, `-Uninstall`), same auto-detect, same plugin cache layout (`%USERPROFILE%\.claude\plugins\cache\devops-ai-skill\...`), same legacy-purge logic. Patches `settings.json` and `installed_plugins.json` natively via `ConvertFrom-Json` / `ConvertTo-Json` (no python3 dependency) and writes BOM-less UTF-8.
+  - `scripts/install-tools.ps1` — 1:1 port of `install-tools.sh`. Same TOOLS registry, same `check` / `install [zeus|horus]` subcommands, same 3-attempt retry. Detects `winget` / `choco` / `scoop` / `uv` / `pip3` / `pip` and fails fast (with install URLs) if none are present.
+  - Both `.ps1` scripts target PowerShell 5.1 — built into every Windows 10 / 11 / Server 2016+ box, no extra install required.
+- **`pnpm setup:win` and `pnpm setup:win:tools`** — npm scripts that invoke the new `.ps1` files non-interactively.
+- **22 new structure tests** under "Windows Native Install" section in `tests/test-structure.sh` — verify file presence, drift-control headers, CLI flag parity with bash, package manager references, and `package.json` whitelist coverage.
+- **Drift-control headers** on both `.ps1` files identify them as 1:1 ports of the corresponding `.sh` and instruct future contributors to update bash first, then port the diff.
+
+### Changed
+
+- **README.md, docs/quick-start.md (+ zh-TW / zh-CN), docs/setup.md, docs/README.zh-TW.md, docs/README.zh-CN.md** — Windows is now a first-class install target alongside macOS / Linux instead of a "use Git Bash / WSL" footnote. Each install snippet shows both the bash and PowerShell forms.
+- **`package.json` `files` whitelist** — added `install.bat` so it ships in the npm tarball.
+
+### Out of scope
+
+- Per-repo `setup.sh` flow on Windows — it relies on Unix symlinks (require Administrator or Developer Mode); Windows users use Global Install (`install.bat` / `install-global.ps1`) instead.
+- Auto-installing Git for Windows / `winget` / PowerShell 7 — documented as prerequisites; not bootstrapped (matches bash behavior on macOS without Homebrew).
+
 ## [1.9.0] - 2026-04-15
 
 ### Added
@@ -242,6 +265,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Bilingual documentation (EN + 繁體中文)
 
 <!-- Links -->
+[1.10.0]: https://github.com/qwedsazxc78/devops-ai-skill/compare/v1.9.0...v1.10.0
 [1.9.0]: https://github.com/qwedsazxc78/devops-ai-skill/compare/v1.8.0...v1.9.0
 [1.8.0]: https://github.com/qwedsazxc78/devops-ai-skill/compare/v1.7.0...v1.8.0
 [1.7.0]: https://github.com/qwedsazxc78/devops-ai-skill/compare/v1.6.0...v1.7.0
