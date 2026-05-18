@@ -5,7 +5,7 @@
 [![DEVOPS](https://img.shields.io/badge/DEVOPS-SKILL-blue?style=flat-square)](https://github.com/qwedsazxc78/devops-ai-skill)
 [![LICENSE](https://img.shields.io/badge/LICENSE-MIT-green?style=flat-square)](https://github.com/qwedsazxc78/devops-ai-skill/blob/main/LICENSE)
 [![FILES](https://img.shields.io/badge/FILES-65+-orange?style=flat-square)](#專案結構)
-[![SKILLS](https://img.shields.io/badge/SKILLS-10-blueviolet?style=flat-square)](#技能模組)
+[![SKILLS](https://img.shields.io/badge/SKILLS-12-blueviolet?style=flat-square)](#技能模組)
 [![PIPELINES](https://img.shields.io/badge/PIPELINES-15-ff6f61?style=flat-square)](#horus-流水線iac)
 [![AGENTS](https://img.shields.io/badge/AGENTS-2-critical?style=flat-square)](#agent-代理)
 [![PLATFORMS](https://img.shields.io/badge/PLATFORMS-4-teal?style=flat-square)](#平台支援)
@@ -272,6 +272,9 @@ npx skills update
 | `*scaffold` | 服務建置（互動式） |
 | `*diagram` | 產生架構圖 |
 | `*status` | 工具安裝狀態檢查 |
+| `*gateway-migrate` | NGINX Ingress → Gateway API 遷移（預設 Traefik，可選 GKE via `--gateway-class gke-l7-*`） |
+| `*nginx-to-traefik` | NGINX Ingress 類別替換為 Traefik Ingress，支援並行運行與 DNS A-record 切換 |
+| `*nginx-to-gateway` | 鏈式 NGINX → Traefik → Gateway API 遷移，產生單一合併報告 |
 
 ## 技能模組
 
@@ -286,6 +289,9 @@ npx skills update
 | cicd-enhancer | Horus | CI/CD 流水線改善 |
 | kustomize-resource-validation | Zeus | Kustomize 建置 + 驗證 |
 | yaml-fix-suggestions | Zeus | YAML 格式修正 |
+| gateway-api-migration | Zeus | NGINX Ingress → Gateway API 遷移，支援狀態追蹤。v1.2.0 起雙目標：預設 Traefik、可選 GKE Gateway。 |
+| nginx-to-traefik | Zeus | NGINX Ingress 類別替換為 Traefik Ingress，支援並行運行與 DNS A-record 切換。 |
+| nginx-to-gateway | Zeus | 薄協調器：在單一 session 中串聯 nginx-to-traefik → gateway-api-migration，產生合併報告。 |
 | repo-detect | 共用 | 儲存庫類型偵測 |
 | release-validate | 共用 | 發佈就緒驗證 |
 

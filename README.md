@@ -5,7 +5,7 @@
 [![DEVOPS](https://img.shields.io/badge/DEVOPS-SKILL-blue?style=flat-square)](https://github.com/qwedsazxc78/devops-ai-skill)
 [![LICENSE](https://img.shields.io/badge/LICENSE-MIT-green?style=flat-square)](https://github.com/qwedsazxc78/devops-ai-skill/blob/main/LICENSE)
 [![FILES](https://img.shields.io/badge/FILES-65+-orange?style=flat-square)](#project-structure)
-[![SKILLS](https://img.shields.io/badge/SKILLS-10-blueviolet?style=flat-square)](#skills)
+[![SKILLS](https://img.shields.io/badge/SKILLS-12-blueviolet?style=flat-square)](#skills)
 [![PIPELINES](https://img.shields.io/badge/PIPELINES-15-ff6f61?style=flat-square)](#horus-pipelines-iac)
 [![AGENTS](https://img.shields.io/badge/AGENTS-2-critical?style=flat-square)](#agents)
 [![PLATFORMS](https://img.shields.io/badge/PLATFORMS-4-teal?style=flat-square)](#platform-support)
@@ -279,6 +279,8 @@ Or double-click `install.bat` from the repo root and choose `[2] Tools`. Require
 | `*diagram` | Generate architecture diagrams |
 | `*status` | Tool installation check |
 | `*gateway-migrate` | NGINX Ingress → Gateway API migration (default Traefik, opt-in GKE via `--gateway-class gke-l7-*`; master/minion or standalone) |
+| `*nginx-to-traefik` | Class-swap NGINX Ingress to Traefik Ingress with parallel run and DNS A-record cutover |
+| `*nginx-to-gateway` | Chained NGINX → Traefik → Gateway API migration with a single combined report |
 
 ## Skills
 
@@ -294,6 +296,8 @@ All skills follow the [Open Agent Skills](https://agentskills.io/specification) 
 | kustomize-resource-validation | Zeus | Kustomize build + validation |
 | yaml-fix-suggestions | Zeus | YAML formatting |
 | gateway-api-migration | Zeus | NGINX Ingress → Gateway API migration with state tracking. Dual-target since v1.2.0: default Traefik, opt-in GKE Gateway. |
+| nginx-to-traefik | Zeus | Class-swap NGINX Ingress to Traefik Ingress with parallel run and DNS A-record cutover. |
+| nginx-to-gateway | Zeus | Thin orchestrator: chains nginx-to-traefik → gateway-api-migration in one session with a combined report. |
 | repo-detect | Both | Repository type detection |
 | release-validate | Shared | Release readiness validation |
 
