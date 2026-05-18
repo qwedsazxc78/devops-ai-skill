@@ -1,6 +1,6 @@
 # Traefik + Gateway API Migration Skills — Design Spec
 
-**Status:** approved, not yet implemented
+**Status:** implemented — v1.11.0 (2026-05-18)
 **Date:** 2026-05-14
 **Owner:** Awoo Platform Team
 **Repos affected:** `devops-ai-skill` (plugin), `eye-of-horus-gitops` (consumer)
