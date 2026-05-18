@@ -257,3 +257,22 @@ create` manually and attach via `GCPBackendPolicy.spec.securityPolicy.name`.
 
 4. **Path denylists**: under Traefik, auto-converted. Under GKE, always a
    manual-review stub requiring Cloud Armor setup.
+
+## Traefik source annotations (added v1.11.0)
+
+When the source is `ingressClassName: traefik` (skill A output, or
+operator-curated Traefik Ingresses), the converter recognises an
+additional annotation family. Middleware references are **reused** —
+the converter never regenerates an existing `Middleware` CRD in the
+`traefik` namespace.
+
+| Traefik annotation | Gateway API equivalent | Notes |
+|---|---|---|
+| `router.middlewares: cors@kubernetescrd` | `HTTPRoute.filters[].extensionRef` → Middleware | Same Middleware reused, no regeneration |
+| `router.middlewares: security-headers@kubernetescrd` | `HTTPRoute.filters[].extensionRef` → Middleware | Same |
+| `router.tls.options: default@kubernetescrd` | listener-level TLSOption reference | Promoted to Gateway listener |
+| `router.entrypoints: websecure` | implicit (HTTPS listener on 443) | Dropped, redundant in Gateway API |
+
+When source is Traefik, **reuse existing Middlewares in the `traefik`
+namespace** instead of regenerating. The converter stores reused
+Middleware refs in `state.yaml.inputs.sourceMiddlewareReuse[]`.
