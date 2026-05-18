@@ -65,7 +65,7 @@ npx skills add qwedsazxc78/devops-ai-skill
 
 Auto-detects installed AI agents and copies skills to the appropriate directories.
 
-> **Note**: `npx skills add` installs 10 skills only. For the full experience (agents + 15 pipelines), use the **One-Click Install**.
+> **Note**: `npx skills add` installs 12 skills only. For the full experience (agents + 17 pipelines), use the **One-Click Install**.
 
 ### Tool Check
 
@@ -244,7 +244,7 @@ npx skills add qwedsazxc78/devops-ai-skill
 npx skills update
 ```
 
-> **注意**：`npx skills add` 僅安裝 10 個 Skills。如需完整體驗（Agent + 15 條流水線），請使用**一鍵安裝**。
+> **注意**：`npx skills add` 僅安裝 12 個 Skills。如需完整體驗（Agent + 17 條流水線），請使用**一鍵安裝**。
 
 ### 版本管理
 

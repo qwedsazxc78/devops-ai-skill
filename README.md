@@ -6,7 +6,7 @@
 [![LICENSE](https://img.shields.io/badge/LICENSE-MIT-green?style=flat-square)](https://github.com/qwedsazxc78/devops-ai-skill/blob/main/LICENSE)
 [![FILES](https://img.shields.io/badge/FILES-65+-orange?style=flat-square)](#project-structure)
 [![SKILLS](https://img.shields.io/badge/SKILLS-12-blueviolet?style=flat-square)](#skills)
-[![PIPELINES](https://img.shields.io/badge/PIPELINES-15-ff6f61?style=flat-square)](#horus-pipelines-iac)
+[![PIPELINES](https://img.shields.io/badge/PIPELINES-17-ff6f61?style=flat-square)](#horus-pipelines-iac)
 [![AGENTS](https://img.shields.io/badge/AGENTS-2-critical?style=flat-square)](#agents)
 [![PLATFORMS](https://img.shields.io/badge/PLATFORMS-4-teal?style=flat-square)](#platform-support)
 
@@ -745,7 +745,7 @@ devops-ai-skill/
 │   ├── skills/
 │   │   ├── horus/SKILL.md
 │   │   ├── zeus/SKILL.md
-│   │   └── (10 skill symlinks)
+│   │   └── (12 skill symlinks)
 │   └── workflows/               # symlinks → prompts/
 │
 ├── skills/                      # Shared skills (Open Agent Skills standard)
@@ -761,7 +761,7 @@ devops-ai-skill/
 │
 ├── prompts/                     # Platform-neutral pipeline definitions
 │   ├── horus/                   # 7 pipelines
-│   ├── zeus/                    # 8 pipelines
+│   ├── zeus/                    # 10 pipelines
 │   └── shared/                  # repo-detect, report-format, tool-check, help
 │
 ├── docs/

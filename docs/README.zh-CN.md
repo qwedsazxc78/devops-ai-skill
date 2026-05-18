@@ -6,7 +6,7 @@
 [![LICENSE](https://img.shields.io/badge/LICENSE-MIT-green?style=flat-square)](https://github.com/qwedsazxc78/devops-ai-skill/blob/main/LICENSE)
 [![FILES](https://img.shields.io/badge/FILES-65+-orange?style=flat-square)](#项目结构)
 [![SKILLS](https://img.shields.io/badge/SKILLS-12-blueviolet?style=flat-square)](#技能模块)
-[![PIPELINES](https://img.shields.io/badge/PIPELINES-15-ff6f61?style=flat-square)](#horus-流水线iac)
+[![PIPELINES](https://img.shields.io/badge/PIPELINES-17-ff6f61?style=flat-square)](#horus-流水线iac)
 [![AGENTS](https://img.shields.io/badge/AGENTS-2-critical?style=flat-square)](#agent-代理)
 [![PLATFORMS](https://img.shields.io/badge/PLATFORMS-4-teal?style=flat-square)](#平台支持)
 
@@ -150,13 +150,13 @@ npx skills add qwedsazxc78/devops-ai-skill
 npx skills update
 ```
 
-> **⚠️ 注意：此方式仅安装 10 个 Skills（SKILL.md），不包含以下功能：**
+> **⚠️ 注意：此方式仅安装 12 个 Skills（SKILL.md），不包含以下功能：**
 >
 > | 功能 | npx skills | 全局安装 |
 > |------|:----------:|:--------:|
-> | 10 个 Skills（SKILL.md） | ✅ | ✅ |
+> | 12 个 Skills（SKILL.md） | ✅ | ✅ |
 > | 2 个 Agent（Horus / Zeus） | ❌ | ✅ |
-> | 14 条流水线（`*full`、`*security` 等） | ❌ | ✅ |
+> | 17 条流水线（`*full`、`*security` 等） | ❌ | ✅ |
 > | 命令面板（Gemini CLI） | ❌ | ✅ |
 > | 工作流（Antigravity） | ❌ | ✅ |
 >
@@ -331,7 +331,7 @@ devops-ai-skill/
 │   ├── skills/
 │   │   ├── horus/SKILL.md
 │   │   ├── zeus/SKILL.md
-│   │   └── (10 skill symlinks)
+│   │   └── (12 skill symlinks)
 │   └── workflows/               # symlinks → prompts/
 │
 ├── skills/                      # 共用技能（Open Agent Skills 标准）
@@ -346,7 +346,7 @@ devops-ai-skill/
 │
 ├── prompts/                     # 平台中立的流水线定义
 │   ├── horus/                   # 7 条流水线
-│   ├── zeus/                    # 8 条流水线
+│   ├── zeus/                    # 10 条流水线
 │   └── shared/                  # repo-detect, report-format, tool-check
 │
 ├── scripts/

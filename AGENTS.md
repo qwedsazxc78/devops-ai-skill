@@ -56,6 +56,9 @@ Detect the repository type to choose the right agent:
 - `$kustomize-resource-validation` — Kustomize build + validation
 - `$yaml-fix-suggestions` — YAML formatting and validation
 - `$repo-detect` — Repository type detection
+- `$gateway-api-migration` — NGINX/Traefik Ingress → Gateway API migration
+- `$nginx-to-traefik` — Class-swap NGINX Ingress to Traefik Ingress
+- `$nginx-to-gateway` — Chained NGINX → Traefik → Gateway API migration
 
 ### Shared Skills
 
