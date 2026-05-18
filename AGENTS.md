@@ -48,6 +48,8 @@ Detect the repository type to choose the right agent:
 | *diagram | Generate architecture diagrams |
 | *status | Tool installation check |
 | *gateway-migrate | Migrate NGINX Ingress to Gateway API (default Traefik, opt-in GKE via `--gateway-class gke-l7-*`) — per-hostname DNS cutover |
+| *nginx-to-traefik | `prompts/zeus/nginx-to-traefik.md` |
+| *nginx-to-gateway | `prompts/zeus/nginx-to-gateway.md` |
 
 ### Zeus Skills
 

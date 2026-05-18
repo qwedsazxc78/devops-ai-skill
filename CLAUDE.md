@@ -39,3 +39,5 @@ On session start:
 | *diagram | `prompts/zeus/diagram.md` |
 | *status | `prompts/zeus/status.md` |
 | *gateway-migrate | `prompts/zeus/gateway-migrate.md` |
+| *nginx-to-traefik | `prompts/zeus/nginx-to-traefik.md` |
+| *nginx-to-gateway | `prompts/zeus/nginx-to-gateway.md` |
