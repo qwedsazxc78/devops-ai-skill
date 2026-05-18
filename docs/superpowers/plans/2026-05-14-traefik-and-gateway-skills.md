@@ -146,7 +146,7 @@ Builds the class-swap skill. Tasks ordered so the operator can exercise scripts 
 **Files:**
 - Create: `skills/nginx-to-traefik/references/nginx-to-traefik-env-config.md`
 
-- [ ] **Step 1: Write the file**
+- [x] **Step 1: Write the file**
 
 ```markdown
 # nginx-to-traefik env config
@@ -201,12 +201,12 @@ After capture, write the snapshot back into `state.yaml.envConfig` and
 also persist a one-line audit entry to `state.yaml.audit[]`.
 ```
 
-- [ ] **Step 2: Verify**
+- [x] **Step 2: Verify**
 
 Run: `wc -l skills/nginx-to-traefik/references/nginx-to-traefik-env-config.md`
 Expected: 30–60 lines.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add skills/nginx-to-traefik/references/nginx-to-traefik-env-config.md
@@ -229,7 +229,7 @@ EOF
 **Files:**
 - Create: `skills/nginx-to-traefik/references/annotation-translation.md`
 
-- [ ] **Step 1: Write the file**
+- [x] **Step 1: Write the file**
 
 The file is the per-annotation rulebook for `generate_traefik_ingress.py`. Use this exact table — it is the authoritative knowledge the script reads against. Categories follow the same vocabulary as `docs/gateway/annotation-map.md` to keep operator mental model consistent.
 
@@ -267,12 +267,12 @@ deterministic translation decision the converter makes every run.
 3. **CORS Middleware reuse**: if `cors@kubernetescrd` exists in the `traefik` namespace, skill A links to it; never regenerates.
 ```
 
-- [ ] **Step 2: Verify**
+- [x] **Step 2: Verify**
 
 Run: `grep -c "^| " skills/nginx-to-traefik/references/annotation-translation.md`
 Expected: at least 12 table rows (10 data + 2 header rows).
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add skills/nginx-to-traefik/references/annotation-translation.md
@@ -295,7 +295,7 @@ EOF
 **Files:**
 - Create: `skills/nginx-to-traefik/references/dns-cutover-runbook.md`
 
-- [ ] **Step 1: Write the file**
+- [x] **Step 1: Write the file**
 
 Content sourced from spec §5.3 invariants + §7.7 cutover runbook (the first 6 steps are class-swap only). Structure:
 
@@ -318,12 +318,12 @@ Content sourced from spec §5.3 invariants + §7.7 cutover runbook (the first 6 
 
 Target length: ~120 lines.
 
-- [ ] **Step 2: Verify**
+- [x] **Step 2: Verify**
 
 Run: `grep -c "^## " skills/nginx-to-traefik/references/dns-cutover-runbook.md`
 Expected: 4 (Pre-cutover invariants, Cutover sequence, Rollback procedure, Cross-links to skill C).
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add skills/nginx-to-traefik/references/dns-cutover-runbook.md
@@ -346,7 +346,7 @@ EOF
 - Create: `skills/nginx-to-traefik/scripts/inventory_nginx_ingresses.py`
 - Test fixture: `tests/nginx-to-traefik/fixtures/basic-three-services/input/`
 
-- [ ] **Step 1: Write the fixture inputs (3 ingress files, kustomization, env-config)**
+- [x] **Step 1: Write the fixture inputs (3 ingress files, kustomization, env-config)**
 
 Create `tests/nginx-to-traefik/fixtures/basic-three-services/input/common.service/overlays/dev/argocd-nginx-ingress.yaml`:
 
@@ -443,7 +443,7 @@ resources:
   - temporal-traefik-ingress.yaml
 ```
 
-- [ ] **Step 2: Write the failing test**
+- [x] **Step 2: Write the failing test**
 
 Create `tests/nginx-to-traefik/run-fixtures.sh`:
 
@@ -482,7 +482,7 @@ echo "Total: $((PASS+FAIL)), Passed: $PASS, Failed: $FAIL"
 Run: `chmod +x tests/nginx-to-traefik/run-fixtures.sh && tests/nginx-to-traefik/run-fixtures.sh`
 Expected: FAIL with `python3: can't open file '.../inventory_nginx_ingresses.py'`.
 
-- [ ] **Step 3: Implement `inventory_nginx_ingresses.py`**
+- [x] **Step 3: Implement `inventory_nginx_ingresses.py`**
 
 Create `skills/nginx-to-traefik/scripts/inventory_nginx_ingresses.py`:
 
@@ -597,12 +597,12 @@ if __name__ == "__main__":
     sys.exit(main())
 ```
 
-- [ ] **Step 4: Run the test and verify PASS**
+- [x] **Step 4: Run the test and verify PASS**
 
 Run: `tests/nginx-to-traefik/run-fixtures.sh`
 Expected: `[PASS] inventory: 2 nginx ingresses (temporal skipped)`.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add skills/nginx-to-traefik/scripts/inventory_nginx_ingresses.py tests/nginx-to-traefik/
@@ -627,7 +627,7 @@ EOF
 - Create: `skills/nginx-to-traefik/scripts/generate_traefik_ingress.py`
 - Test fixture: `tests/nginx-to-traefik/fixtures/basic-three-services/expected/` (Traefik ingress files)
 
-- [ ] **Step 1: Write expected outputs in fixture**
+- [x] **Step 1: Write expected outputs in fixture**
 
 Create `tests/nginx-to-traefik/fixtures/basic-three-services/expected/common.service/overlays/dev/argocd-traefik-ingress.yaml`:
 
@@ -686,7 +686,7 @@ spec:
               number: 3000
 ```
 
-- [ ] **Step 2: Write the failing test (extend `run-fixtures.sh`)**
+- [x] **Step 2: Write the failing test (extend `run-fixtures.sh`)**
 
 Add to `tests/nginx-to-traefik/run-fixtures.sh` before `echo "Total..."`:
 
@@ -715,7 +715,7 @@ test_generate_basic
 Run: `tests/nginx-to-traefik/run-fixtures.sh`
 Expected: FAIL (script missing).
 
-- [ ] **Step 3: Implement `generate_traefik_ingress.py`**
+- [x] **Step 3: Implement `generate_traefik_ingress.py`**
 
 Create `skills/nginx-to-traefik/scripts/generate_traefik_ingress.py`:
 
@@ -854,12 +854,12 @@ if __name__ == "__main__":
     sys.exit(main())
 ```
 
-- [ ] **Step 4: Run the test and verify PASS**
+- [x] **Step 4: Run the test and verify PASS**
 
 Run: `tests/nginx-to-traefik/run-fixtures.sh`
 Expected: `[PASS] generate argocd: matches expected`.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add skills/nginx-to-traefik/scripts/generate_traefik_ingress.py tests/nginx-to-traefik/fixtures/basic-three-services/expected/
@@ -882,7 +882,7 @@ EOF
 **Files:**
 - Create: `skills/nginx-to-traefik/scripts/update_kustomization.py`
 
-- [ ] **Step 1: Add fixture for idempotent kustomization edit**
+- [x] **Step 1: Add fixture for idempotent kustomization edit**
 
 Create `tests/nginx-to-traefik/fixtures/basic-three-services/expected/common.service/overlays/dev/kustomization.yaml`:
 
@@ -898,7 +898,7 @@ resources:
 
 Also create the archive subdirectory fixture files (`archive/argocd-nginx-ingress.yaml`, `archive/grafana-nginx-ingress.yaml`) as exact copies of the input nginx files.
 
-- [ ] **Step 2: Write the failing test**
+- [x] **Step 2: Write the failing test**
 
 Add to `tests/nginx-to-traefik/run-fixtures.sh`:
 
@@ -937,7 +937,7 @@ test_update_kustomization_idempotent
 Run: `tests/nginx-to-traefik/run-fixtures.sh`
 Expected: FAIL (script missing).
 
-- [ ] **Step 3: Implement `update_kustomization.py`**
+- [x] **Step 3: Implement `update_kustomization.py`**
 
 Create `skills/nginx-to-traefik/scripts/update_kustomization.py`:
 
@@ -1043,12 +1043,12 @@ if __name__ == "__main__":
     sys.exit(main())
 ```
 
-- [ ] **Step 4: Run the test and verify PASS**
+- [x] **Step 4: Run the test and verify PASS**
 
 Run: `tests/nginx-to-traefik/run-fixtures.sh`
 Expected: `[PASS] update_kustomization: idempotent`.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add skills/nginx-to-traefik/scripts/update_kustomization.py tests/nginx-to-traefik/
@@ -1074,7 +1074,7 @@ EOF
 
 The script reads the same host lists the operator-owned `dns-create-traefik.sh` and `verify-traefik-<env>.sh` declare, but to avoid sourcing those scripts (and the risk of `eval` or side effects) it parses them as plain text using `grep`/`awk`. This keeps the verification step a read-only static check.
 
-- [ ] **Step 1: Write fixture with a stale DNS entry**
+- [x] **Step 1: Write fixture with a stale DNS entry**
 
 Create `tests/nginx-to-traefik/fixtures/cross-consistency-stale-dns/input/scripts/dns-create-traefik.sh`:
 
@@ -1100,7 +1100,7 @@ URLS_DEV_B1=(
 
 Create the two Traefik ingress files (argocd, grafana — hosts only, matching) and `common.traefik/overlays/dev/app.ingress.yaml` (TLS hosts: argocd, grafana — no `stale`).
 
-- [ ] **Step 2: Write the failing test**
+- [x] **Step 2: Write the failing test**
 
 Add to `tests/nginx-to-traefik/run-fixtures.sh`:
 
@@ -1132,7 +1132,7 @@ test_cross_consistency_detects_stale_dns
 Run: `tests/nginx-to-traefik/run-fixtures.sh`
 Expected: FAIL (script missing).
 
-- [ ] **Step 3: Implement `validate_cross_consistency.sh`**
+- [x] **Step 3: Implement `validate_cross_consistency.sh`**
 
 The script parses the source bash arrays statically (via `awk`) rather than `source`-ing them, so external scripts cannot inject side effects. It does not use `eval`.
 
@@ -1241,12 +1241,12 @@ exit "$bad"
 
 Make it executable: `chmod +x skills/nginx-to-traefik/scripts/validate_cross_consistency.sh`
 
-- [ ] **Step 4: Run the test and verify PASS**
+- [x] **Step 4: Run the test and verify PASS**
 
 Run: `tests/nginx-to-traefik/run-fixtures.sh`
 Expected: `[PASS] cross-consistency: stale host detected`.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add skills/nginx-to-traefik/scripts/validate_cross_consistency.sh tests/nginx-to-traefik/fixtures/cross-consistency-stale-dns/
@@ -1270,7 +1270,7 @@ EOF
 **Files:**
 - Create: `skills/nginx-to-traefik/SKILL.md`
 
-- [ ] **Step 1: Write the SKILL.md frontmatter and overview (top ~80 lines)**
+- [x] **Step 1: Write the SKILL.md frontmatter and overview (top ~80 lines)**
 
 ```markdown
 ---
@@ -1331,7 +1331,7 @@ Triggered explicitly by `*nginx-to-traefik` from Zeus. Not auto-triggered.
 ```
 ```
 
-- [ ] **Step 2: Write the Step Flow section (steps 0–10)**
+- [x] **Step 2: Write the Step Flow section (steps 0–10)**
 
 Append this section. The 11-row step table is the **authoritative spec §5.2**; the body below it explains halts, state writes, and the operator-facing behaviour each step exhibits.
 
@@ -1504,12 +1504,12 @@ After halt, the skill writes `state.yaml.verdict: HALTED` with the failing
 step. `--resume` re-runs from the failed step.
 ```
 
-- [ ] **Step 3: Verify**
+- [x] **Step 3: Verify**
 
 Run: `wc -l skills/nginx-to-traefik/SKILL.md && head -5 skills/nginx-to-traefik/SKILL.md`
 Expected: 250–400 lines; first 5 lines are `---`, `name: nginx-to-traefik`, `description: >`, description continuation, …
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add skills/nginx-to-traefik/SKILL.md
@@ -1531,7 +1531,7 @@ EOF
 **Files:**
 - Create: `prompts/zeus/nginx-to-traefik.md`
 
-- [ ] **Step 1: Write the pipeline**
+- [x] **Step 1: Write the pipeline**
 
 Follow the pattern in `prompts/zeus/gateway-migrate.md`:
 
@@ -1600,7 +1600,7 @@ DNS A-records are the only cutover lever. Delegates all logic to the
 - Modified `scripts/dns-create-traefik.sh` and `scripts/verify-traefik-<env>.sh`
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add prompts/zeus/nginx-to-traefik.md
@@ -1622,7 +1622,7 @@ EOF
 **Files:**
 - Create: `.gemini/commands/devops/pipelines/zeus-nginx-to-traefik.toml`
 
-- [ ] **Step 1: Write the file**
+- [x] **Step 1: Write the file**
 
 Pattern from `.gemini/commands/devops/pipelines/zeus-gateway-migrate.toml`:
 
@@ -1660,7 +1660,7 @@ Report file: docs/reports/nginx-to-traefik/<env>-<batch>-<isodate>/report.md
 """
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add .gemini/commands/devops/pipelines/zeus-nginx-to-traefik.toml
@@ -1686,7 +1686,7 @@ Adds `--source-class`, `--source-state`, `--no-redirect`, and two semantic check
 - Modify: `skills/gateway-api-migration/scripts/classify_ingress.py`
 - Test: extend `tests/gateway-api-migration/run-fixtures.sh`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `tests/gateway-api-migration/fixtures/traefik-source-minimal/input/common.service/overlays/dev/argocd-traefik-ingress.yaml`:
 
@@ -1736,7 +1736,7 @@ test_classify_traefik_source
 Run: `tests/gateway-api-migration/run-fixtures.sh`
 Expected: FAIL — current classifier returns `foreign` (per rule 5) with no `sourceClass` field.
 
-- [ ] **Step 2: Modify `classify_ingress.py`**
+- [x] **Step 2: Modify `classify_ingress.py`**
 
 Edit `skills/gateway-api-migration/scripts/classify_ingress.py` in three places:
 
@@ -1782,12 +1782,12 @@ def _extract(doc: dict) -> dict:
 
 **2d.** Update the docstring JSON schema (lines 11–21) to include `"sourceClass": "nginx" | "traefik"`.
 
-- [ ] **Step 3: Run the test and verify PASS**
+- [x] **Step 3: Run the test and verify PASS**
 
 Run: `tests/gateway-api-migration/run-fixtures.sh`
 Expected: `[PASS] classify_ingress: sourceClass=traefik`. All existing nginx-source tests still pass (they now report `sourceClass: nginx`).
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add skills/gateway-api-migration/scripts/classify_ingress.py tests/gateway-api-migration/fixtures/traefik-source-minimal/
@@ -1810,11 +1810,11 @@ EOF
 **Files:**
 - Modify: `skills/gateway-api-migration/references/annotation-map.md` (resolve symlink target first)
 
-- [ ] **Step 1: Determine the canonical file**
+- [x] **Step 1: Determine the canonical file**
 
 Run: `ls -la skills/gateway-api-migration/references/annotation-map.md`. If the entry shows `->` it is a symlink; edit the target file. Otherwise edit the file in place.
 
-- [ ] **Step 2: Append the Traefik source section**
+- [x] **Step 2: Append the Traefik source section**
 
 Add this section after the existing nginx annotation table:
 
@@ -1839,7 +1839,7 @@ namespace** instead of regenerating. The converter stores reused
 Middleware refs in `state.yaml.inputs.sourceMiddlewareReuse[]`.
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add skills/gateway-api-migration/references/annotation-map.md docs/gateway/annotation-map.md
@@ -1862,7 +1862,7 @@ EOF
 **Files:**
 - Modify: `skills/gateway-api-migration/SKILL.md`
 
-- [ ] **Step 1: Add flags to Invocation forms**
+- [x] **Step 1: Add flags to Invocation forms**
 
 Find the `## Invocation forms` section (around line 86). Append after the existing `--include-orphan-hosts` line:
 
@@ -1879,7 +1879,7 @@ Find the `## Invocation forms` section (around line 86). Append after the existi
 *gateway-migrate <module-path> --no-redirect       # skip tls-redirect HTTPRoute
 ```
 
-- [ ] **Step 2: Document the new state fields**
+- [x] **Step 2: Document the new state fields**
 
 Find the state-schema section. Add (additive, no schema bump per spec §6.3):
 
@@ -1895,7 +1895,7 @@ inputs:
 
 And add: "These fields are **additive** on schema v2. The schema version is unchanged. Existing nginx-only runs continue to omit them entirely."
 
-- [ ] **Step 3: Document `--no-redirect` behaviour in Step 3A**
+- [x] **Step 3: Document `--no-redirect` behaviour in Step 3A**
 
 Find Step 3A (Gateway + listeners + redirect HTTPRoute generation). Add:
 
@@ -1907,7 +1907,7 @@ already handles HTTP→HTTPS, and a redundant HTTPRoute would conflict.
 Default-on behaviour is unchanged for standalone nginx-source runs.
 ```
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add skills/gateway-api-migration/SKILL.md
@@ -1938,7 +1938,7 @@ HTTPRoute. The Traefik branch is new logic; the nginx branch is preserved.
 - Modify: `skills/gateway-api-migration/scripts/validate_generated.py`
 - Fixture: `tests/gateway-api-migration/fixtures/traefik-source-middleware-coverage-fail/`
 
-- [ ] **Step 1: Write the failing test fixture**
+- [x] **Step 1: Write the failing test fixture**
 
 Create `tests/gateway-api-migration/fixtures/traefik-source-middleware-coverage-fail/input/common.service/overlays/dev/argocd-traefik-ingress.yaml`:
 
@@ -1970,11 +1970,11 @@ spec:
 
 And `tests/gateway-api-migration/fixtures/traefik-source-middleware-coverage-fail/expected/common.service/overlays/dev/argocd-httproute.yaml` — an HTTPRoute **without** any `extensionRef` filter (deliberately broken). Add a test runner stub that calls `validate_generated.py` with `--source-class traefik` and asserts check 12 status == `fail`.
 
-- [ ] **Step 2: Run the failing test**
+- [x] **Step 2: Run the failing test**
 
 Expected: check 12 status == `pass` (current logic only inspects nginx CORS). FAIL.
 
-- [ ] **Step 3: Modify `check_middleware_coverage()` in `validate_generated.py`**
+- [x] **Step 3: Modify `check_middleware_coverage()` in `validate_generated.py`**
 
 Located around line 678. The existing implementation walks every HTTPRoute and looks for `backend annotations -> filters`. Add a new branch that runs when `sourceClass == traefik`:
 
@@ -2036,11 +2036,11 @@ def check_middleware_coverage(
 
 Update the call site to pass `source_class` from CLI args.
 
-- [ ] **Step 4: Run the test, verify PASS (i.e. check correctly fails on the fixture)**
+- [x] **Step 4: Run the test, verify PASS (i.e. check correctly fails on the fixture)**
 
 Expected: `[PASS] check 12 fails on traefik source missing extensionRef`.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add skills/gateway-api-migration/scripts/validate_generated.py tests/gateway-api-migration/fixtures/traefik-source-middleware-coverage-fail/
@@ -2064,13 +2064,13 @@ EOF
 - Modify: `skills/gateway-api-migration/scripts/validate_generated.py`
 - Fixture: `tests/gateway-api-migration/fixtures/traefik-source-redundant-redirect-warn/`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create fixture where source is Traefik AND a `tls-redirect` HTTPRoute was emitted (operator forgot `--no-redirect`). Add a test runner stub asserting check 13 status == `warn`.
 
 Run the stub. Expected: FAIL (check 13 does not exist).
 
-- [ ] **Step 2: Implement `check_no_redundant_tls_redirect()`**
+- [x] **Step 2: Implement `check_no_redundant_tls_redirect()`**
 
 Append to `validate_generated.py`:
 
@@ -2105,11 +2105,11 @@ def check_no_redundant_tls_redirect(
 
 Wire it into the check runner alongside checks 1–12. Update the docstring's check list (line 48-65) to include `13. no-redundant-tls-redirect`.
 
-- [ ] **Step 3: Run the test, verify PASS**
+- [x] **Step 3: Run the test, verify PASS**
 
 Expected: `[PASS] check 13 warns on traefik source with tls-redirect emitted`.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add skills/gateway-api-migration/scripts/validate_generated.py tests/gateway-api-migration/fixtures/traefik-source-redundant-redirect-warn/
@@ -2135,7 +2135,7 @@ Thin orchestrator. Owns no conversion logic; invokes skill A then skill B with t
 **Files:**
 - Create: `skills/nginx-to-gateway/references/chain-report-template.md`
 
-- [ ] **Step 1: Write the template**
+- [x] **Step 1: Write the template**
 
 ```markdown
 # Chain Report — nginx → traefik → Gateway API
@@ -2191,7 +2191,7 @@ Thin orchestrator. Owns no conversion logic; invokes skill A then skill B with t
 - **Render halt:** resume re-runs only step C.5.
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add skills/nginx-to-gateway/references/chain-report-template.md
@@ -2213,7 +2213,7 @@ EOF
 **Files:**
 - Create: `skills/nginx-to-gateway/SKILL.md`
 
-- [ ] **Step 1: Write the file**
+- [x] **Step 1: Write the file**
 
 ```markdown
 ---
@@ -2388,12 +2388,12 @@ becomes `docs/reports/ingress-to-gateway/`. Skill C records whichever
 the sub-skill produces — no special-casing.
 ```
 
-- [ ] **Step 2: Verify**
+- [x] **Step 2: Verify**
 
 Run: `wc -l skills/nginx-to-gateway/SKILL.md`
 Expected: 180–230 lines (spec §7.1 target ~200).
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add skills/nginx-to-gateway/SKILL.md
@@ -2416,7 +2416,7 @@ EOF
 **Files:**
 - Create: `prompts/zeus/nginx-to-gateway.md`
 
-- [ ] **Step 1: Write the pipeline**
+- [x] **Step 1: Write the pipeline**
 
 ```markdown
 # nginx-to-gateway Pipeline
@@ -2467,7 +2467,7 @@ Thin orchestrator. Delegates all conversion logic to skills
 - All phase-A and phase-B artifacts under their respective report dirs
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add prompts/zeus/nginx-to-gateway.md
@@ -2489,7 +2489,7 @@ EOF
 **Files:**
 - Create: `.gemini/commands/devops/pipelines/zeus-nginx-to-gateway.toml`
 
-- [ ] **Step 1: Write the file**
+- [x] **Step 1: Write the file**
 
 ```toml
 description = "Zeus: Chained NGINX → Traefik → Gateway API migration (orchestrator)"
@@ -2523,7 +2523,7 @@ Flags:
 """
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add .gemini/commands/devops/pipelines/zeus-nginx-to-gateway.toml
@@ -2548,7 +2548,7 @@ EOF
 
 This test exercises **only the orchestration contract** (file format and exit codes), not the markdown SKILL.md instructions. Sub-skill calls are mocked via shell stubs.
 
-- [ ] **Step 1: Write the happy-path mock for skill A**
+- [x] **Step 1: Write the happy-path mock for skill A**
 
 Create `tests/nginx-to-gateway/fixtures/chain-happy-path/mocks/nginx-to-traefik`:
 
@@ -2574,7 +2574,7 @@ echo "stub-a: wrote $out_dir/state.yaml"
 
 `chmod +x` it.
 
-- [ ] **Step 2: Write the phase-a-halt mock**
+- [x] **Step 2: Write the phase-a-halt mock**
 
 Create `tests/nginx-to-gateway/fixtures/chain-phase-a-halt/mocks/nginx-to-traefik`:
 
@@ -2586,7 +2586,7 @@ exit 1
 
 `chmod +x` it.
 
-- [ ] **Step 3: Write the test runner**
+- [x] **Step 3: Write the test runner**
 
 Create `tests/nginx-to-gateway/run-fixtures.sh`:
 
@@ -2639,12 +2639,12 @@ echo "Total: $((PASS+FAIL)), Passed: $PASS, Failed: $FAIL"
 
 `chmod +x` it.
 
-- [ ] **Step 4: Run the tests**
+- [x] **Step 4: Run the tests**
 
 Run: `tests/nginx-to-gateway/run-fixtures.sh`
 Expected: both PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add tests/nginx-to-gateway/
@@ -2670,17 +2670,17 @@ Mechanical updates to make the two new skills discoverable across all four platf
 **Files:**
 - Modify: `VERSION`, `package.json`, `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, `.gemini/extensions/devops/gemini-extension.json`
 
-- [ ] **Step 1: Run version bump**
+- [x] **Step 1: Run version bump**
 
 Run: `pnpm version:bump 1.11.0`
 Expected: command updates all five files.
 
-- [ ] **Step 2: Verify**
+- [x] **Step 2: Verify**
 
 Run: `pnpm version:consistency`
 Expected: all five files report `1.11.0`.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add VERSION package.json .claude-plugin/plugin.json .claude-plugin/marketplace.json .gemini/extensions/devops/gemini-extension.json
@@ -2699,12 +2699,12 @@ EOF
 **Files:**
 - Modify: `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, `.gemini/extensions/devops/gemini-extension.json`
 
-- [ ] **Step 1: Inspect current shape**
+- [x] **Step 1: Inspect current shape**
 
 Run: `jq '.skills' .claude-plugin/plugin.json`
 Capture the array of existing skill entries to learn the field names.
 
-- [ ] **Step 2: Add entries**
+- [x] **Step 2: Add entries**
 
 For each of the three JSON files, append entries matching the existing pattern:
 
@@ -2723,7 +2723,7 @@ For each of the three JSON files, append entries matching the existing pattern:
 
 Match the exact field names from your `jq` output in step 1.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add .claude-plugin/plugin.json .claude-plugin/marketplace.json .gemini/extensions/devops/gemini-extension.json
@@ -2745,7 +2745,7 @@ EOF
 **Files:**
 - Modify: `CLAUDE.md`, `AGENTS.md`, `GEMINI.md`, `../CLAUDE.md`
 
-- [ ] **Step 1: Append rows to each Zeus commands table**
+- [x] **Step 1: Append rows to each Zeus commands table**
 
 In each file, locate the Zeus command table headed `| Command | Pipeline |`. Add two rows:
 
@@ -2756,7 +2756,7 @@ In each file, locate the Zeus command table headed `| Command | Pipeline |`. Add
 
 Repeat in the parent `infra-iac/CLAUDE.md` Zeus section.
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add CLAUDE.md AGENTS.md GEMINI.md ../CLAUDE.md
@@ -2777,11 +2777,11 @@ EOF
 **Files:**
 - Modify: `docs/PROJECT.md`
 
-- [ ] **Step 1: Update the skills table and counts**
+- [x] **Step 1: Update the skills table and counts**
 
 Add two rows for `nginx-to-traefik` and `nginx-to-gateway` in the skill inventory. Bump count text ("10 skills under …") to 12 and pipelines from 15 to 17 (horus 7 + zeus 10).
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add docs/PROJECT.md
@@ -2802,11 +2802,11 @@ EOF
 **Files:**
 - Modify: `README.md`, `docs/README.zh-TW.md`, `docs/README.zh-CN.md`
 
-- [ ] **Step 1: Locate skill table in each README**
+- [x] **Step 1: Locate skill table in each README**
 
 Run: `grep -n "gateway-api-migration\|gateway-migrate" README.md docs/README.zh-TW.md docs/README.zh-CN.md`
 
-- [ ] **Step 2: Add rows for the two new skills**
+- [x] **Step 2: Add rows for the two new skills**
 
 en (`README.md`):
 ```markdown
@@ -2826,7 +2826,7 @@ zh-CN (`docs/README.zh-CN.md`):
 | `nginx-to-gateway` | 编排 NGINX → Traefik → Gateway API 的链式迁移。 |
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add README.md docs/README.zh-TW.md docs/README.zh-CN.md
@@ -2847,7 +2847,7 @@ EOF
 **Files:**
 - Modify: `tests/test-structure.sh`
 
-- [ ] **Step 1: Add the two new skills to `EXPECTED_SKILLS`**
+- [x] **Step 1: Add the two new skills to `EXPECTED_SKILLS`**
 
 Edit `tests/test-structure.sh` line 74-84, append:
 
@@ -2856,7 +2856,7 @@ Edit `tests/test-structure.sh` line 74-84, append:
     "nginx-to-gateway"
 ```
 
-- [ ] **Step 2: Add pipeline + TOML registration checks**
+- [x] **Step 2: Add pipeline + TOML registration checks**
 
 In the Zeus pipeline section (search for `prompts/zeus`), add:
 
@@ -2878,12 +2878,12 @@ for toml in zeus-nginx-to-traefik zeus-nginx-to-gateway; do
 done
 ```
 
-- [ ] **Step 3: Run all tests**
+- [x] **Step 3: Run all tests**
 
 Run: `pnpm test`
 Expected: 0 failures.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add tests/test-structure.sh
@@ -2904,7 +2904,7 @@ EOF
 **Files:**
 - Modify: `CHANGELOG.md`
 
-- [ ] **Step 1: Add v1.11.0 entry**
+- [x] **Step 1: Add v1.11.0 entry**
 
 Insert at the top of `CHANGELOG.md` (above the v1.10.0 entry):
 
@@ -2938,7 +2938,7 @@ Insert at the top of `CHANGELOG.md` (above the v1.10.0 entry):
   frontmatter, pipeline, trigger, report dir).
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add CHANGELOG.md
@@ -2959,22 +2959,22 @@ EOF
 
 **Files:** (none modified; verification only)
 
-- [ ] **Step 1: Run the full test suite**
+- [x] **Step 1: Run the full test suite**
 
 Run: `pnpm test`
 Expected: all PASS. WARN acceptable only for advisory checks.
 
-- [ ] **Step 2: Run release-validate skill**
+- [x] **Step 2: Run release-validate skill**
 
 Run: `pnpm release:validate` (or the equivalent provided by the `release-validate` skill)
 Expected: green.
 
-- [ ] **Step 3: Run version consistency**
+- [x] **Step 3: Run version consistency**
 
 Run: `pnpm version:consistency`
 Expected: all five version files == `1.11.0`.
 
-- [ ] **Step 4: Smoke-test new skills locally**
+- [x] **Step 4: Smoke-test new skills locally**
 
 ```bash
 tests/nginx-to-traefik/run-fixtures.sh
@@ -2984,7 +2984,7 @@ tests/nginx-to-gateway/run-fixtures.sh
 
 Expected: every script exits 0.
 
-- [ ] **Step 5: Final commit (only if step 1–4 surfaced fixes)**
+- [x] **Step 5: Final commit (only if step 1–4 surfaced fixes)**
 
 If everything is green, do not commit anything in this step — just confirm readiness for `pnpm release`, which the user will trigger separately (outside this plan).
 
@@ -2997,7 +2997,7 @@ If everything is green, do not commit anything in this step — just confirm rea
 **Files:**
 - Modify: `docs/superpowers/specs/2026-05-14-traefik-and-gateway-skills-design.md`
 
-- [ ] **Step 1: Edit line 3**
+- [x] **Step 1: Edit line 3**
 
 Change:
 
@@ -3011,7 +3011,7 @@ to:
 **Status:** v1.11.0 implemented (see `docs/superpowers/plans/2026-05-14-traefik-and-gateway-skills.md`); v2.0.0 rename deferred
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add docs/superpowers/specs/2026-05-14-traefik-and-gateway-skills-design.md
