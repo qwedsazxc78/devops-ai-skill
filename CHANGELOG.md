@@ -5,6 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.11.0] - 2026-05-18
+
+### Added
+
+- **Skill A — `nginx-to-traefik` (new skill)**
+  - Class-swap pipeline: replaces `kubernetes.io/ingress.class: nginx` with `traefik` across an entire Kustomize overlay in one operator session.
+  - 11-step flow (0, 0b, 1–10): tool check → env-config → inventory → batch plan → generate Traefik Ingress → archive nginx file → kustomization edit → managed-cert update → kustomize build → cross-consistency check → DNS/verify script update.
+  - 3 new Python scripts: `inventory_nginx_ingresses.py`, `generate_traefik_ingress.py` (10 annotation-translation rules), `update_kustomization.py` (idempotent resource/patch/host edits).
+  - 1 new shell script: `validate_cross_consistency.sh` — 4-way cross-check of DNS script, verify script, Traefik Ingress YAMLs, and `app.ingress.yaml`. Uses `awk` static parsing (no `source`/`eval`) for bash 3.2 compatibility.
+  - Reference docs: `annotation-translation.md` (10-row rule table), `dns-cutover-runbook.md` (pre-cutover invariants, cutover sequence, rollback procedure), `nginx-to-traefik-env-config.md` (env-config schema).
+  - State YAML schema: `outputs.traefikIngresses[]` — hand-off contract consumed by Skill C.
+  - Gemini TOML command: `zeus-nginx-to-traefik`.
+- **Skill B enhancement — `gateway-api-migration` extended for Traefik source**
+  - New CLI flags: `--source-class nginx|traefik` (default `nginx`), `--source-state <path>` (state.yaml from Skill A), `--no-redirect` (suppress TLS-redirect HTTPRoute when source already serves HTTPS via Traefik).
+  - `classify_ingress.py` Rule 5 updated: `traefik` ingressClass is now classified as `"ready"` with `"sourceClass": "traefik"` (was `"skip"`).
+  - `validate_generated.py` check 12 `middleware-coverage` extended: traefik-source branch validates `router.middlewares` annotations map to HTTPRoute `extensionRef` filters.
+  - `validate_generated.py` check 13 `no-redundant-tls-redirect` (new): WARN when `--source-class traefik` and a `tls-redirect` HTTPRoute is emitted.
+  - `docs/gateway/annotation-map.md` appended with Traefik source annotation table (4 rows: router.middlewares, router.tls.options, router.entrypoints).
+- **Skill C — `nginx-to-gateway` (new thin orchestrator skill)**
+  - Chains Skill A + Skill B in one session: NGINX Ingress → Traefik Ingress → Gateway API resources.
+  - 6-step flow (C.0–C.5): merged tool check → chain run-dir → invoke Skill A → hand-off (reads `outputs.traefikIngresses[]`) → invoke Skill B with `--source-class traefik --no-redirect --source-state <A's state.yaml>` → render combined report.
+  - Failure semantics: A halt → chain halt; B halt after A done → resume with `--skip-a`; C.5 halt → re-run only render step.
+  - Flags: `--gateway-class traefik|gke-l7-global-external-managed`, `--skip-a`, `--skip-b`, `--resume`.
+  - Reference: `chain-report-template.md` — `{{ ... }}` template for the combined chain report.
+  - Gemini TOML command: `zeus-nginx-to-gateway`.
+- **Test fixtures** for both new skills: `tests/nginx-to-traefik/` (4 fixture tests, all passing), `tests/nginx-to-gateway/` (2 fixture tests, all passing).
+- **Structure test Section 19** — validates SKILL.md presence and step count, pipeline files, TOML commands, references, and fixture runners for both new skills. Total TOML count updated to 21.
+
 ## [1.10.0] - 2026-05-07
 
 ### Added
@@ -265,6 +293,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Bilingual documentation (EN + 繁體中文)
 
 <!-- Links -->
+[1.11.0]: https://github.com/qwedsazxc78/devops-ai-skill/compare/v1.10.0...v1.11.0
 [1.10.0]: https://github.com/qwedsazxc78/devops-ai-skill/compare/v1.9.0...v1.10.0
 [1.9.0]: https://github.com/qwedsazxc78/devops-ai-skill/compare/v1.8.0...v1.9.0
 [1.8.0]: https://github.com/qwedsazxc78/devops-ai-skill/compare/v1.7.0...v1.8.0
