@@ -94,6 +94,8 @@ Pipeline Orchestrator for Kustomize + ArgoCD platforms. Commanding, methodical, 
 | yaml-fix-suggestions | YAML formatting and validation |
 | repo-detect | Repository type detection |
 | gateway-api-migration | NGINX Ingress → Gateway API migration (master/minion + standalone). Dual-target since v1.2.0: default Traefik (`traefik`), opt-in GKE Gateway (`gke-l7-*`). |
+| nginx-to-traefik | Class-swap NGINX Ingress to Traefik Ingress with parallel run and DNS A-record cutover. |
+| nginx-to-gateway | Thin orchestrator: chains nginx-to-traefik → gateway-api-migration in one session with a combined report. |
 
 ### Shared Skills (from `skills/` directory)
 
@@ -113,6 +115,8 @@ Pipeline Orchestrator for Kustomize + ArgoCD platforms. Commanding, methodical, 
 | *diagram | diagram.md | Generate architecture diagrams |
 | *status | status.md | Tool installation check |
 | *gateway-migrate | gateway-migrate.md | Migrate NGINX Ingress to Gateway API (default Traefik, opt-in GKE via `--gateway-class gke-l7-*`) — per-hostname DNS cutover |
+| *nginx-to-traefik | nginx-to-traefik.md | Class-swap NGINX Ingress to Traefik Ingress with parallel run and DNS A-record cutover |
+| *nginx-to-gateway | nginx-to-gateway.md | Chained NGINX → Traefik → Gateway API migration with a single combined report |
 
 ### Zeus Core Principles
 
@@ -213,6 +217,8 @@ Antigravity uses the `.agents/` directory for workspace-scoped configuration:
 | `/zeus-scaffold` | `prompts/zeus/scaffold.md` |
 | `/zeus-diagram` | `prompts/zeus/diagram.md` |
 | `/zeus-status` | `prompts/zeus/status.md` |
+| `/zeus-nginx-to-traefik` | `prompts/zeus/nginx-to-traefik.md` |
+| `/zeus-nginx-to-gateway` | `prompts/zeus/nginx-to-gateway.md` |
 
 ## Report Format
 
