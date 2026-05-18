@@ -43,7 +43,11 @@ def _load(path: Path) -> dict:
     if rc.returncode != 0:
         sys.stderr.write(rc.stderr)
         sys.exit(2)
-    return json.loads(rc.stdout or "{}")
+    try:
+        return json.loads(rc.stdout or "{}")
+    except json.JSONDecodeError as exc:
+        sys.stderr.write(f"[generate_traefik_ingress] failed to parse yq output: {exc}\n")
+        sys.exit(2)
 
 
 def _warn(msg: str) -> None:

@@ -1223,6 +1223,16 @@ def main() -> int:
         target_root, minion_overlay, minion_built,
     ))
 
+    # 11: ingress2gateway second opinion (optional)
+    soo_run = False
+    if not args.no_second_opinion:
+        result = check_ingress2gateway_second_opinion(
+            source_built, minion_built, gateway_built,
+        )
+        if result is not None:
+            checks.append(result)
+            soo_run = result["status"] != "warn" or "install" not in result["summary"]
+
     # 12: middleware coverage (Traefik target only for nginx-source; always for traefik-source)
     if source_built.is_file():
         checks.append(check_middleware_coverage(
@@ -1234,16 +1244,6 @@ def main() -> int:
     checks.append(check_no_redundant_tls_redirect(
         minion_built, source_class=args.source_class,
     ))
-
-    # 11: ingress2gateway second opinion (optional)
-    soo_run = False
-    if not args.no_second_opinion:
-        result = check_ingress2gateway_second_opinion(
-            source_built, minion_built, gateway_built,
-        )
-        if result is not None:
-            checks.append(result)
-            soo_run = result["status"] != "warn" or "install" not in result["summary"]
 
     final = _finalize(checks, args, checks_run=len(checks),
                       second_opinion_run=soo_run)

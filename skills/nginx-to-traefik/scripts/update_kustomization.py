@@ -38,8 +38,8 @@ def _yq_read(expr: str, file: Path) -> str:
 
 
 def replace_resource(kfile: Path, old: str, new: str) -> None:
-    has_new = _yq_read(f'.resources | contains(["{new}"])', kfile) == "true"
-    has_old = _yq_read(f'.resources | contains(["{old}"])', kfile) == "true"
+    has_new = _yq_read(f'.resources // [] | contains(["{new}"])', kfile) == "true"
+    has_old = _yq_read(f'.resources // [] | contains(["{old}"])', kfile) == "true"
     if has_new and not has_old:
         return
     _yq(f'(.resources[] | select(. == "{old}")) |= "{new}"', kfile)

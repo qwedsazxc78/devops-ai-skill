@@ -158,6 +158,8 @@ Read `devops-ai-skill/docs/PROJECT.md` for shared project context.
 | *diagram | Generate architecture diagrams |
 | *status | Tool installation check |
 | *gateway-migrate | One-time Ingress→Gateway API migration |
+| *nginx-to-traefik | Class-swap NGINX Ingress to Traefik Ingress |
+| *nginx-to-gateway | Chained NGINX → Traefik → Gateway API migration |
 ENTRY
 )
   if [ -f "$TARGET_DIR/CLAUDE.md" ]; then
@@ -202,7 +204,7 @@ Skills are available at `.codex/skills/`. Pipelines at `devops-ai-skill/prompts/
 
 ### Agents
 - **Horus** — IaC Operations Engineer (Terraform + Helm + GKE): `*full`, `*upgrade`, `*security`, `*validate`, `*scaffold`, `*cicd`, `*health`
-- **Zeus** — GitOps Engineer (Kustomize + ArgoCD): `*full`, `*pre-merge`, `*health`, `*review`, `*scaffold`, `*diagram`, `*status`, `*gateway-migrate`
+- **Zeus** — GitOps Engineer (Kustomize + ArgoCD): `*full`, `*pre-merge`, `*health`, `*review`, `*scaffold`, `*diagram`, `*status`, `*gateway-migrate`, `*nginx-to-traefik`, `*nginx-to-gateway`
 ENTRY
 )
   if [ -f "$TARGET_DIR/AGENTS.md" ]; then
@@ -253,7 +255,7 @@ Read `devops-ai-skill/docs/PROJECT.md` for shared project context.
 - Extension: `.gemini/extensions/devops/gemini-extension.json`
 - Pipelines: `devops-ai-skill/prompts/` (17 pipelines)
 
-Trigger with `*full`, `*upgrade`, `*security`, `*validate`, `*scaffold`, `*cicd`, `*health` (Horus) or `*full`, `*pre-merge`, `*health`, `*review`, `*scaffold`, `*diagram`, `*status`, `*gateway-migrate` (Zeus).
+Trigger with `*full`, `*upgrade`, `*security`, `*validate`, `*scaffold`, `*cicd`, `*health` (Horus) or `*full`, `*pre-merge`, `*health`, `*review`, `*scaffold`, `*diagram`, `*status`, `*gateway-migrate`, `*nginx-to-traefik`, `*nginx-to-gateway` (Zeus).
 ENTRY
 )
   if [ -f "$TARGET_DIR/GEMINI.md" ]; then
@@ -316,6 +318,8 @@ setup_antigravity() {
     "zeus-diagram:zeus/diagram.md"
     "zeus-status:zeus/status.md"
     "zeus-gateway-migrate:zeus/gateway-migrate.md"
+    "zeus-nginx-to-traefik:zeus/nginx-to-traefik.md"
+    "zeus-nginx-to-gateway:zeus/nginx-to-gateway.md"
     "shared-repo-detect:shared/repo-detect.md"
     "shared-report-format:shared/report-format.md"
     "shared-tool-check:shared/tool-check.md"
