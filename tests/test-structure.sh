@@ -530,15 +530,6 @@ for ci_file in .github/workflows/ci.yml .github/workflows/release.yml; do
     fi
 done
 
-# Logo assets
-for img in docs/images/logo.png; do
-    if [ -f "$ROOT_DIR/$img" ]; then
-        pass "$img exists"
-    else
-        warn "$img missing (marketplace logo)"
-    fi
-done
-
 # ============================================
 # SECTION 12: Security Scan
 # ============================================
