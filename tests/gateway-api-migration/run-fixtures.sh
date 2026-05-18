@@ -83,6 +83,113 @@ test_classify_traefik_source() {
 test_classify_traefik_source
 
 echo ""
+echo "--- validate_generated unit tests ---"
+
+test_check12_fails_traefik_source_missing_extensionref() {
+  local tmpdir; tmpdir=$(mktemp -d)
+  local source_yaml="$tmpdir/source.yaml"
+  local service_yaml="$tmpdir/service.yaml"
+
+  cat > "$source_yaml" <<'YAML'
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: argocd-server
+  namespace: argocd
+  annotations:
+    traefik.ingress.kubernetes.io/router.middlewares: traefik-cors@kubernetescrd
+spec:
+  ingressClassName: traefik
+  rules:
+  - host: argocd.dev.awoo.org
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: argocd-server
+            port:
+              number: 80
+YAML
+
+  cat > "$service_yaml" <<'YAML'
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: argocd-server
+  namespace: argocd
+spec:
+  hostnames:
+  - argocd.dev.awoo.org
+  rules:
+  - backendRefs:
+    - name: argocd-server
+      port: 80
+YAML
+
+  local result
+  result=$(python3 - "$source_yaml" "$service_yaml" <<'PYEOF'
+import json, sys
+sys.path.insert(0, "skills/gateway-api-migration/scripts")
+from validate_generated import check_middleware_coverage
+from pathlib import Path
+source_built, service_build = Path(sys.argv[1]), Path(sys.argv[2])
+r = check_middleware_coverage(source_built, service_build, service_build, "traefik", source_class="traefik")
+print(json.dumps(r))
+PYEOF
+  )
+  local status
+  status=$(echo "$result" | jq -r '.status')
+  if [[ "$status" == "fail" ]]; then
+    pass "check 12 fails on traefik source missing extensionRef"
+  else
+    fail "check 12: expected fail, got $status"
+  fi
+  rm -rf "$tmpdir"
+}
+
+test_check13_warns_traefik_source_with_tls_redirect() {
+  local tmpdir; tmpdir=$(mktemp -d)
+  local service_yaml="$tmpdir/service.yaml"
+
+  cat > "$service_yaml" <<'YAML'
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: tls-redirect
+  namespace: argocd
+spec:
+  rules:
+  - filters:
+    - type: RequestRedirect
+YAML
+
+  local result
+  result=$(python3 - "$service_yaml" <<'PYEOF'
+import json, sys
+sys.path.insert(0, "skills/gateway-api-migration/scripts")
+from validate_generated import check_no_redundant_tls_redirect
+from pathlib import Path
+service_build = Path(sys.argv[1])
+r = check_no_redundant_tls_redirect(service_build, source_class="traefik")
+print(json.dumps(r))
+PYEOF
+  )
+  local status
+  status=$(echo "$result" | jq -r '.status')
+  if [[ "$status" == "warn" ]]; then
+    pass "check 13 warns on traefik source with tls-redirect emitted"
+  else
+    fail "check 13: expected warn, got $status"
+  fi
+  rm -rf "$tmpdir"
+}
+
+test_check12_fails_traefik_source_missing_extensionref
+test_check13_warns_traefik_source_with_tls_redirect
+
+echo ""
 echo "=========================="
 echo "PASS: $PASS  FAIL: $FAIL"
 echo "=========================="

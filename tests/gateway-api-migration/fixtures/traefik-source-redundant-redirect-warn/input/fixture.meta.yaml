@@ -1,0 +1,2 @@
+expectError: false
+description: "Traefik source with tls-redirect HTTPRoute in output — check 13 should warn"

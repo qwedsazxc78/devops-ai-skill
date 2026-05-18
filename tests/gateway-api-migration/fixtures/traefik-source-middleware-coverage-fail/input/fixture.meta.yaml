@@ -1,0 +1,2 @@
+expectError: false
+description: "Traefik source with router.middlewares but generated HTTPRoute missing extensionRef — check 12 should fail"

@@ -61,7 +61,10 @@ Checks (in order):
                                         annotations, verify the corresponding Middleware
                                         CRDs are generated AND referenced by every HTTPRoute
                                         via extensionRef filter. Passes trivially for GKE and
-                                        vanilla targets (those don't use Middleware).
+                                        vanilla targets. When source-class=traefik, also checks
+                                        that router.middlewares refs appear as extensionRef filters.
+    13. no-redundant-tls-redirect     — When sourceClass=traefik AND a tls-redirect HTTPRoute is
+                                        present, WARN: operator likely forgot --no-redirect.
 
 Dependencies: Python 3 stdlib + `yq` and `kustomize` on PATH.
 Optional:     `ingress2gateway` on PATH for check #11.
@@ -677,20 +680,63 @@ def check_tls_secret_coverage(
 
 def check_middleware_coverage(
     source_built: Path, gateway_build: Path, service_build: Path,
-    target_family: str,
+    target_family: str, source_class: str = "nginx",
 ) -> dict:
-    """Check 12: Traefik target + CORS annotations → at least one Middleware
-    of kind `headers` must exist AND every HTTPRoute that handles a backend
-    that was CORS-annotated must reference it via extensionRef filter.
+    """Check 12 — Middleware coverage.
 
-    Only runs when target_family == 'traefik'. Returns a pass-through "skipped"
-    check for other targets (GKE's CORS is handled via GCPBackendPolicy.targetRef,
-    which is check-6's responsibility; vanilla targets have no middleware to check).
+    Two modes:
+      1. nginx-source (existing): Traefik target + CORS/row-9c annotations →
+         Middleware CRDs generated AND referenced by every HTTPRoute via extensionRef.
+      2. traefik-source (v1.11.0): every Ingress with `router.middlewares` annotation
+         must have its Middleware list reflected on the HTTPRoute as extensionRef filters.
 
-    This catches the InvalidKind / missing-extensionRef class of bug the
-    new Traefik branch introduces — where the skill emitted the Middleware
-    but forgot to reference it from one or more HTTPRoutes.
+    Only the nginx-source mode requires target_family == 'traefik'.
+    The traefik-source mode runs regardless of target_family when source_class == 'traefik'.
     """
+    # Traefik-source branch: check router.middlewares → extensionRef carry-through
+    if source_class == "traefik":
+        source_docs = _yq_ea_json(source_built)
+        service_docs = _yq_ea_json(service_build)
+        failures: list[str] = []
+        for ing in (d for d in source_docs if d.get("kind") == "Ingress"):
+            annotations = (ing.get("metadata") or {}).get("annotations") or {}
+            spec = ing.get("spec") or {}
+            cls = annotations.get("kubernetes.io/ingress.class") or spec.get("ingressClassName")
+            if cls != "traefik":
+                continue
+            mws = annotations.get("traefik.ingress.kubernetes.io/router.middlewares", "")
+            required_refs = [m.split("@")[0].strip() for m in mws.split(",") if m.strip()]
+            if not required_refs:
+                continue
+            host_set = {r["host"] for r in (spec.get("rules") or []) if "host" in r}
+            matching_routes = [
+                r for r in service_docs
+                if r.get("kind") == "HTTPRoute"
+                and bool(host_set & set((r.get("spec") or {}).get("hostnames") or []))
+            ]
+            for route in matching_routes:
+                emitted = []
+                for rule in (route.get("spec") or {}).get("rules") or []:
+                    for f in rule.get("filters") or []:
+                        ref = (f.get("extensionRef") or {})
+                        if ref.get("kind") == "Middleware":
+                            emitted.append(ref.get("name"))
+                missing = [m for m in required_refs if m not in emitted]
+                if missing:
+                    failures.append(
+                        f"HTTPRoute {(route.get('metadata') or {}).get('name')}: "
+                        f"missing Middleware extensionRef(s) {missing}"
+                    )
+        if failures:
+            return _check(
+                "middleware-coverage", "fail",
+                f"{len(failures)} HTTPRoute(s) missing Middleware extensionRef",
+                severity="S1",
+                details={"failures": failures},
+            )
+        return _check("middleware-coverage", "pass", "all traefik router.middlewares refs emitted")
+
+    # nginx-source branch (existing logic)
     if target_family != "traefik":
         return _check(
             "middleware-coverage",
@@ -792,6 +838,35 @@ def check_middleware_coverage(
         f"Traefik middleware coverage complete: CORS={cors_middleware_found}, path-denylist={deny_middleware_found}",
         details=details,
     )
+
+
+def check_no_redundant_tls_redirect(
+    service_build: Path, source_class: str = "nginx",
+) -> dict:
+    """Check 13 — When sourceClass=traefik AND a tls-redirect HTTPRoute is
+    present in the generated module, WARN: the operator likely forgot
+    `--no-redirect`. Traefik's EntryPoint handles HTTP→HTTPS already, so
+    the emitted HTTPRoute is redundant and may conflict."""
+    if source_class != "traefik":
+        return _check(
+            "no-redundant-tls-redirect", "pass",
+            "not applicable (sourceClass != traefik)",
+        )
+    docs = _yq_ea_json(service_build)
+    redirects = [
+        d for d in docs
+        if d.get("kind") == "HTTPRoute"
+        and "tls-redirect" in ((d.get("metadata") or {}).get("name") or "")
+    ]
+    if redirects:
+        names = [(d.get("metadata") or {}).get("name") for d in redirects]
+        return _check(
+            "no-redundant-tls-redirect", "warn",
+            "redundant tls-redirect HTTPRoute(s) emitted with sourceClass=traefik",
+            severity="S2",
+            details={"redirects": names, "suggest": "re-run with --no-redirect"},
+        )
+    return _check("no-redundant-tls-redirect", "pass", "no redundant redirect emitted")
 
 
 def check_dead_file_safety(
@@ -1054,6 +1129,11 @@ def main() -> int:
                              "Used only to derive target family for check #12.")
     parser.add_argument("--no-second-opinion", action="store_true",
                         help="skip ingress2gateway cross-check")
+    parser.add_argument("--source-class", default="nginx",
+                        choices=["nginx", "traefik"],
+                        help="source Ingress class (v1.11.0+; default nginx)")
+    parser.add_argument("--no-redirect", action="store_true",
+                        help="skip tls-redirect HTTPRoute check (v1.11.0+; use with --source-class traefik)")
     parser.add_argument("--tmp-dir", default="/tmp/gwm-validate",
                         help="where to stash build output")
     args = parser.parse_args()
@@ -1143,11 +1223,17 @@ def main() -> int:
         target_root, minion_overlay, minion_built,
     ))
 
-    # 12: middleware coverage (Traefik target only; no-op for others)
+    # 12: middleware coverage (Traefik target only for nginx-source; always for traefik-source)
     if source_built.is_file():
         checks.append(check_middleware_coverage(
             source_built, gateway_built, minion_built, target_family,
+            source_class=args.source_class,
         ))
+
+    # 13: no-redundant-tls-redirect (traefik source only)
+    checks.append(check_no_redundant_tls_redirect(
+        minion_built, source_class=args.source_class,
+    ))
 
     # 11: ingress2gateway second opinion (optional)
     soo_run = False
