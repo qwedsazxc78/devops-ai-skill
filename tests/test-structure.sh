@@ -81,6 +81,9 @@ EXPECTED_SKILLS=(
     "yaml-fix-suggestions"
     "repo-detect"
     "release-validate"
+    "gateway-api-migration"
+    "nginx-to-traefik"
+    "nginx-to-gateway"
 )
 
 for skill in "${EXPECTED_SKILLS[@]}"; do
@@ -143,7 +146,7 @@ done
 section "Prompts Directory"
 
 HORUS_PROMPTS=("full-pipeline.md" "upgrade.md" "security.md" "validate.md" "scaffold.md" "cicd.md" "health.md")
-ZEUS_PROMPTS=("full-pipeline.md" "pre-merge.md" "health.md" "review.md" "scaffold.md" "diagram.md" "status.md")
+ZEUS_PROMPTS=("full-pipeline.md" "pre-merge.md" "health.md" "review.md" "scaffold.md" "diagram.md" "status.md" "nginx-to-traefik.md" "nginx-to-gateway.md")
 SHARED_PROMPTS=("repo-detect.md" "report-format.md" "tool-check.md" "help.md")
 
 for prompt in "${HORUS_PROMPTS[@]}"; do
@@ -280,7 +283,7 @@ for agent in horus zeus; do
 done
 
 # Pipeline command TOMLs
-gemini_pipelines=("horus-full" "horus-upgrade" "horus-security" "horus-validate" "horus-scaffold" "horus-cicd" "horus-health" "zeus-full" "zeus-pre-merge" "zeus-health" "zeus-review" "zeus-scaffold" "zeus-diagram" "zeus-status" "zeus-gateway-migrate" "repo-detect" "tool-check")
+gemini_pipelines=("horus-full" "horus-upgrade" "horus-security" "horus-validate" "horus-scaffold" "horus-cicd" "horus-health" "zeus-full" "zeus-pre-merge" "zeus-health" "zeus-review" "zeus-scaffold" "zeus-diagram" "zeus-status" "zeus-gateway-migrate" "zeus-nginx-to-traefik" "zeus-nginx-to-gateway" "repo-detect" "tool-check")
 for pipeline in "${gemini_pipelines[@]}"; do
     toml_file="$gemini_cmds_dir/pipelines/$pipeline.toml"
     if [ -f "$toml_file" ]; then
@@ -292,10 +295,10 @@ done
 
 # Count total TOML files
 toml_count=$(find "$gemini_cmds_dir" -name "*.toml" 2>/dev/null | wc -l | tr -d ' ')
-if [ "$toml_count" -eq 19 ]; then
+if [ "$toml_count" -eq 21 ]; then
     pass "Correct TOML command count: $toml_count"
 else
-    fail "Expected 19 TOML commands, found $toml_count"
+    fail "Expected 21 TOML commands, found $toml_count"
 fi
 
 # ============================================
@@ -1035,6 +1038,85 @@ if [ -f "$ROOT_DIR/package.json" ]; then
         fail "package.json files whitelist missing install.bat"
     fi
 fi
+
+# ============================================
+# SECTION 19: nginx-to-traefik and nginx-to-gateway skills
+# ============================================
+section "nginx-to-traefik and nginx-to-gateway skills"
+
+for skill in nginx-to-traefik nginx-to-gateway; do
+    skill_md="$ROOT_DIR/skills/$skill/SKILL.md"
+    if [ -f "$skill_md" ]; then
+        pass "skills/$skill/SKILL.md exists"
+        if grep -q "^name: $skill" "$skill_md"; then
+            pass "skills/$skill/SKILL.md has correct name field"
+        else
+            fail "skills/$skill/SKILL.md name field incorrect"
+        fi
+        step_count=$(grep -c "^### Step " "$skill_md" 2>/dev/null || echo 0)
+        if [ "$step_count" -gt 3 ]; then
+            pass "skills/$skill/SKILL.md has $step_count Step sections"
+        else
+            fail "skills/$skill/SKILL.md has only $step_count Step sections (expected >3)"
+        fi
+    else
+        fail "skills/$skill/SKILL.md missing"
+    fi
+
+    pipeline_md="$ROOT_DIR/prompts/zeus/$(echo "$skill" | sed 's/nginx-to-/nginx-to-/').md"
+    if [ -f "$ROOT_DIR/prompts/zeus/$skill.md" ]; then
+        pass "prompts/zeus/$skill.md exists"
+    else
+        fail "prompts/zeus/$skill.md missing"
+    fi
+
+    toml_name="zeus-$skill"
+    if [ -f "$ROOT_DIR/.gemini/commands/devops/pipelines/$toml_name.toml" ]; then
+        pass ".gemini/commands/devops/pipelines/$toml_name.toml exists"
+    else
+        fail ".gemini/commands/devops/pipelines/$toml_name.toml missing"
+    fi
+done
+
+# nginx-to-traefik: references directory checks
+for ref in annotation-translation.md dns-cutover-runbook.md nginx-to-traefik-env-config.md; do
+    if [ -f "$ROOT_DIR/skills/nginx-to-traefik/references/$ref" ]; then
+        pass "nginx-to-traefik/references/$ref exists"
+    else
+        fail "nginx-to-traefik/references/$ref missing"
+    fi
+done
+
+# nginx-to-traefik: scripts exist
+for script in inventory_nginx_ingresses.py generate_traefik_ingress.py update_kustomization.py validate_cross_consistency.sh; do
+    if [ -f "$ROOT_DIR/skills/nginx-to-traefik/scripts/$script" ]; then
+        pass "nginx-to-traefik/scripts/$script exists"
+    else
+        fail "nginx-to-traefik/scripts/$script missing"
+    fi
+done
+
+# nginx-to-gateway: chain-report-template exists
+if [ -f "$ROOT_DIR/skills/nginx-to-gateway/references/chain-report-template.md" ]; then
+    pass "nginx-to-gateway/references/chain-report-template.md exists"
+else
+    fail "nginx-to-gateway/references/chain-report-template.md missing"
+fi
+
+# Fixture test runners exist and are executable
+for runner in nginx-to-traefik nginx-to-gateway; do
+    runner_path="$ROOT_DIR/tests/$runner/run-fixtures.sh"
+    if [ -f "$runner_path" ]; then
+        pass "tests/$runner/run-fixtures.sh exists"
+        if [ -x "$runner_path" ]; then
+            pass "tests/$runner/run-fixtures.sh is executable"
+        else
+            fail "tests/$runner/run-fixtures.sh is not executable"
+        fi
+    else
+        fail "tests/$runner/run-fixtures.sh missing"
+    fi
+done
 
 # ============================================
 # SUMMARY
