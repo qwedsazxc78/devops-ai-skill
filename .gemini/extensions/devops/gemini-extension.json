@@ -64,6 +64,16 @@
       "name": "release-validate",
       "description": "Release readiness validation across versions, cross-platform links, and setup scripts",
       "path": "../../../skills/release-validate/SKILL.md"
+    },
+    {
+      "name": "nginx-to-traefik",
+      "description": "Class-swap NGINX Ingress to Traefik Ingress with parallel run and DNS A-record cutover.",
+      "path": "../../../skills/nginx-to-traefik/SKILL.md"
+    },
+    {
+      "name": "nginx-to-gateway",
+      "description": "Orchestrate chained NGINX → Traefik → Gateway API migration with a single combined report.",
+      "path": "../../../skills/nginx-to-gateway/SKILL.md"
     }
   ]
 }
