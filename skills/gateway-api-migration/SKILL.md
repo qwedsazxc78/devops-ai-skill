@@ -100,6 +100,16 @@ Triggered explicitly by `*gateway-migrate` from Zeus. Not auto-triggered.
 # Preflight and generation controls:
 *gateway-migrate <module-path> --skip-preflight <n>   # skip individual preflight check N
 *gateway-migrate <module-path> --include-orphan-hosts # emit listeners for hosts without minions
+
+# Source-class selection (v1.11.0+; default nginx for backwards-compat):
+*gateway-migrate <module-path> --source-class nginx
+*gateway-migrate <module-path> --source-class traefik
+
+# Chain integration (v1.11.0+; set by skill C, optional standalone):
+*gateway-migrate <module-path> --source-state <path-to-skill-A-state.yaml>
+
+# Redirect control (v1.11.0+; auto-on for nginx, recommended off for traefik):
+*gateway-migrate <module-path> --no-redirect       # skip tls-redirect HTTPRoute
 ```
 
 **Default target:** `traefik`. The skill emits Traefik-specific CRDs
@@ -129,6 +139,18 @@ Every successful run writes:
    `docs/reports/gateway-migration/<slug>/backups/`.
 4. `docs/reports/gateway-migration/<slug>/state.yaml` — the machine-readable
    audit trail that `--resume` reads and re-runs build from.
+   Additional v1.11.0 `inputs` fields (additive on schema v2, backwards-compatible):
+   ```yaml
+   inputs:
+     sourceClass: nginx | traefik           # default nginx
+     sourceMiddlewareReuse:                  # only when sourceClass: traefik
+       - middlewareName: cors
+         namespace: traefik
+         referencedBy: [argocd-server, grafana]
+     sourceStatePath: docs/reports/nginx-to-traefik/<slug>/state.yaml  # only when chained
+   ```
+   These fields are **additive** on schema v2. The schema version is unchanged.
+   Existing nginx-only runs continue to omit them entirely.
 5. `docs/reports/gateway-migration/<slug>/report.md` — the human-readable
    report, rendered from `references/report-template.md`.
 6. `common.gateway/MIGRATION.md` — the operator runbook, substituted from
@@ -644,6 +666,12 @@ branches on the target prefix:
    `RequestRedirect` filter scheme=https port=443 statusCode=301. Without
    this file, the Gateway listens on port 80 but silently drops HTTP
    traffic — a common migration regression.
+
+   **`--no-redirect` flag (v1.11.0+):** When `--no-redirect` is passed, the
+   converter skips emitting the `tls-redirect` HTTPRoute. Use this when the
+   source is Traefik: the Traefik EntryPoint config in `app.values.yaml`
+   already handles HTTP→HTTPS, and a redundant HTTPRoute would conflict.
+   Default-on behaviour is unchanged for standalone nginx-source runs.
 
    Template:
 
