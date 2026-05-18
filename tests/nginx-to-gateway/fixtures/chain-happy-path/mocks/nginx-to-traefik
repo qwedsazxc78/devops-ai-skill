@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# Pretend to be skill A. Write a fake state.yaml to the slug-derived path
+# and exit 0.
+set -euo pipefail
+root="${1:-.}"
+slug="dev-b1-2026-05-14T10-00-00Z"
+out_dir="$root/docs/reports/nginx-to-traefik/$slug"
+mkdir -p "$out_dir"
+cat > "$out_dir/state.yaml" <<'YAML'
+schemaVersion: 1
+verdict: COMPLETE
+outputs:
+  traefikIngresses:
+    - { file: argocd-traefik-ingress.yaml, host: argocd.dev.awoo.org, namespace: argocd, backend: argocd-server, port: 80, sha256: deadbeef }
+    - { file: grafana-traefik-ingress.yaml, host: grafana.dev.awoo.org, namespace: monitoring, backend: grafana, port: 3000, sha256: cafebabe }
+YAML
+echo "stub-a: wrote $out_dir/state.yaml"
