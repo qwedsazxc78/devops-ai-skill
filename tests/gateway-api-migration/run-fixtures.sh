@@ -2,6 +2,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 FIXTURES_DIR="$SCRIPT_DIR/fixtures"
 
 PASS=0
@@ -64,6 +65,22 @@ for fixture in "$FIXTURES_DIR"/*/; do
     fi
   fi
 done
+
+echo ""
+echo "--- classify_ingress unit tests ---"
+
+test_classify_traefik_source() {
+  local f="$ROOT_DIR/tests/gateway-api-migration/fixtures/traefik-source-minimal/input/common.service/overlays/dev/argocd-traefik-ingress.yaml"
+  local out
+  out=$(python3 "$ROOT_DIR/skills/gateway-api-migration/scripts/classify_ingress.py" "$f")
+  if echo "$out" | jq -e '.sourceClass == "traefik"' >/dev/null; then
+    pass "classify_ingress: sourceClass=traefik"
+  else
+    fail "classify_ingress: missing sourceClass=traefik in $out"
+  fi
+}
+
+test_classify_traefik_source
 
 echo ""
 echo "=========================="

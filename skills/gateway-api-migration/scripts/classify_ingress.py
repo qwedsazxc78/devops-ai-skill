@@ -12,7 +12,8 @@ emit one JSON line per Ingress to stdout with:
       "namespace": "ingress-nginx",
       "classification": "master" | "minion" | "standalone" | "foreign" | "unknown",
       "reason": "<one-line justification>",
-      "ingressClass": "nginx" | "gce" | null,
+      "ingressClass": "nginx" | "traefik" | "gce" | null,
+      "sourceClass": "nginx" | "traefik",
       "hosts": ["argocd.awoo.org", ...],
       "hasPaths": true | false,
       "hasTls": true | false,
@@ -27,7 +28,7 @@ SKILL.md Step 1):
   2. `spec.rules[].host` present AND no `spec.rules[].http.paths` anywhere → master (heuristic)
   3. `spec.rules[].http.paths[]` present AND no `spec.tls` AND ingress.class: nginx → minion
   4. `spec.rules[].host` + `spec.rules[].http.paths[]` + `spec.tls` → standalone
-  5. `kubernetes.io/ingress.class` != "nginx" (e.g. gce) → foreign (skipped by migration)
+  5. `kubernetes.io/ingress.class` not in {nginx, traefik} (e.g. gce) → foreign (skipped by migration)
   6. Otherwise → unknown
 
 Dependencies: Python 3 stdlib + `yq` on PATH (yq >= 4.x, shell syntax).
@@ -92,9 +93,9 @@ def _classify(doc: dict) -> tuple[str, str]:
     if not ingress_class:
         ingress_class = spec.get("ingressClassName")
 
-    # Rule 5 — foreign class
-    if ingress_class and ingress_class != "nginx":
-        return "foreign", f"ingressClass={ingress_class!r} (skill targets nginx only)"
+    # Rule 5 — foreign class (non-nginx, non-traefik)
+    if ingress_class and ingress_class not in ("nginx", "traefik"):
+        return "foreign", f"ingressClass={ingress_class!r} (skill targets nginx and traefik)"
 
     rules = spec.get("rules") or []
     has_host = any("host" in r for r in rules)
@@ -130,13 +131,16 @@ def _extract(doc: dict) -> dict:
     spec = doc.get("spec") or {}
     rules = spec.get("rules") or []
     annotations = metadata.get("annotations") or {}
+    ingress_class = (
+        annotations.get("kubernetes.io/ingress.class")
+        or spec.get("ingressClassName")
+    )
+    source_class = "traefik" if ingress_class == "traefik" else "nginx"
     return {
         "name": metadata.get("name"),
         "namespace": metadata.get("namespace"),
-        "ingressClass": (
-            annotations.get("kubernetes.io/ingress.class")
-            or spec.get("ingressClassName")
-        ),
+        "ingressClass": ingress_class,
+        "sourceClass": source_class,
         "hosts": [r["host"] for r in rules if "host" in r],
         "hasPaths": any((r.get("http") or {}).get("paths") for r in rules),
         "hasTls": bool(spec.get("tls")),
