@@ -1,0 +1,21 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: temporal-web
+  namespace: temporal
+spec:
+  ingressClassName: traefik
+  tls:
+  - hosts: ["temporal.dev.awoo.org"]
+    secretName: temporal-web-tls
+  rules:
+  - host: temporal.dev.awoo.org
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: temporal-web
+            port:
+              number: 8080

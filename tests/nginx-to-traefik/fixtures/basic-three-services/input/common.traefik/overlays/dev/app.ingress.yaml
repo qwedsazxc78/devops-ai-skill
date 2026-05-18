@@ -1,0 +1,15 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: app-managed-cert
+  namespace: traefik
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+spec:
+  ingressClassName: traefik
+  tls:
+  - hosts:
+    - temporal.dev.awoo.org
+    secretName: app-managed-cert-tls
+  rules:
+  - host: temporal.dev.awoo.org
