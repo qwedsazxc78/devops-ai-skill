@@ -46,7 +46,6 @@ else
   FAIL=$((FAIL+1))
 fi
 
-
 P7="$ROOT_DIR/skills/release-validate/scripts/check_ai_tool_parity.sh"
 
 echo "[3] phase7-all-platforms (one command, registered everywhere)"
@@ -74,6 +73,21 @@ if [[ "$verdict" == "FAIL" && "$gaps" == "claude" ]]; then
   PASS=$((PASS+1))
 else
   echo "  [FAIL] expected FAIL+claude gap; got verdict=$verdict gap=$gaps"
+  echo "  raw: $out"
+  FAIL=$((FAIL+1))
+fi
+
+echo "[5] phase7-name-mismatch (basename 'long-name' resolves to registered '*short')"
+out=$(bash "$P7" \
+  --repo-root "$SCRIPT_DIR/fixtures/phase7-name-mismatch" \
+  --command long-name 2>/dev/null || true)
+verdict=$(echo "$out" | jq -r '.verdict')
+registered=$(echo "$out" | jq -r '.commands[0].registeredAs')
+if [[ "$verdict" == "OK" && "$registered" == "short" ]]; then
+  echo "  [PASS] verdict=OK, registeredAs=short (basename resolved correctly)"
+  PASS=$((PASS+1))
+else
+  echo "  [FAIL] expected OK+registeredAs=short; got verdict=$verdict registeredAs=$registered"
   echo "  raw: $out"
   FAIL=$((FAIL+1))
 fi

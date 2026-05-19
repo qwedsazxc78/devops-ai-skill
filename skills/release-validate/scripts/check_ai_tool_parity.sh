@@ -68,6 +68,7 @@ fi
 build_entry() {
   local cmd="$1"
   local pipeline tomlMirror claude agents gemini project
+  local GAPS GAPS_JSON
 
   # NOTE: file basename != command name in some cases. Example:
   # `prompts/zeus/full-pipeline.md` is registered as `*full` (not
