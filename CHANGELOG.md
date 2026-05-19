@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.15.0] - 2026-05-19
+
+### Added
+
+- **`release-validate` skill v1.15.0** — two new pre-release gates and a top-level orchestrator:
+  - **Phase 6 — Cross-repo-style coverage check.** `scripts/check_repo_style_coverage.sh` reads `references/repo-style-matrix.md` (a plain markdown table declaring per-skill style requirements) and reports gaps. WARN-only. Pre-v1.15.0 fixtures count as `kustomize-argocd`-style by convention; other styles require directory names containing the style keyword (e.g. `helm-only-basic`).
+  - **Phase 7 — Cross-AI-tool registration parity check.** `scripts/check_ai_tool_parity.sh` verifies that every Zeus command appears in all 4 surfaces (CLAUDE.md / AGENTS.md / GEMINI.md / docs/PROJECT.md) + has a Gemini TOML mirror. FAIL on any gap — strengthens the existing Phase 2 (file-reference validation) with command-registration validation.
+  - **`scripts/release_check.sh` orchestrator + `pnpm release:check`** — runs Phases 4 + 5 + 6 + 7, writes per-phase JSON under `docs/reports/release-validate/<version>/`, and invokes the renderer for `RELEASE-CHECK.md`. Used by both operators and CI.
+  - **CI integration** — `.github/workflows/release.yml` runs `scripts/release_check.sh` after the existing structure-test step and uploads `docs/reports/release-validate/` as a workflow artifact (`release-check-<tag>`).
+- 4 new fixture tests under `tests/release-validate/fixtures/` covering Phase 6 + 7 happy / failure paths (plus a name-mismatch resolution test for Phase 7).
+
 ## [1.14.0] - 2026-05-19
 
 ### Added
@@ -445,6 +456,7 @@ Dry-run smoke-tested against eye-of-horus-gitops.
 - Bilingual documentation (EN + 繁體中文)
 
 <!-- Links -->
+[1.15.0]: https://github.com/qwedsazxc78/devops-ai-skill/compare/v1.14.0...v1.15.0
 [1.14.0]: https://github.com/qwedsazxc78/devops-ai-skill/compare/v1.13.0...v1.14.0
 [1.13.0]: https://github.com/qwedsazxc78/devops-ai-skill/compare/v1.12.0...v1.13.0
 [1.12.0]: https://github.com/qwedsazxc78/devops-ai-skill/compare/v1.11.0...v1.12.0
@@ -461,5 +473,6 @@ Dry-run smoke-tested against eye-of-horus-gitops.
 [1.2.0]: https://github.com/qwedsazxc78/devops-ai-skill/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/qwedsazxc78/devops-ai-skill/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/qwedsazxc78/devops-ai-skill/releases/tag/v1.0.0
+[1.15.0]: https://github.com/qwedsazxc78/devops-ai-skill/compare/v1.14.0...v1.15.0
 [1.14.0]: https://github.com/qwedsazxc78/devops-ai-skill/compare/v1.13.1...v1.14.0
 [1.13.1]: https://github.com/qwedsazxc78/devops-ai-skill/releases/tag/v1.13.1
