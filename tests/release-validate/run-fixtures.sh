@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+set -uo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
+P6="$ROOT_DIR/skills/release-validate/scripts/check_repo_style_coverage.sh"
+
+PASS=0
+FAIL=0
+TMP=$(mktemp -d); trap 'rm -rf "$TMP"' EXIT
+
+echo "release-validate fixtures (v1.15.0)"
+echo "----------------------------------"
+
+echo "[1] phase6-complete (matrix declares kustomize-argocd, fixture present)"
+out=$(bash "$P6" \
+  --repo-root "$SCRIPT_DIR/fixtures/phase6-complete" \
+  --matrix-skills "dummy-skill" \
+  --matrix-styles "kustomize-argocd" \
+  --matrix-required "dummy-skill:kustomize-argocd" 2>/dev/null || true)
+verdict=$(echo "$out" | jq -r '.verdict')
+if [[ "$verdict" == "OK" ]]; then
+  echo "  [PASS] verdict=OK (no missing styles)"
+  PASS=$((PASS+1))
+else
+  echo "  [FAIL] expected verdict=OK, got $verdict"
+  echo "  raw: $out"
+  FAIL=$((FAIL+1))
+fi
+
+echo "[2] phase6-missing-style (matrix declares helm-only required, fixture absent)"
+out=$(bash "$P6" \
+  --repo-root "$SCRIPT_DIR/fixtures/phase6-missing-style" \
+  --matrix-skills "dummy-skill" \
+  --matrix-styles "kustomize-argocd helm-only" \
+  --matrix-required "dummy-skill:kustomize-argocd,dummy-skill:helm-only" 2>/dev/null || true)
+verdict=$(echo "$out" | jq -r '.verdict')
+missing=$(echo "$out" | jq -r '.missing[0] // "none"')
+if [[ "$verdict" == "WARN" && "$missing" == "dummy-skill:helm-only" ]]; then
+  echo "  [PASS] verdict=WARN, missing=dummy-skill:helm-only"
+  PASS=$((PASS+1))
+else
+  echo "  [FAIL] expected WARN + helm-only missing; got verdict=$verdict missing=$missing"
+  echo "  raw: $out"
+  FAIL=$((FAIL+1))
+fi
+
+echo ""
+echo "release-validate: $PASS passed, $FAIL failed"
+[[ $FAIL -gt 0 ]] && exit 1 || exit 0
