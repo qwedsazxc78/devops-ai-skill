@@ -1,4 +1,4 @@
-# release-validate v2.1.0 — Phase 6, 7, and CI Wiring Implementation Plan
+# release-validate v1.15.0 — Phase 6, 7, and CI Wiring Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -14,7 +14,7 @@
 
 | File | Status | Responsibility |
 |---|---|---|
-| `skills/release-validate/SKILL.md` | Modify | Bump to v2.1.0, add Phase 6 and Phase 7 sections |
+| `skills/release-validate/SKILL.md` | Modify | Bump to v1.15.0, add Phase 6 and Phase 7 sections |
 | `skills/release-validate/references/repo-style-matrix.md` | Create | Plain markdown table declaring which skills need fixtures for which repo styles |
 | `skills/release-validate/scripts/check_repo_style_coverage.sh` | Create | Reads the matrix + inventories `tests/*/fixtures/`, reports gaps |
 | `skills/release-validate/scripts/check_ai_tool_parity.sh` | Create | For every Zeus command, verify registration across all 4 platforms |
@@ -82,7 +82,7 @@ matches the style (e.g. `tests/nginx-to-traefik/fixtures/kustomize-argocd-basic/
 `tests/nginx-to-traefik/fixtures/basic-three-services/` counts as
 `kustomize-argocd` by convention since all current fixtures are that style).
 
-For v2.1.0 introduction the script treats EVERY existing fixture as
+For v1.15.0 introduction the script treats EVERY existing fixture as
 `kustomize-argocd`-style (the current reality). Gaps surface only when a
 new style row is added to the matrix.
 ```
@@ -110,7 +110,7 @@ PASS=0
 FAIL=0
 TMP=$(mktemp -d); trap 'rm -rf "$TMP"' EXIT
 
-echo "release-validate fixtures (v2.1.0)"
+echo "release-validate fixtures (v1.15.0)"
 echo "----------------------------------"
 
 echo "[1] phase6-complete (matrix declares kustomize-argocd, fixture present)"
@@ -164,7 +164,7 @@ bash tests/release-validate/run-fixtures.sh
 Expected output:
 
 ```
-release-validate fixtures (v2.1.0)
+release-validate fixtures (v1.15.0)
 ----------------------------------
 [1] phase6-complete (matrix declares kustomize-argocd, fixture present)
   [FAIL] expected verdict=OK, got null
@@ -272,7 +272,7 @@ done
 # Inventory: a (skill, style) pair has a fixture if any directory under
 # tests/<skill>/fixtures/ contains the style name as a substring, OR if
 # tests/<skill>/fixtures/ contains ANY fixture (the convention is that
-# pre-v2.1.0 fixtures count as kustomize-argocd).
+# pre-v1.15.0 fixtures count as kustomize-argocd).
 MISSING=()
 SCANNED=0
 for skill in $MATRIX_SKILLS; do
@@ -284,7 +284,7 @@ for skill in $MATRIX_SKILLS; do
     present=false
     if [[ -d "$fixtures_dir" ]]; then
       if [[ "$style" == "kustomize-argocd" ]]; then
-        # Convention: any pre-v2.1.0 fixture counts as kustomize-argocd
+        # Convention: any pre-v1.15.0 fixture counts as kustomize-argocd
         if [[ -n "$(ls -A "$fixtures_dir" 2>/dev/null)" ]]; then
           present=true
         fi
@@ -336,7 +336,7 @@ bash tests/release-validate/run-fixtures.sh
 Expected output:
 
 ```
-release-validate fixtures (v2.1.0)
+release-validate fixtures (v1.15.0)
 ----------------------------------
 [1] phase6-complete (matrix declares kustomize-argocd, fixture present)
   [PASS] verdict=OK (no missing styles)
@@ -633,7 +633,7 @@ bash tests/release-validate/run-fixtures.sh
 Expected:
 
 ```
-release-validate fixtures (v2.1.0)
+release-validate fixtures (v1.15.0)
 ----------------------------------
 [1] phase6-complete ...                        [PASS]
 [2] phase6-missing-style ...                   [PASS]
@@ -686,7 +686,7 @@ Replace the env-var documentation block at the top of `render_release_artifact.s
 #   AI_TOOL_PARITY_JSON  — output of check_ai_tool_parity.sh (Phase 7, optional)
 #   OUTPUT               — absolute path to write the .md file
 #
-# Phase 6 and 7 inputs are optional for backwards-compat with v2.0.0
+# Phase 6 and 7 inputs are optional for backwards-compat with v1.14.0
 # callers; when absent, only Phases 4 + 5 are rendered.
 #
 # Output:
@@ -699,7 +699,7 @@ Replace the env-var documentation block at the top of `render_release_artifact.s
 set -euo pipefail
 ```
 
-Then after the existing `PORT_VERDICT=...` block (around line 33 in v2.0.0; locate via `grep -n PORT_VERDICT skills/release-validate/scripts/render_release_artifact.sh`), append:
+Then after the existing `PORT_VERDICT=...` block (around line 33 in v1.14.0; locate via `grep -n PORT_VERDICT skills/release-validate/scripts/render_release_artifact.sh`), append:
 
 ```bash
 
@@ -981,7 +981,7 @@ git commit -m "ci(release): wire release_check.sh into release workflow as pre-p
 
 ---
 
-## Task 6: Update SKILL.md to v2.1.0
+## Task 6: Update SKILL.md to v1.15.0
 
 **Files:**
 - Modify: `skills/release-validate/SKILL.md`
@@ -997,23 +997,23 @@ description: >
   Validates package release readiness across version consistency, cross-platform
   link integrity, npm package content, setup script smoke testing, skill
   fixture suite runs (Phase 4), shell portability static checks (Phase 5),
-  cross-repo-style fixture coverage (Phase 6, v2.1.0+), cross-AI-tool
-  registration parity (Phase 7, v2.1.0+), and release artifact generation
+  cross-repo-style fixture coverage (Phase 6, shipped in v1.15.0), cross-AI-tool
+  registration parity (Phase 7, shipped in v1.15.0), and release artifact generation
   (Phase 8). Use before running `pnpm release` to catch issues that structure
   tests may miss. Top-level orchestrator at `scripts/release_check.sh` runs
   every phase and is wired into `.github/workflows/release.yml` as a
   pre-publish gate. Produces `docs/reports/release-validate/<version>/RELEASE-CHECK.md`
   suitable verbatim for the GitHub Release body.
-version: "2.1.0"
+version: "1.15.0"
 ---
 ```
 
 - [ ] **Step 2: Append Phase 6 and Phase 7 sections**
 
-Find the `## Phase 8: Release Artifact Generation (v2.0.0)` heading and insert BEFORE it:
+Find the `## Phase 8: Release Artifact Generation (v1.14.0)` heading and insert BEFORE it:
 
 ```markdown
-## Phase 6: Cross-Repo-Style Coverage (v2.1.0)
+## Phase 6: Cross-Repo-Style Coverage (v1.15.0)
 
 For each "Kustomize-touching skill" listed in
 `references/repo-style-matrix.md`, verify fixtures exist for each declared
@@ -1026,7 +1026,7 @@ bash skills/release-validate/scripts/check_repo_style_coverage.sh --repo-root .
 
 Output JSON: `{scanned, matrix: [...], missing: ["skill:style"], coveragePct, verdict}`.
 
-**Convention**: any pre-v2.1.0 fixture under `tests/<skill>/fixtures/`
+**Convention**: any pre-v1.15.0 fixture under `tests/<skill>/fixtures/`
 counts as `kustomize-argocd`-style (matches the current reality). Other
 styles must have a directory whose name contains the style keyword
 (e.g. `tests/<skill>/fixtures/helm-only-basic/`).
@@ -1035,7 +1035,7 @@ styles must have a directory whose name contains the style keyword
 they're follow-up work, not regressions. To upgrade a row to FAIL, edit
 the matrix and add a new column with `required` (no code change needed).
 
-## Phase 7: Cross-AI-Tool Registration Parity (v2.1.0)
+## Phase 7: Cross-AI-Tool Registration Parity (v1.15.0)
 
 For every Zeus command (file under `prompts/zeus/`), verify it is
 registered across all 4 AI-tool surfaces. Delegates to
@@ -1065,7 +1065,7 @@ only checks file references, not command registration.
 
 - [ ] **Step 3: Update Phase 8 documentation to mention new inputs**
 
-In the existing `## Phase 8: Release Artifact Generation (v2.0.0)` section, replace the env-var list with:
+In the existing `## Phase 8: Release Artifact Generation (v1.14.0)` section, replace the env-var list with:
 
 ```markdown
 Combine Phases 4 + 5 + 6 + 7 outputs into a single Markdown artifact at
@@ -1085,7 +1085,7 @@ VERSION=$(cat VERSION) \
 
 (`REPO_STYLE_JSON` and `AI_TOOL_PARITY_JSON` are optional — when absent,
 the artifact renders Phase 6 + 7 verdicts as `SKIPPED`, matching the
-v2.0.0 caller contract for backwards compatibility.)
+v1.14.0 caller contract for backwards compatibility.)
 ```
 
 - [ ] **Step 4: Append "## Top-level orchestrator" section**
@@ -1093,7 +1093,7 @@ v2.0.0 caller contract for backwards compatibility.)
 After the Phase 8 section and before `## Output Format`, insert:
 
 ```markdown
-## Top-Level Orchestrator (v2.1.0)
+## Top-Level Orchestrator (v1.15.0)
 
 `scripts/release_check.sh` at the repo root runs every phase in sequence
 and renders the artifact. Used by both operators (manual pre-release
@@ -1122,7 +1122,7 @@ Actions run page.
 
 ```bash
 git add skills/release-validate/SKILL.md
-git commit -m "docs(release-validate): SKILL.md v2.1.0 — document Phase 6, 7, and orchestrator"
+git commit -m "docs(release-validate): SKILL.md v1.15.0 — document Phase 6, 7, and orchestrator"
 ```
 
 ---
@@ -1151,8 +1151,8 @@ Replace the auto-scaffolded `## [1.15.0] - <date>` block with:
 
 ### Added
 
-- **`release-validate` skill v2.1.0** — two new pre-release gates and a top-level orchestrator:
-  - **Phase 6 — Cross-repo-style coverage check.** `scripts/check_repo_style_coverage.sh` reads `references/repo-style-matrix.md` (a plain markdown table declaring per-skill style requirements) and reports gaps. WARN-only. Pre-v2.1.0 fixtures count as `kustomize-argocd`-style by convention; other styles require directory names containing the style keyword (e.g. `helm-only-basic`).
+- **`release-validate` skill v1.15.0** — two new pre-release gates and a top-level orchestrator:
+  - **Phase 6 — Cross-repo-style coverage check.** `scripts/check_repo_style_coverage.sh` reads `references/repo-style-matrix.md` (a plain markdown table declaring per-skill style requirements) and reports gaps. WARN-only. Pre-v1.15.0 fixtures count as `kustomize-argocd`-style by convention; other styles require directory names containing the style keyword (e.g. `helm-only-basic`).
   - **Phase 7 — Cross-AI-tool registration parity check.** `scripts/check_ai_tool_parity.sh` verifies that every Zeus command appears in all 4 surfaces (CLAUDE.md / AGENTS.md / GEMINI.md / docs/PROJECT.md) + has a Gemini TOML mirror. FAIL on any gap — strengthens the existing Phase 2 (file-reference validation) with command-registration validation.
   - **`scripts/release_check.sh` orchestrator + `pnpm release:check`** — runs Phases 4 + 5 + 6 + 7, writes per-phase JSON under `docs/reports/release-validate/<version>/`, and invokes the renderer for `RELEASE-CHECK.md`. Used by both operators and CI.
   - **CI integration** — `.github/workflows/release.yml` runs `scripts/release_check.sh` after the existing structure-test step and uploads `docs/reports/release-validate/` as a workflow artifact (`release-check-<tag>`).
@@ -1186,8 +1186,8 @@ Expected exit code: 0. Verdict: PASS or WARN (any FAIL halts the release).
 ```bash
 git add VERSION package.json .claude-plugin/marketplace.json .claude-plugin/plugin.json \
         .gemini/extensions/devops/gemini-extension.json CHANGELOG.md
-git commit -m "chore(release): v1.15.0 — release-validate v2.1.0 (Phase 6 + 7 + CI)"
-git tag -a v1.15.0 -m "Release v1.15.0 — release-validate v2.1.0 (Phase 6, 7, orchestrator, CI)"
+git commit -m "chore(release): v1.15.0 — release-validate v1.15.0 (Phase 6 + 7 + CI)"
+git tag -a v1.15.0 -m "Release v1.15.0 — release-validate v1.15.0 (Phase 6, 7, orchestrator, CI)"
 git push origin main
 git push origin v1.15.0
 ```

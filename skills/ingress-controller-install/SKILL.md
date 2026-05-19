@@ -10,7 +10,7 @@ description: >
   `ingress-nginx` via Kustomize-build inspection (no live cluster
   required). Use for new-cluster bootstrap, adding a new env overlay,
   or bumping the Traefik chart version.
-version: "2.0.0"
+version: "1.14.0"
 ---
 
 # ingress-controller-install Skill

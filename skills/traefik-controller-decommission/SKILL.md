@@ -10,7 +10,7 @@ description: >
   prune, then optional LB / IAM cleanup. Never runs `helm uninstall` —
   ArgoCD handles the actual resource removal via prune. Plan-only:
   emits a `commands.sh` for the operator to drive manually.
-version: "2.0.0"
+version: "1.14.0"
 ---
 
 # traefik-controller-decommission Skill

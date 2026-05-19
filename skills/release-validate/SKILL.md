@@ -10,7 +10,7 @@ description: >
   modifying setup scripts to confirm they still work end-to-end. Produces
   `docs/reports/release-validate/<version>/RELEASE-CHECK.md` suitable for the
   GitHub Release body.
-version: "2.0.0"
+version: "1.14.0"
 ---
 
 # Release Validation Skill
