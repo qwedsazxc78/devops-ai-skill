@@ -293,7 +293,7 @@ npx skills update
 | nginx-to-traefik | Zeus | NGINX Ingress 类别替换为 Traefik Ingress，支持并行运行与 DNS A-record 切换。 |
 | nginx-to-gateway | Zeus | 薄协调器：在单一 session 中串联 nginx-to-traefik → gateway-api-migration，生成合并报告。 |
 | repo-detect | 共用 | 仓库类型检测 |
-| release-validate | 共用 | 发布就绪验证 |
+| release-validate | 共用 | 发布就绪验证 — Phase 4~7 全自动检查（fixture 测试、Shell 可移植性、跨库样式覆盖率、AI 工具同步）。发布前执行 `pnpm release:check`。(v1.15.0+) |
 
 ## 项目结构
 

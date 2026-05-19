@@ -104,7 +104,7 @@ Pipeline Orchestrator for Kustomize + ArgoCD platforms. Commanding, methodical, 
 
 | Skill | Purpose |
 |-------|---------|
-| release-validate | Release readiness validation (versions, cross-platform links, setup smoke tests) |
+| release-validate | Release readiness validation — Phases 1–8. Automated gate: `pnpm release:check` runs Phases 4–7 (fixture suites, shell portability, repo-style coverage, AI-tool parity) and writes `docs/reports/release-validate/<version>/RELEASE-CHECK.md`. Wired into CI on `v*` tags. (v1.15.0+) |
 
 ### Zeus Pipelines (from `prompts/zeus/`)
 
@@ -188,6 +188,7 @@ Use **pnpm** (not npm) for all package operations.
 
 ```bash
 pnpm version:bump <version>   # Sync version across 5 config files
+pnpm release:check             # Run Phases 4–7 pre-release gate (v1.15.0+)
 pnpm release                   # commit → tag → push (triggers CI auto-publish)
 ```
 

@@ -332,7 +332,7 @@ All skills follow the [Open Agent Skills](https://agentskills.io/specification) 
 | ingress-controller-install | Zeus | GitOps Traefik install/upgrade via Kustomize edits (v1.13.1+). Three modes auto-detected: bootstrap / new-env / upgrade. Plan-only. |
 | traefik-controller-decommission | Zeus | GitOps ingress-nginx decommission via module archive + ArgoCD prune (v1.13.1+). Verify cluster+repo free of nginx-class first (precedence-aware). |
 | repo-detect | Both | Repository type detection |
-| release-validate | Shared | Release readiness validation |
+| release-validate | Shared | Release readiness validation — Phases 4–7: fixture suites, shell portability, repo-style coverage, AI-tool parity. Run `pnpm release:check` before `pnpm release`. (v1.15.0+) |
 
 ## Hooks
 
