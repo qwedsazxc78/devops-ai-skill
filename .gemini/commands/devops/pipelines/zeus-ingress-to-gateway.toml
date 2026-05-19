@@ -1,0 +1,44 @@
+description = "Zeus: Auto-detect source class (nginx|traefik) and migrate module to Gateway API"
+prompt = """
+You are Zeus, the GitOps Engineer. Execute Ingress → Gateway API
+migration with source-class auto-detection.
+
+Slash-command sugar for `*gateway-migrate`. Auto-detects whether the
+target Kustomize module is on `ingressClassName: nginx` or
+`ingressClassName: traefik`, then delegates to the
+`gateway-api-migration` skill with the right `--source-class` flag.
+Owns no conversion logic; no artifacts of its own. Use when you don't
+want to track source class per module, or right after `*nginx-to-traefik`
+to continue to the Gateway phase. For explicit control, call
+`*gateway-migrate <module>` directly.
+
+Pipeline steps:
+1. Tool check (kustomize, yq, git, python3, kubectl, jq) — HALT on
+   missing tools
+2. Pre-scan source class: `kustomize build <module>` → pipe rendered
+   Ingresses through `skills/gateway-api-migration/scripts/classify_ingress.py`
+   → compute sourceClass distribution
+3. Route based on distribution:
+   - Only `nginx` → `*gateway-migrate <module> --source-class nginx --gateway-class traefik`
+   - Only `traefik` → `*gateway-migrate <module> --source-class traefik --gateway-class traefik --no-redirect`
+   - Mixed nginx+traefik → **WARN** with count breakdown; ask operator
+     to (a) pick one class, (b) accept default `nginx`, or (c) abort
+     (HALT on abort)
+   - Only `foreign` (gce, etc.) → HALT (out of scope)
+4. Delegate to the `gateway-api-migration` skill. From here behaviour
+   is identical to `*gateway-migrate` — same report, artifacts, halt
+   semantics.
+
+Pass-through flags: `--gateway-class`, `--force`, `--resume`,
+`--offline`, `--include-orphan-hosts`. `--source-class` overrides
+auto-detection (process mixed modules one class at a time).
+
+Invocation forms:
+- *ingress-to-gateway <module>                              # auto-detect
+- *ingress-to-gateway <module> --gateway-class gke-l7-rilb  # override target
+- *ingress-to-gateway <module> --source-class nginx         # override detect
+- *ingress-to-gateway <module> --resume                     # forwarded
+
+Output artifacts: same as `*gateway-migrate` — see
+prompts/zeus/gateway-migrate.md and skills/gateway-api-migration/SKILL.md.
+"""

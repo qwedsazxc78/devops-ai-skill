@@ -1,0 +1,29 @@
+{
+  "mode": "built",
+  "overlaysScanned": 1,
+  "ingressesFound": 1,
+  "inventory": [
+    {
+      "service": "dashboard",
+      "namespace": "monitoring",
+      "sourceClass": "traefik",
+      "envs": ["dev"],
+      "modulePathPerEnv": {
+        "dev": "common.service/overlays/dev"
+      },
+      "hostsPerEnv": {
+        "dev": ["dashboard.dev.awoo.org", "panel.dev.awoo.org"]
+      },
+      "annotations": {
+        "total": 16,
+        "unknownLikely": 0,
+        "cors": true,
+        "authPresent": false,
+        "securityHeadersPresent": false,
+        "wafPresent": false
+      },
+      "tlsMode": "none",
+      "backendResolved": true
+    }
+  ]
+}

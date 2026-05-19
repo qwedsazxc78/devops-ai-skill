@@ -1,0 +1,3 @@
+schemaVersion: 1
+services:
+  legacy-gce-app: standard

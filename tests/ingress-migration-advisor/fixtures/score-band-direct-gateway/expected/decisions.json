@@ -1,0 +1,20 @@
+{
+  "decisions": [
+    {
+      "service": "grafana",
+      "path": "direct-gateway",
+      "advisoryPath": "direct-gateway",
+      "vetoReason": null,
+      "overrideReason": null,
+      "suggestedCommand": "*gateway-migrate common.service/overlays/dev --source-class nginx --gateway-class traefik"
+    },
+    {
+      "service": "kibana",
+      "path": "direct-gateway",
+      "advisoryPath": "direct-gateway",
+      "vetoReason": null,
+      "overrideReason": null,
+      "suggestedCommand": "*gateway-migrate common.service/overlays/dev --source-class nginx --gateway-class traefik"
+    }
+  ]
+}

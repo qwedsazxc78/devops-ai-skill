@@ -1,0 +1,29 @@
+{
+  "mode": "built",
+  "overlaysScanned": 1,
+  "ingressesFound": 1,
+  "inventory": [
+    {
+      "service": "legacy-gce-app",
+      "namespace": "legacy",
+      "sourceClass": "foreign",
+      "envs": ["dev"],
+      "modulePathPerEnv": {
+        "dev": "common.service/overlays/dev"
+      },
+      "hostsPerEnv": {
+        "dev": ["legacy.dev.awoo.org"]
+      },
+      "annotations": {
+        "total": 3,
+        "unknownLikely": 0,
+        "cors": false,
+        "authPresent": false,
+        "securityHeadersPresent": false,
+        "wafPresent": false
+      },
+      "tlsMode": "managed-cert",
+      "backendResolved": true
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "decisions": [
+    {
+      "service": "legacy-gce-app",
+      "path": "defer",
+      "advisoryPath": "defer",
+      "vetoReason": "foreign-class",
+      "overrideReason": null,
+      "suggestedCommand": null
+    }
+  ]
+}

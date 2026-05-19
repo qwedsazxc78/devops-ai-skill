@@ -1,0 +1,12 @@
+{
+  "decisions": [
+    {
+      "service": "dashboard",
+      "path": "direct-gateway",
+      "advisoryPath": "direct-gateway",
+      "vetoReason": null,
+      "overrideReason": null,
+      "suggestedCommand": "*gateway-migrate common.service/overlays/dev --source-class traefik --gateway-class traefik --no-redirect"
+    }
+  ]
+}

@@ -1,0 +1,51 @@
+{
+  "mode": "built",
+  "overlaysScanned": 1,
+  "ingressesFound": 2,
+  "inventory": [
+    {
+      "service": "grafana",
+      "namespace": "monitoring",
+      "sourceClass": "nginx",
+      "envs": ["dev"],
+      "modulePathPerEnv": {
+        "dev": "common.service/overlays/dev"
+      },
+      "hostsPerEnv": {
+        "dev": ["grafana.dev.awoo.org"]
+      },
+      "annotations": {
+        "total": 2,
+        "unknownLikely": 0,
+        "cors": false,
+        "authPresent": false,
+        "securityHeadersPresent": false,
+        "wafPresent": false
+      },
+      "tlsMode": "secret",
+      "backendResolved": true
+    },
+    {
+      "service": "kibana",
+      "namespace": "logging",
+      "sourceClass": "nginx",
+      "envs": ["dev"],
+      "modulePathPerEnv": {
+        "dev": "common.service/overlays/dev"
+      },
+      "hostsPerEnv": {
+        "dev": ["kibana.dev.awoo.org"]
+      },
+      "annotations": {
+        "total": 3,
+        "unknownLikely": 0,
+        "cors": false,
+        "authPresent": false,
+        "securityHeadersPresent": false,
+        "wafPresent": false
+      },
+      "tlsMode": "secret",
+      "backendResolved": true
+    }
+  ]
+}

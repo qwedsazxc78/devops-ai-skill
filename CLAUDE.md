@@ -26,6 +26,8 @@ On session start:
 | *scaffold | `prompts/horus/scaffold.md` |
 | *cicd | `prompts/horus/cicd.md` |
 | *health | `prompts/horus/health.md` |
+| *install-traefik | `prompts/horus/install-traefik-controller.md` |
+| *decommission-nginx | `prompts/horus/decommission-nginx-controller.md` |
 
 ## Zeus Commands
 
@@ -41,4 +43,5 @@ On session start:
 | *gateway-migrate | `prompts/zeus/gateway-migrate.md` |
 | *nginx-to-traefik | `prompts/zeus/nginx-to-traefik.md` |
 | *nginx-to-gateway | `prompts/zeus/nginx-to-gateway.md` |
+| *ingress-to-gateway | `prompts/zeus/ingress-to-gateway.md` |
 | *ingress-migration-advisor | `prompts/zeus/ingress-migration-advisor.md` |

@@ -1,0 +1,17 @@
+{
+  "scores": [
+    {
+      "service": "argocd-server",
+      "vetoed": true,
+      "vetoReason": "critical-tier",
+      "tier": "critical",
+      "dimensions": {},
+      "total": null,
+      "rationale": "critical-tier veto (advisory: see decision step)"
+    }
+  ],
+  "warnings": [],
+  "tierMap": {
+    "argocd-server": "critical"
+  }
+}
