@@ -2,15 +2,16 @@
 name: release-validate
 description: >
   Validates package release readiness across version consistency, cross-platform
-  link integrity, npm package content, setup script smoke testing, **skill
-  fixture suite runs (Phase 4)**, **shell portability static checks (Phase 5)**,
-  and **release artifact generation (Phase 8)**. Use before running
-  `pnpm release` to catch issues that structure tests may miss. Also use when
-  adding new skills or pipelines to verify all platforms stay in sync, or after
-  modifying setup scripts to confirm they still work end-to-end. Produces
-  `docs/reports/release-validate/<version>/RELEASE-CHECK.md` suitable for the
-  GitHub Release body.
-version: "1.14.0"
+  link integrity, npm package content, setup script smoke testing, skill
+  fixture suite runs (Phase 4), shell portability static checks (Phase 5),
+  cross-repo-style fixture coverage (Phase 6, shipped in v1.15.0), cross-AI-tool
+  registration parity (Phase 7, shipped in v1.15.0), and release artifact generation
+  (Phase 8). Use before running `pnpm release` to catch issues that structure
+  tests may miss. Top-level orchestrator at `scripts/release_check.sh` runs
+  every phase and is wired into `.github/workflows/release.yml` as a
+  pre-publish gate. Produces `docs/reports/release-validate/<version>/RELEASE-CHECK.md`
+  suitable verbatim for the GitHub Release body.
+version: "1.15.0"
 ---
 
 # Release Validation Skill
@@ -405,9 +406,57 @@ Rules:
 **Gate:** any ERROR → release blocked. WARN-only → release allowed but
 flagged.
 
+## Phase 6: Cross-Repo-Style Coverage (v1.15.0)
+
+For each "Kustomize-touching skill" listed in
+`references/repo-style-matrix.md`, verify fixtures exist for each declared
+repo style (`kustomize-argocd`, `helm-only`, `mixed`). Delegates to
+`scripts/check_repo_style_coverage.sh`:
+
+```bash
+bash skills/release-validate/scripts/check_repo_style_coverage.sh --repo-root .
+```
+
+Output JSON: `{scanned, matrix: [...], missing: ["skill:style"], coveragePct, verdict}`.
+
+**Convention**: any pre-v1.15.0 fixture under `tests/<skill>/fixtures/`
+counts as `kustomize-argocd`-style (matches the current reality). Other
+styles must have a directory whose name contains the style keyword
+(e.g. `tests/<skill>/fixtures/helm-only-basic/`).
+
+**Gate**: WARN-only. Coverage gaps are surfaced but do not block release —
+they're follow-up work, not regressions. To upgrade a row to FAIL, edit
+the matrix and add a new column with `required` (no code change needed).
+
+## Phase 7: Cross-AI-Tool Registration Parity (v1.15.0)
+
+For every Zeus command (file under `prompts/zeus/`), verify it is
+registered across all 4 AI-tool surfaces. Delegates to
+`scripts/check_ai_tool_parity.sh`:
+
+```bash
+bash skills/release-validate/scripts/check_ai_tool_parity.sh --repo-root . --all
+```
+
+Checks per command:
+
+| # | Where | Required |
+|---|---|---|
+| 1 | `prompts/zeus/<cmd>.md` exists | yes |
+| 2 | `.gemini/commands/devops/pipelines/zeus-<cmd>.toml` exists | yes |
+| 3 | `CLAUDE.md` mentions `*<cmd>` | yes |
+| 4 | `AGENTS.md` mentions `*<cmd>` | yes |
+| 5 | `GEMINI.md` mentions `*<cmd>` | yes |
+| 6 | `docs/PROJECT.md` mentions `*<cmd>` | yes |
+
+**Gate**: FAIL on any gap. Every Zeus command must surface identically
+across Claude Code, OpenAI Codex CLI, Google Gemini CLI, and Google
+Antigravity. Strengthens Phase 2 (cross-platform link validation), which
+only checks file references, not command registration.
+
 ## Phase 8: Release Artifact Generation (v2.0.0)
 
-Combine Phase 4 + Phase 5 outputs into a single Markdown artifact at
+Combine Phases 4 + 5 + 6 + 7 outputs into a single Markdown artifact at
 `docs/reports/release-validate/<version>/RELEASE-CHECK.md`. Suitable
 verbatim as the body of `gh release create --notes-file ...` or as the
 npm publish README excerpt.
@@ -416,25 +465,55 @@ npm publish README excerpt.
 VERSION=$(cat VERSION) \
   FIXTURES_JSON=/tmp/fixtures.json \
   PORTABILITY_JSON=/tmp/portability.json \
+  REPO_STYLE_JSON=/tmp/repo-style.json \
+  AI_TOOL_PARITY_JSON=/tmp/ai-parity.json \
   OUTPUT="docs/reports/release-validate/${VERSION}/RELEASE-CHECK.md" \
   bash skills/release-validate/scripts/render_release_artifact.sh
 ```
 
+(`REPO_STYLE_JSON` and `AI_TOOL_PARITY_JSON` are optional — when absent,
+the artifact renders Phase 6 + 7 verdicts as `SKIPPED`, matching the
+v1.14.0 caller contract for backwards compatibility.)
+
 The artifact contains:
 - Overall verdict (PASS / WARN / FAIL — worst of all phases)
-- Per-phase verdict table
+- Per-phase verdict table (4 rows: Phases 4–7)
 - Per-suite breakdown (Phase 4)
 - Per-issue table (Phase 5)
+- Phase 6 + 7 detail sections (coverage metrics and registration gaps)
 - "How to interpret" + "Next steps" sections
 
 The renderer also prints a one-line summary to stdout for CI logs:
 
 ```
-release-validate v1.14.0: PASS (fixtures=OK, portability=OK)
+release-validate v1.15.0: PASS (fixtures=OK, portability=OK, repoStyle=OK, parity=OK)
 ```
 
 **Gate:** if overall verdict is `FAIL`, the renderer exits 1 — `pnpm release`
 should refuse to proceed.
+
+## Top-Level Orchestrator (v1.15.0)
+
+`scripts/release_check.sh` at the repo root runs every phase in sequence
+and renders the artifact. Used by both operators (manual pre-release
+sanity check) and CI (`.github/workflows/release.yml`).
+
+```bash
+pnpm release:check    # or: bash scripts/release_check.sh
+```
+
+The orchestrator:
+1. Creates `docs/reports/release-validate/<version>/`
+2. Runs Phase 4 → `fixtures.json`
+3. Runs Phase 5 → `portability.json`
+4. Runs Phase 6 → `repo-style.json`
+5. Runs Phase 7 → `ai-parity.json`
+6. Invokes the renderer → `RELEASE-CHECK.md`
+7. Exits 1 if overall verdict is FAIL, else 0
+
+CI uploads `docs/reports/release-validate/` as a workflow artifact named
+`release-check-<tag>` so the rendered Markdown is downloadable from the
+Actions run page.
 
 ## Output Format
 
