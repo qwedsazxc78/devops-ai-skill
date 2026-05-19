@@ -27,8 +27,6 @@ Detect the repository type to choose the right agent:
 | *scaffold | Scaffold new Helm module |
 | *cicd | Improve CI/CD pipeline |
 | *health | Platform health check |
-| *install-traefik | Install/upgrade Traefik controller with ingress-nginx coexistence checks (plan-only) |
-| *decommission-nginx | Safe uninstall plan for ingress-nginx after migrations + DNS bake |
 
 ### Horus Skills
 
@@ -37,8 +35,6 @@ Detect the repository type to choose the right agent:
 - `$terraform-security` — Security scanning
 - `$cicd-enhancer` — CI/CD pipeline improvement
 - `$helm-scaffold` — New module generation
-- `$ingress-controller-install` — Plan-only Traefik Helm install with coexistence checks
-- `$traefik-controller-decommission` — Plan-only ingress-nginx uninstall after migration
 
 ## Zeus Commands (GitOps — Kustomize + ArgoCD)
 
@@ -56,6 +52,8 @@ Detect the repository type to choose the right agent:
 | *nginx-to-gateway | `prompts/zeus/nginx-to-gateway.md` |
 | *ingress-to-gateway | Auto-detect source class (nginx/traefik) then migrate to Gateway API |
 | *ingress-migration-advisor | Read-only EOL planner: scores services and recommends a migration path per service |
+| *install-traefik | GitOps-flavored Traefik bootstrap/new-env/upgrade — edits common.traefik/, plan-only |
+| *decommission-nginx | GitOps-flavored ingress-nginx decommission — archives module + ArgoCD prune, plan-only |
 | *migration-quickstart | 30-second orientation: decision tree + 5-command table + sample invocations (no scan, no prompts) |
 
 ### Zeus Skills
@@ -67,6 +65,8 @@ Detect the repository type to choose the right agent:
 - `$nginx-to-traefik` — Class-swap NGINX Ingress to Traefik Ingress
 - `$nginx-to-gateway` — Chained NGINX → Traefik → Gateway API migration
 - `$ingress-migration-advisor` — Read-only planner for ingress-nginx EOL migration
+- `$ingress-controller-install` — GitOps Traefik install/upgrade via Kustomize edits
+- `$traefik-controller-decommission` — GitOps ingress-nginx decommission via module archive + ArgoCD prune
 
 ### Shared Skills
 

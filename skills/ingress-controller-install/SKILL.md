@@ -1,305 +1,262 @@
 ---
 name: ingress-controller-install
 description: >
-  Idempotent install or upgrade of the Traefik Ingress Controller via Helm,
-  configured for safe coexistence with an existing `ingress-nginx` controller
-  (distinct IngressClass, distinct LoadBalancer IP, no port collision). Use
-  when standing up Traefik on a cluster that already serves traffic through
-  `ingress-nginx`, when bumping a Traefik chart version, or when validating
-  controller coexistence before a migration. Plan-only — never executes
-  `helm install`, `helm upgrade`, or `kubectl apply`.
-version: "1.0.0"
+  GitOps-flavored Traefik Ingress Controller bootstrap, env addition, or
+  chart upgrade in a Kustomize + ArgoCD repo. Operates exclusively on
+  files under `common.traefik/` (base, overlays, argocd manifests).
+  Never runs `helm install` or `helm upgrade` — those are ArgoCD's job.
+  Plan-only: edits Kustomize files, emits the `git add` / commit / push
+  commands, and the operator drives git. Validates coexistence with
+  `ingress-nginx` via Kustomize-build inspection (no live cluster
+  required). Use for new-cluster bootstrap, adding a new env overlay,
+  or bumping the Traefik chart version.
+version: "2.0.0"
 ---
 
 # ingress-controller-install Skill
 
-Invoked by Horus pipeline `*install-traefik`.
+Invoked by Zeus pipeline `*install-traefik`. This is the GitOps companion
+to `*decommission-nginx` — both manipulate the `common.*/` Kustomize
+modules ArgoCD reconciles, never the live cluster directly.
 
-This skill produces an **install plan** for Traefik that an operator runs
-manually. It detects whether Traefik is already deployed, branches into
-either an install or upgrade flow, validates coexistence with
-`ingress-nginx`, renders a parameterized `values.yaml`, and emits a
-ready-to-run `install.sh` containing the exact `helm` command. The skill
-never invokes `helm`, `kubectl`, or any state-mutating command itself.
+## What this skill is NOT
+
+- Not a `helm install` / `helm upgrade` runner — those would conflict
+  with ArgoCD reconciling the same release.
+- Not a cluster mutator — the only side effects are edits to repo files
+  under `common.traefik/`.
+- Not an ArgoCD application applier — the operator runs
+  `kubectl apply -f common.traefik/argocd/<env>.yaml` after committing.
+
+## Modes
+
+The skill auto-detects which of three modes applies, based on repo state:
+
+| Mode | Trigger | Action |
+|---|---|---|
+| `bootstrap` | `common.traefik/` does not exist | Scaffold the whole module from `references/traefik-module-template.yaml` |
+| `new-env` | `common.traefik/base/` exists, `overlays/<target-env>/` does not | Copy `overlays/dev/` → `overlays/<target-env>/`, prompt operator for env-specific overrides |
+| `upgrade` | `common.traefik/overlays/<target-env>/` exists | Bump the Traefik chart `version:` in `base/kustomization.yaml` AND every `overlays/*/kustomization.yaml`, idempotent |
+
+Override the detected mode with `--mode <bootstrap|new-env|upgrade>`.
 
 ## Canonical references
 
 | File | When to read |
 |---|---|
-| `references/coexistence-checklist.md` | Step 0, Step 4 — pre/post-install cluster checks |
-| `references/values-template.yaml` | Step 5 — base Helm values, parameterized per env |
+| `references/coexistence-checklist.md` | Step 3 — pre-commit checks for IngressClass / LB IP / port collision (read-only, Kustomize-build inspection) |
+| `references/values-template.yaml` | Step 2 (bootstrap) — embedded into `base/app.values.yaml` |
+| `references/traefik-module-template.yaml` | Step 2 (bootstrap) — Kustomize scaffolding skeleton (kustomization.yaml + base + overlays + argocd) |
 
 ## Bundled scripts
 
 | Script | Used by | Purpose |
 |---|---|---|
-| `scripts/detect_existing_install.sh` | Step 1 | helm + kubectl probes for existing Traefik |
-| `scripts/validate_coexistence.sh` | Step 4 | Class, LB IP, and port collision checks |
+| `scripts/detect_mode.sh` | Step 1 | Inspect repo, decide between bootstrap / new-env / upgrade |
+| `scripts/validate_coexistence_kustomize.sh` | Step 3 | Build the planned overlay AND any existing nginx overlay; verify no class / port / LB collision |
+| `scripts/upgrade_chart_version.sh` | Step 4 (upgrade mode) | Atomic version bump across base + all overlays + pre-commit consistency check |
 
 ## Activation
 
-Triggered explicitly by `*install-traefik` from Horus. Not auto-triggered.
+Triggered explicitly by `*install-traefik` from Zeus. Not auto-triggered.
 
 ## Invocation forms
 
 ```
-*install-traefik                                 # interactive: detect + prompt
-*install-traefik --env <dev|stg|prd>             # render plan for one env
-*install-traefik --upgrade-only                  # only run if already installed
-*install-traefik --resume                        # continue from state.yaml
+*install-traefik                                # interactive: detect mode, prompt as needed
+*install-traefik --env dev                      # explicit target env
+*install-traefik --env prd --mode new-env       # force new-env mode
+*install-traefik --upgrade-to 40.1.0            # upgrade chart version on every overlay
+*install-traefik --resume <state-path>          # continue from state.yaml
 ```
 
 ## Output location
 
-All artifacts land under:
-
 ```
-docs/reports/ingress-controller-install/<ISO_DATE>/
-  state.yaml         # machine-readable plan + verdict
-  values.yaml        # rendered Traefik Helm values
-  install.sh         # exact `helm` command to run manually
+docs/reports/ingress-controller-install/<isodate>/
+  state.yaml          # machine-readable plan + verdict
+  plan.md             # operator-readable summary + commit message + git commands
+  diff.patch          # unified diff of all proposed file edits (pre-commit preview)
 ```
 
-`<ISO_DATE>` is the current `YYYY-MM-DD` UTC date.
+The skill **edits files in place** under `common.traefik/`. Before any
+edit it writes a backup to `docs/reports/.../backups/` (full file
+content, not a diff — matches the safety pattern from
+`gateway-api-migration`). On `kustomize build` failure post-edit, the
+backup is restored automatically.
 
 ## Step Flow
 
 | Step | Action | Script |
 |---|---|---|
-| 0 | Tool check (`helm`, `kubectl`, `yq`) | inline `command -v` |
-| 1 | Detect existing Traefik install | `detect_existing_install.sh` |
-| 2 | Gather operator inputs (install OR upgrade branch) | inline prompts |
-| 3 | Resolve target chart version (ArtifactHub) | inline curl |
-| 4 | Validate coexistence with `ingress-nginx` | `validate_coexistence.sh` |
-| 5 | Render `values.yaml` from `references/values-template.yaml` | inline templating |
-| 6 | Emit `install.sh` with the exact `helm` command | inline |
-| 7 | Write `state.yaml`, print verdict, HALT (plan-only) | inline |
+| 0 | Tool check (`kustomize`, `yq`, `git`) | inline `command -v` |
+| 1 | Detect mode + target env | `detect_mode.sh` |
+| 2 | Branch on mode: scaffold OR copy-env OR identify upgrade scope | inline |
+| 3 | Validate coexistence (read-only Kustomize-build inspection) | `validate_coexistence_kustomize.sh` |
+| 4 | Apply edits to `common.traefik/`, with backups | `upgrade_chart_version.sh` (upgrade) or inline (bootstrap / new-env) |
+| 5 | `kustomize build` the target overlay; rollback from backups on failure | inline |
+| 6 | Render plan.md + diff.patch; print git commands | inline |
 
 ### Step 0 — Tool check
 
-Run `command -v helm kubectl yq`. HALT on any missing. Print actionable
-install hints (`brew install helm`, `gcloud components install kubectl`,
-`brew install yq`).
+Run `command -v kustomize yq git`. HALT on any missing.
 
-### Step 1 — Detect existing install
+### Step 1 — Detect mode
 
-Invoke `scripts/detect_existing_install.sh`. It runs two probes:
+Invoke `scripts/detect_mode.sh --repo-root . --target-env <env>`. The
+script returns JSON:
 
-1. `helm list -A -o json -f '^traefik$'` — match release name `traefik`.
-2. `kubectl get ingressclass -o json` — enumerate registered classes.
-
-Write to `state.yaml.detection`:
-
-```yaml
-detection:
-  existingInstall: <bool>
-  currentVersion: "<chart-version or null>"
-  currentNamespace: "<namespace or null>"
-  existingClasses: ["nginx", "traefik?", ...]
+```json
+{
+  "mode": "bootstrap" | "new-env" | "upgrade",
+  "moduleExists": true,
+  "baseExists": true,
+  "targetEnvExists": false,
+  "existingOverlays": ["dev", "stg", "prd"],
+  "currentChartVersion": "39.0.8"
+}
 ```
 
-Branch:
-- `existingInstall: false` → **NEW INSTALL** flow (Step 2a).
-- `existingInstall: true`  → **UPGRADE** flow (Step 2b).
-- `--upgrade-only` was passed and `existingInstall: false` → HALT with
-  verdict `BLOCKED` and message "no existing Traefik release found".
+If `--mode` is explicit, the script validates it's compatible with the
+detected state (e.g., refuses to bootstrap if `common.traefik/` already
+exists, unless `--force` is passed).
 
-### Step 2a — Inputs (NEW INSTALL)
+### Step 2 — Branch on mode
 
-Prompt the operator (use defaults aggressively, never invent LB IPs):
+**`bootstrap`**: Read `references/traefik-module-template.yaml`,
+substitute env names, write to `common.traefik/{base,overlays/<env>,argocd}/`.
+Read `references/values-template.yaml` and write to
+`common.traefik/base/app.values.yaml`. The values file is parameterized
+on `${INGRESS_CLASS_NAME}` (default `traefik`), `${LB_IP}` (operator
+must supply — never derive from cluster), and `${GATEWAY_API_ENABLED}`
+(default `false`).
 
-| Prompt | Default | Notes |
-|---|---|---|
-| `env` | (required) | One of `dev`, `stg`, `prd` |
-| `namespace` | `traefik` | Will be created if missing |
-| `ingressClassName` | `traefik` | MUST differ from any existing class |
-| `lbIp` | (required) | Static IP. May be a GCP `compute address` name (e.g. `traefik-dev-ip`) — the operator resolves it — or a raw IPv4. Never auto-derive. |
-| `chartVersion` | latest from ArtifactHub (Step 3) | Operator may pin |
-| `gatewayApiEnabled` | `false` | Enables `providers.kubernetesGateway` |
+**`new-env`**: `cp -r common.traefik/overlays/<source-env>/ common.traefik/overlays/<target-env>/`
+where `<source-env>` defaults to `dev`. Prompt operator for env-specific
+overrides (LB IP, log level, replica count). Apply substitutions.
 
-Write to `state.yaml.inputs`.
+**`upgrade`**: No file structure changes; only version bumps in Step 4.
 
-### Step 2b — Inputs (UPGRADE)
+### Step 3 — Validate coexistence
 
-Read `state.yaml.detection.currentVersion` as the **from** version. Prompt:
+Invoke `scripts/validate_coexistence_kustomize.sh --target-env <env>`.
 
-| Prompt | Default | Notes |
-|---|---|---|
-| `chartVersion` | latest from Step 3 | Show diff with current |
-| `preserveExistingValues` | `true` | Recommend `helm get values traefik -n <ns>` and merge |
-| `gatewayApiEnabled` | preserve current | Detect from existing values |
+The script does **read-only Kustomize-build inspection** — no live
+cluster queries:
 
-`namespace`, `ingressClassName`, and `lbIp` are read from the live release
-and re-validated in Step 4, never re-prompted.
-
-### Step 3 — Resolve target chart version
-
-Query ArtifactHub for the canonical Traefik chart:
-
-```
-GET https://artifacthub.io/api/v1/packages/helm/traefik/traefik
-```
-
-Extract `version` and `app_version`. If the operator pinned a version in
-Step 2, use that; otherwise default to the latest. Record both fields:
-
-```yaml
-inputs:
-  chartVersion: "<resolved>"
-  chartAppVersion: "<resolved>"
-```
-
-For upgrades, present a one-line diff (`<currentVersion> -> <chartVersion>`)
-and a `Patch | Minor | Major` classification. Warn loudly on major.
-
-### Step 4 — Validate coexistence
-
-Invoke `scripts/validate_coexistence.sh` with:
-- `--ingress-class <ingressClassName>`
-- `--lb-ip <lbIp>`
-- `--namespace <namespace>`
-
-The script asserts three invariants and writes one boolean each to
-`state.yaml.validation`:
-
-| Check | Pass condition |
+| Check | How |
 |---|---|
-| `classCollision: false` | Chosen `ingressClassName` is **not** in the existing `kubectl get ingressclass` output (excluding any pre-existing `traefik` class on UPGRADE). |
-| `ipCollision: false` | Chosen `lbIp` is **not** an IP currently bound to any `Service` of type `LoadBalancer` belonging to a different controller (specifically: not bound to any Service in the `ingress-nginx` namespace, and not in any Service annotated with `kubernetes.io/ingress.class: nginx`). |
-| `portCollision: false` | The target namespace either does not exist yet, or contains no Service of `type: LoadBalancer` already exposing ports 80/443 under a different release. |
+| `classCollision` | Run `kustomize build` on the target overlay + every other `common.*/overlays/<env>/`. Extract every `IngressClass` and every `kubernetes.io/ingress.class` / `spec.ingressClassName`. The proposed Traefik class must not appear in any other module's built output (unless mode is `upgrade` — then collision against the existing Traefik class is expected). |
+| `lbIpCollision` | Grep `loadBalancerIP:` and `kubernetes.io/load-balancer-source-ranges` annotations across all module builds. Proposed IP must not appear elsewhere. |
+| `portCollision` | For Services with `type: LoadBalancer`, port 80/443 must not be claimed by a non-Traefik release in the target namespace. |
 
-On **any** collision, HALT with verdict `BLOCKED` and print remediation
-guidance from `references/coexistence-checklist.md`. Do not write
-`values.yaml` or `install.sh`.
+On any collision: HALT with verdict `BLOCKED`. Plan files NOT written.
 
-The reference checklist also documents the post-install verification
-commands the operator should run after they execute `install.sh`.
+### Step 4 — Apply edits
 
-### Step 5 — Render values.yaml
+**`bootstrap`** and **`new-env`**: write the planned files directly.
 
-Read `references/values-template.yaml`. Substitute these placeholders:
+**`upgrade`**: invoke `scripts/upgrade_chart_version.sh --target <version>`.
+The script:
 
-| Placeholder | Source |
-|---|---|
-| `${ENV}` | `inputs.env` |
-| `${NAMESPACE}` | `inputs.namespace` |
-| `${INGRESS_CLASS_NAME}` | `inputs.ingressClassName` |
-| `${LB_IP}` | `inputs.lbIp` |
-| `${GATEWAY_API_ENABLED}` | `inputs.gatewayApiEnabled` (string `true`/`false`) |
+1. Backs up `base/kustomization.yaml` + all `overlays/*/kustomization.yaml`.
+2. Updates `helmCharts[0].version` in each (idempotent via `yq -i`).
+3. Verifies all updated versions match the target (consistency check —
+   the `traefik-version-consistency` pre-commit hook in the consumer
+   repo will enforce this, but the skill catches it first).
 
-Write the result to `docs/reports/ingress-controller-install/<ISO_DATE>/values.yaml`.
-
-The template is opinionated for coexistence:
-- `ingressClass.name = ${INGRESS_CLASS_NAME}`, `isDefaultClass: false`
-- `providers.kubernetesIngress.ingressClass = ${INGRESS_CLASS_NAME}`
-- `providers.kubernetesIngress.publishedService.enabled: true`
-- `providers.kubernetesGateway.enabled = ${GATEWAY_API_ENABLED}`
-- `service.spec.loadBalancerIP = ${LB_IP}` (kept under a comment block
-  noting the GCP `loadBalancerIP` deprecation; operators on newer clusters
-  swap this for `service.annotations` instead)
-- `ports.web` and `ports.websecure` keep upstream defaults (8000/8443
-  internally, 80/443 externally — no conflict with ingress-nginx pods)
-
-### Step 6 — Emit install.sh
-
-Render the exact command. For NEW INSTALL:
+### Step 5 — Build + rollback safety
 
 ```bash
-#!/usr/bin/env bash
-set -euo pipefail
-helm repo add traefik https://traefik.github.io/charts
-helm repo update traefik
-helm install traefik traefik/traefik \
-  --namespace ${NAMESPACE} \
-  --create-namespace \
-  --version ${CHART_VERSION} \
-  --values "$(dirname "$0")/values.yaml"
+kustomize build common.traefik/overlays/<target-env> > /tmp/built.yaml
 ```
 
-For UPGRADE:
+If exit != 0: restore all backups from
+`docs/reports/.../backups/`, mark verdict `FAIL`, HALT with the
+`kustomize` stderr. The repo is left identical to its pre-skill state.
+
+### Step 6 — Render plan + commit message
+
+Write `plan.md` with:
+- Detected mode + target env
+- Coexistence check results
+- File-level summary (created / modified / unchanged)
+- The exact git commands the operator runs next:
 
 ```bash
-#!/usr/bin/env bash
-set -euo pipefail
-helm repo update traefik
-helm upgrade traefik traefik/traefik \
-  --namespace ${NAMESPACE} \
-  --version ${CHART_VERSION} \
-  --reuse-values \
-  --values "$(dirname "$0")/values.yaml"
+git add common.traefik/  # or specific files
+git commit -m "feat(traefik): bootstrap controller for <env>"
+git push
+kubectl apply -f common.traefik/argocd/<env>.yaml  # only for bootstrap / new-env
 ```
 
-Write to `docs/reports/ingress-controller-install/<ISO_DATE>/install.sh`
-and `chmod +x` it. Record `plan.helmCommand` (the full one-liner) and
-`plan.valuesPath` and `plan.postInstallChecks` in `state.yaml`.
+Also write `diff.patch` (full unified diff) so the operator can preview
+exactly what changed before staging.
 
-### Step 7 — Verdict + HALT
-
-Write `state.yaml.verdict`:
-
-- `READY` — all validations passed, plan written. Print: "Run
-  `bash docs/reports/ingress-controller-install/<ISO_DATE>/install.sh`
-  when ready."
-- `BLOCKED` — at least one validation failed. Plan files NOT written.
-- `NEEDS_REVIEW` — major version bump, OR `existingClasses` includes
-  unfamiliar entries, OR ArtifactHub was unreachable and operator pinned
-  an unverified version. Plan files written, but require explicit
-  operator sign-off.
-
-**The skill never runs `helm` or `kubectl`.** Operator runs `install.sh`.
+**The skill never auto-commits.** Operator drives git.
 
 ## State YAML schema
 
 ```yaml
+schemaVersion: 1
+skillVersion: "2.0.0"
+runId: <ulid>
+createdAt: <iso>
 inputs:
-  env: dev | stg | prd
-  namespace: "traefik"
-  ingressClassName: "traefik"
-  chartVersion: "<semver>"
-  chartAppVersion: "<semver>"
-  lbIp: "<ipv4 or gcp-address-name>"
+  targetEnv: dev | stg | prd | <custom>
+  mode: bootstrap | new-env | upgrade | auto
+  upgradeTo: "<chart-version>" | null
+  ingressClassName: traefik
+  lbIp: "<operator-supplied>"
   gatewayApiEnabled: false
 detection:
-  existingInstall: false
-  currentVersion: null
-  currentNamespace: null
-  existingClasses: ["nginx"]
+  moduleExists: true
+  baseExists: true
+  targetEnvExists: false
+  existingOverlays: [dev, stg, prd]
+  currentChartVersion: "39.0.8"
 validation:
   classCollision: false
-  ipCollision: false
+  lbIpCollision: false
   portCollision: false
+  details: {}
 plan:
-  helmCommand: "helm install traefik traefik/traefik ..."
-  valuesPath: "docs/reports/ingress-controller-install/<date>/values.yaml"
-  postInstallChecks:
-    - "kubectl -n traefik rollout status deploy/traefik"
-    - "kubectl get ingressclass"
-    - "kubectl -n traefik get svc traefik -o jsonpath='{.status.loadBalancer.ingress[0].ip}'"
+  mode: upgrade
+  filesCreated: []
+  filesModified:
+    - {path: common.traefik/base/kustomization.yaml, backup: "...", sha256Before: "...", sha256After: "..."}
+  filesUnchanged: []
+  commitMessage: "chore(traefik): upgrade chart 39.0.8 → 40.1.0"
+  gitCommands: [...]
+  postApplyCommands:
+    - "kubectl apply -f common.traefik/argocd/dev.yaml"
 verdict: READY | BLOCKED | NEEDS_REVIEW
+reportPath: docs/reports/ingress-controller-install/<slug>/plan.md
 ```
 
-## Error Handling
+## Halt conditions
 
-- **Tool missing (Step 0)**: HALT. Verdict not written.
-- **`helm list` fails (Step 1)**: Cannot determine install state. HALT with
-  verdict `BLOCKED`, message "kubectl/helm context not reachable".
-- **ArtifactHub unreachable (Step 3)**: Fall back to operator-provided
-  version. Verdict becomes `NEEDS_REVIEW`.
-- **Coexistence violation (Step 4)**: HALT. Verdict `BLOCKED`. Do not write
-  `values.yaml` or `install.sh`. Print the specific failing check and the
-  remediation row from `references/coexistence-checklist.md`.
-- **Output directory already exists**: Append `-<HHMM>` suffix; never
-  overwrite a prior run's `state.yaml`.
+| Step | Halt cause |
+|---|---|
+| 0 | Required tool missing |
+| 1 | Mode mismatch (e.g., `--mode bootstrap` but `common.traefik/` exists), no `--force` |
+| 3 | Class / LB IP / port collision |
+| 5 | `kustomize build` fails post-edit (backups restored automatically) |
 
-## Dry-Run Support
+## Principle: GitOps-first
 
-This skill is **inherently plan-only**. Every run is a dry run from the
-cluster's perspective — no `helm` or `kubectl` mutations occur. The
-operator chooses when (or whether) to execute `install.sh`.
+Four invariants:
 
-## Dependencies
-
-- `helm` ≥ 3.12
-- `kubectl` with active context for the target cluster
-- `yq` (Mike Farah's Go implementation) for the validation script
-- `curl` for ArtifactHub queries
+1. **Never run `helm install` / `helm upgrade` directly.** The
+   HelmChartInflationGenerator embedded in
+   `common.traefik/overlays/<env>/kustomization.yaml` is the source of
+   truth. ArgoCD applies the rendered manifests when the operator
+   commits.
+2. **Never run `kubectl apply` directly.** The skill prints the
+   `kubectl apply -f common.traefik/argocd/<env>.yaml` command but does
+   not execute it.
+3. **Edit only `common.traefik/`.** No other module is touched.
+   Coexistence validation reads but never writes other modules.
+4. **Full-file backups before any edit.** On `kustomize build` failure
+   post-edit, the backup is restored. Failure mode is "repo unchanged",
+   not "repo half-edited".

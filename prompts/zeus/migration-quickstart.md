@@ -42,7 +42,7 @@ CLUSTER STATES
 
 DECISION TREE (default path: NGINX → Traefik Ingress → Gateway API)
 
-  S0 ──▶ *install-traefik          (Horus, plan-only Helm install)
+  S0 ──▶ *install-traefik          (Zeus, GitOps Kustomize edits to common.traefik/)
   │                                 │
   │                                 ▼
   └─────────────────────────────▶  S1
@@ -66,7 +66,7 @@ DECISION TREE (default path: NGINX → Traefik Ingress → Gateway API)
                                                                                          │
                                                                                          ▼
                                                                                   *decommission-nginx
-                                                                                  (Horus, plan-only uninstall)
+                                                                                  (Zeus, archive module + ArgoCD prune)
 ```
 
 ```mermaid
@@ -88,15 +88,15 @@ flowchart LR
 ```
 THE FIVE MIGRATION COMMANDS
 
-| Command                       | Agent | Scope             | When                                |
-|-------------------------------|-------|-------------------|-------------------------------------|
-| *install-traefik              | Horus | Cluster (1 env)   | Standing up Traefik next to nginx   |
-| *nginx-to-traefik <env>       | Zeus  | One env / batch   | Class swap: stay on Ingress API     |
-| *nginx-to-gateway <env>       | Zeus  | One env           | Full chain: end on Gateway API      |
-| *gateway-migrate <module>     | Zeus  | One module        | Explicit source/target              |
-| *ingress-to-gateway <module>  | Zeus  | One module        | Auto-detect nginx vs traefik source |
-| *ingress-migration-advisor    | Zeus  | Whole repo        | Read-only planner; per-service path |
-| *decommission-nginx           | Horus | Cluster           | Final uninstall of ingress-nginx    |
+| Command                       | Agent | Scope             | When                                            |
+|-------------------------------|-------|-------------------|-------------------------------------------------|
+| *install-traefik              | Zeus  | common.traefik/   | Bootstrap/new-env/upgrade via Kustomize edits   |
+| *nginx-to-traefik <env>       | Zeus  | One env / batch   | Class swap: stay on Ingress API                 |
+| *nginx-to-gateway <env>       | Zeus  | One env           | Full chain: end on Gateway API                  |
+| *gateway-migrate <module>     | Zeus  | One module        | Explicit source/target                          |
+| *ingress-to-gateway <module>  | Zeus  | One module        | Auto-detect nginx vs traefik source             |
+| *ingress-migration-advisor    | Zeus  | Whole repo        | Read-only planner; per-service path             |
+| *decommission-nginx           | Zeus  | common.ingress-*  | Archive module + ArgoCD prune (NO helm uninstall) |
 
 (Plus *gateway-migrate for explicit source/target — the underlying skill
 the auto-detect command delegates to.)

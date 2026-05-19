@@ -5,6 +5,61 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.13.1] - 2026-05-19
+
+Patch release: corrects the agent placement of `*install-traefik` and
+`*decommission-nginx` (v1.12.0 / v1.13.0 had them under Horus, which
+ran `helm install` / `helm uninstall` directly — incompatible with
+ArgoCD + Kustomize cluster setups). Relocated to Zeus and rewritten
+for GitOps semantics. Both commands now operate on Kustomize files
+under `common.traefik/` and `common.ingress-nginx/`, never invoke
+`helm` directly, and emit `git` / `kubectl apply -f .../argocd/<env>.yaml`
+for the operator. ArgoCD handles the actual helm install/uninstall.
+
+Treated as a patch (not a minor) because v1.12.0 / v1.13.0 adoption is
+very recent and the original placement was a design error rather than
+shipped functionality — no consumer should have built around it yet.
+Dry-run smoke-tested against eye-of-horus-gitops.
+
+### Changed
+
+- **`*install-traefik` relocated Horus → Zeus**, skill `ingress-controller-install` v2.0.0:
+  - Three auto-detected modes: `bootstrap` (scaffold `common.traefik/{base,overlays/<env>,argocd}/`), `new-env` (copy an existing overlay), `upgrade` (atomic chart-version bump across base + every overlay with full-file backups).
+  - Coexistence validation switched to read-only `kustomize build` inspection across `common.*/overlays/<env>/` (offline; no `kubectl` required).
+  - Scripts: `detect_mode.sh`, `validate_coexistence_kustomize.sh`, `upgrade_chart_version.sh` (replace `detect_existing_install.sh` + `validate_coexistence.sh`).
+- **`*decommission-nginx` relocated Horus → Zeus**, skill `traefik-controller-decommission` v2.0.0:
+  - Discover the ingress-nginx Kustomize module via `discover_nginx_module.sh` (greps `helmCharts[].name == ingress-nginx`, walks up to the module root). HALT on zero / ambiguous matches.
+  - Decommission plan rewritten as: archive Kustomize module → ArgoCD prunes resources → disable + delete the ArgoCD Application → optional GKE LB / IAM cleanup. No more `helm uninstall` command.
+  - `verify_no_nginx_class.sh` (precedence-aware from v1.12.0/v1.13.0) unchanged — already GitOps-correct.
+- **Quickstart decision tree** (`prompts/zeus/migration-quickstart.md`) re-labels both commands as Zeus.
+
+### Added
+
+- 2 Gemini TOML mirrors completing the relocation: `zeus-install-traefik.toml`, `zeus-decommission-nginx.toml`. (The v1.12.0 release had Horus pipelines without TOML mirrors; this patch completes them under Zeus.)
+- Test fixtures rewritten for GitOps mode detection:
+  - `tests/ingress-controller-install/fixtures/{bootstrap-empty-repo,new-env-needed,upgrade-existing}/` — exercise `detect_mode.sh`.
+  - `tests/traefik-controller-decommission/fixtures/discover-single-module/` — exercises `discover_nginx_module.sh` happy path.
+
+### Test infrastructure
+
+- TOML command count 24 → 26 in `tests/test-structure.sh`. Full suite: 410 (structure) + 83 (setup) + 135 (gateway-api-migration) + 18 across the 5 skill fixture suites = 656 PASS, 0 FAIL.
+
+### Smoke-test results (eye-of-horus-gitops, 2026-05-19)
+
+| Script | Verdict |
+|---|---|
+| `detect_mode --target-env dev` | `mode=upgrade, currentChartVersion=39.0.8` |
+| `detect_mode --target-env new-region` | `mode=new-env, currentChartVersion=39.0.8` |
+| `discover_nginx_module` | `verdict=NONE` (ingress-nginx is not GitOps-managed in this repo — correct) |
+| `verify_no_nginx_class --repo` | `verdict=BLOCKED, 6 overlays still have nginx-class Ingresses` |
+| `validate_coexistence_kustomize --target-class traefik --mode upgrade` | `classCollision=false, lbIpCollision=false, portCollision=false` |
+
+### Migration notes for v1.12.0 / v1.13.0 adopters
+
+- Old paths under `prompts/horus/install-traefik-controller.md` and `prompts/horus/decommission-nginx-controller.md` are gone (moved to `prompts/zeus/`).
+- State-file schemas unchanged (additive only). Existing reports under `docs/reports/ingress-controller-install/<date>/` and `docs/reports/traefik-controller-decommission/<date>/` from prior runs remain readable.
+- The `install.sh` artifact is no longer produced; the Helm command lives inside Kustomize's `HelmChartInflationGenerator` block instead. The new `plan.md` contains the operator's `git` + `kubectl apply` recipe.
+
 ## [1.13.0] - 2026-05-19
 
 ### Added
@@ -354,6 +409,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Bilingual documentation (EN + 繁體中文)
 
 <!-- Links -->
+[1.14.0]: https://github.com/qwedsazxc78/devops-ai-skill/compare/v1.13.0...v1.14.0
 [1.13.0]: https://github.com/qwedsazxc78/devops-ai-skill/compare/v1.12.0...v1.13.0
 [1.12.0]: https://github.com/qwedsazxc78/devops-ai-skill/compare/v1.11.0...v1.12.0
 [1.11.0]: https://github.com/qwedsazxc78/devops-ai-skill/compare/v1.10.0...v1.11.0
