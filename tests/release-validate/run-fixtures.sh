@@ -46,6 +46,38 @@ else
   FAIL=$((FAIL+1))
 fi
 
+
+P7="$ROOT_DIR/skills/release-validate/scripts/check_ai_tool_parity.sh"
+
+echo "[3] phase7-all-platforms (one command, registered everywhere)"
+out=$(bash "$P7" \
+  --repo-root "$SCRIPT_DIR/fixtures/phase7-all-platforms" \
+  --command example-cmd 2>/dev/null || true)
+verdict=$(echo "$out" | jq -r '.verdict')
+if [[ "$verdict" == "OK" ]]; then
+  echo "  [PASS] verdict=OK (registered on all 4 platforms)"
+  PASS=$((PASS+1))
+else
+  echo "  [FAIL] expected OK, got $verdict"
+  echo "  raw: $out"
+  FAIL=$((FAIL+1))
+fi
+
+echo "[4] phase7-missing-claude (CLAUDE.md row absent)"
+out=$(bash "$P7" \
+  --repo-root "$SCRIPT_DIR/fixtures/phase7-missing-claude" \
+  --command example-cmd 2>/dev/null || true)
+verdict=$(echo "$out" | jq -r '.verdict')
+gaps=$(echo "$out" | jq -r '[.commands[].gaps[].platform] | first // "none"')
+if [[ "$verdict" == "FAIL" && "$gaps" == "claude" ]]; then
+  echo "  [PASS] verdict=FAIL, gap=claude"
+  PASS=$((PASS+1))
+else
+  echo "  [FAIL] expected FAIL+claude gap; got verdict=$verdict gap=$gaps"
+  echo "  raw: $out"
+  FAIL=$((FAIL+1))
+fi
+
 echo ""
 echo "release-validate: $PASS passed, $FAIL failed"
 [[ $FAIL -gt 0 ]] && exit 1 || exit 0

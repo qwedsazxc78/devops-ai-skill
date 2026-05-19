@@ -1,0 +1,1 @@
+| *example-cmd | Fixture pipeline |
