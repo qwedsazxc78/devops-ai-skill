@@ -58,6 +58,7 @@
     "version:consistency": "bash scripts/version-consistency.sh",
     "version:bump": "bash scripts/version-bump.sh",
     "release": "bash scripts/release.sh",
+    "release:check": "bash scripts/release_check.sh",
     "postinstall": "node scripts/postinstall.js 2>/dev/null || true"
   }
 }
