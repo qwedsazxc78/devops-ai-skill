@@ -27,6 +27,15 @@ jobs:
       - name: Run structure tests
         run: bash tests/test-structure.sh
 
+      - name: Run release-validate (fixture + portability + repo-style + parity)
+        run: bash scripts/release_check.sh
+
+      - name: Upload release-check artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-check-${{ github.ref_name }}
+          path: docs/reports/release-validate/
+
       - name: Extract changelog and append links
         env:
           TAG_REF: ${{ github.ref_name }}
