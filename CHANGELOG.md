@@ -5,6 +5,42 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.14.0] - 2026-05-19
+
+### Added
+
+- **`release-validate` skill v2.0.0** — three new phases that complete the pre-release safety net:
+  - **Phase 4 — Skill fixture suite runs.** New `scripts/run_all_fixtures.sh` iterates every `tests/*/run-fixtures.sh`, captures per-suite PASS / FAIL counts, and emits aggregated JSON. Fail-fast on any suite returning non-zero. Catches regressions that the structure test (file-existence) cannot detect.
+  - **Phase 5 — Shell portability static checks.** New `scripts/check_shell_portability.sh` lints every `.sh` under `skills/` and `scripts/` against five cross-OS rules: portable shebang (WARN), `declare -A` bash 3.2 incompatibility (ERROR), `mapfile`/`readarray` bash 4+ (ERROR), `sed -i` BSD/GNU divergence (WARN), `readlink -f` BSD incompatibility (WARN). Optional `shellcheck` integration when available. Would have caught the bash-3.2 `declare -A` bug fixed in v1.13.1.
+  - **Phase 8 — Release artifact generation.** New `scripts/render_release_artifact.sh` aggregates Phase 4 + 5 (and existing Phases 1–3) outputs into `docs/reports/release-validate/<version>/RELEASE-CHECK.md`. The artifact is suitable verbatim as the body for `gh release create --notes-file` or as the npm publish README excerpt.
+- 22 shell scripts under `skills/` + `scripts/` now pass the portability lint (`scanned=22, errors=0, warnings=0`).
+
+### Smoke-test results (v1.14.0)
+
+```
+release-validate v1.14.0: PASS (fixtures=OK, portability=OK)
+
+| Phase | Verdict | Detail                                              |
+| 4. Fixture suites    | OK | 153 PASS / 0 FAIL across 6 suites          |
+| 5. Shell portability | OK | 22 scripts scanned, 0 errors, 0 warnings  |
+```
+
+Per-suite Phase 4 breakdown:
+
+| Suite | PASS | Verdict |
+|---|---|---|
+| gateway-api-migration | 135 | OK |
+| ingress-controller-install | 3 | OK |
+| ingress-migration-advisor | 4 | OK |
+| nginx-to-gateway | 2 | OK |
+| nginx-to-traefik | 4 | OK |
+| traefik-controller-decommission | 5 | OK |
+
+### Documentation
+
+- README.md, docs/README.zh-{CN,TW}.md: skill / pipeline / TOML counts synced to v1.13.1 reality. README adds a "Migration journey at a glance" decision-tree subsection pointing operators at `*migration-quickstart`.
+- docs/setup.md: `npx skills add` count corrected (12 → 15 skills; 17 → 22 pipelines).
+
 ## [1.13.1] - 2026-05-19
 
 Patch release: corrects the agent placement of `*install-traefik` and
@@ -425,3 +461,5 @@ Dry-run smoke-tested against eye-of-horus-gitops.
 [1.2.0]: https://github.com/qwedsazxc78/devops-ai-skill/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/qwedsazxc78/devops-ai-skill/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/qwedsazxc78/devops-ai-skill/releases/tag/v1.0.0
+[1.14.0]: https://github.com/qwedsazxc78/devops-ai-skill/compare/v1.13.1...v1.14.0
+[1.13.1]: https://github.com/qwedsazxc78/devops-ai-skill/releases/tag/v1.13.1

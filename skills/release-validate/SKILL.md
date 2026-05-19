@@ -2,11 +2,15 @@
 name: release-validate
 description: >
   Validates package release readiness across version consistency, cross-platform
-  link integrity, npm package content, and setup script smoke testing. Use before
-  running `pnpm release` to catch issues that structure tests may miss. Also use
-  when adding new skills or pipelines to verify all platforms stay in sync, or
-  after modifying setup scripts to confirm they still work end-to-end.
-version: "1.0.0"
+  link integrity, npm package content, setup script smoke testing, **skill
+  fixture suite runs (Phase 4)**, **shell portability static checks (Phase 5)**,
+  and **release artifact generation (Phase 8)**. Use before running
+  `pnpm release` to catch issues that structure tests may miss. Also use when
+  adding new skills or pipelines to verify all platforms stay in sync, or after
+  modifying setup scripts to confirm they still work end-to-end. Produces
+  `docs/reports/release-validate/<version>/RELEASE-CHECK.md` suitable for the
+  GitHub Release body.
+version: "2.0.0"
 ---
 
 # Release Validation Skill
@@ -363,6 +367,74 @@ Handled automatically by the `trap` in Step 3a. If running manually, ensure:
 ```bash
 rm -rf "$TEST_DIR"
 ```
+
+## Phase 4: Skill Fixture Suite Runs (v2.0.0)
+
+Iterate every `tests/*/run-fixtures.sh` and aggregate PASS/FAIL counts per
+suite. Delegates to `scripts/run_all_fixtures.sh`:
+
+```bash
+bash skills/release-validate/scripts/run_all_fixtures.sh > /tmp/fixtures.json
+```
+
+Output JSON shape: `{suites: [...], totalPass, totalFail, totalSuites, verdict}`.
+
+**Gate:** any suite with `verdict: FAIL` → overall verdict `FAIL` → release
+blocked. Empty list (no fixture runners present) → `verdict: NONE` (not a
+failure, but flagged in the report).
+
+## Phase 5: Shell Portability Static Checks (v2.0.0)
+
+Static lint of every `.sh` file under `skills/` and `scripts/` for cross-OS
+compatibility issues. Delegates to `scripts/check_shell_portability.sh`:
+
+```bash
+bash skills/release-validate/scripts/check_shell_portability.sh . > /tmp/portability.json
+```
+
+Rules:
+
+| # | Rule | Severity | Why |
+|---|---|---|---|
+| 1 | `#!/usr/bin/env bash` shebang | WARN | `/bin/bash` and `/bin/sh` paths vary across distros |
+| 2 | No `declare -A` | ERROR | macOS bash 3.2 lacks associative arrays — caught by us in v1.13.1 |
+| 3 | No `mapfile` / `readarray` | ERROR | Bash 4+ only |
+| 4 | No `sed -i` without backup suffix | WARN | BSD vs GNU divergence; portable form is `sed -i.bak ...` |
+| 5 | No `readlink` with `-f` | WARN | BSD lacks `-f`; use `cd && pwd` pattern |
+
+**Gate:** any ERROR → release blocked. WARN-only → release allowed but
+flagged.
+
+## Phase 8: Release Artifact Generation (v2.0.0)
+
+Combine Phase 4 + Phase 5 outputs into a single Markdown artifact at
+`docs/reports/release-validate/<version>/RELEASE-CHECK.md`. Suitable
+verbatim as the body of `gh release create --notes-file ...` or as the
+npm publish README excerpt.
+
+```bash
+VERSION=$(cat VERSION) \
+  FIXTURES_JSON=/tmp/fixtures.json \
+  PORTABILITY_JSON=/tmp/portability.json \
+  OUTPUT="docs/reports/release-validate/${VERSION}/RELEASE-CHECK.md" \
+  bash skills/release-validate/scripts/render_release_artifact.sh
+```
+
+The artifact contains:
+- Overall verdict (PASS / WARN / FAIL — worst of all phases)
+- Per-phase verdict table
+- Per-suite breakdown (Phase 4)
+- Per-issue table (Phase 5)
+- "How to interpret" + "Next steps" sections
+
+The renderer also prints a one-line summary to stdout for CI logs:
+
+```
+release-validate v1.14.0: PASS (fixtures=OK, portability=OK)
+```
+
+**Gate:** if overall verdict is `FAIL`, the renderer exits 1 — `pnpm release`
+should refuse to proceed.
 
 ## Output Format
 
