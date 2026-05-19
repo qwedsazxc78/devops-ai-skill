@@ -1,6 +1,6 @@
 # Gateway API Migration Skill — Design Spec
 
-**Status:** Draft for review
+**Status:** implemented — shipped in v1.7.0 (initial skill); dual-target (Traefik/GKE) extension shipped in v1.8.0; Traefik-source support shipped in v1.11.0; precedence fix shipped in v1.13.0
 **Date:** 2026-04-13
 **Author:** alexhsieh (via brainstorming session)
 **Target agent:** Zeus (GitOps / Kustomize + ArgoCD)

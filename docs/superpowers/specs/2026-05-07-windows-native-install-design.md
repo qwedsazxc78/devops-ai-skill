@@ -1,9 +1,9 @@
 # Windows-Native Install — Design Spec
 
-**Status:** Draft for review
+**Status:** implemented — shipped in v1.10.0 (install-global.ps1, install-tools.ps1, install.bat); install.bat moved to scripts/setup/ in v1.13.1
 **Date:** 2026-05-07
 **Author:** alexhsieh (via brainstorming session)
-**Target release:** devops-ai-skill v1.10.0 (next minor)
+**Target release:** devops-ai-skill v1.10.0
 **Touches:** `scripts/`, repo root, `README.md`, `docs/quick-start*.md`, `docs/setup.md`, `docs/README.zh-*.md`
 
 ## 1. Overview

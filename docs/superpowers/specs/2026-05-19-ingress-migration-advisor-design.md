@@ -1,6 +1,6 @@
 # Ingress Migration Advisor Skill — Design Spec
 
-**Status:** ready-for-implementation (TODOs resolved 2026-05-19)
+**Status:** implemented — shipped in v1.12.0 (commit 31e70cd); test fixtures + Gemini TOML mirror added in v1.12.0; precedence-related fixture added in v1.13.0
 **Date:** 2026-05-19
 **Owner:** Awoo Platform Team
 **Repos affected:** `devops-ai-skill` (plugin)
