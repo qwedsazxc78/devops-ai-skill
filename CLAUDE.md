@@ -41,3 +41,4 @@ On session start:
 | *gateway-migrate | `prompts/zeus/gateway-migrate.md` |
 | *nginx-to-traefik | `prompts/zeus/nginx-to-traefik.md` |
 | *nginx-to-gateway | `prompts/zeus/nginx-to-gateway.md` |
+| *ingress-migration-advisor | `prompts/zeus/ingress-migration-advisor.md` |
