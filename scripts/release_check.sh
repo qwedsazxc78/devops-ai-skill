@@ -27,16 +27,20 @@ SCRIPTS=skills/release-validate/scripts
 echo "release_check: running 4 phases for v$VERSION"
 
 echo "  [4/4] Phase 4 — skill fixture suites"
-bash "$SCRIPTS/run_all_fixtures.sh" "$ROOT_DIR" > "$REPORT_DIR/fixtures.json" || FIX_RC=$?
+bash "$SCRIPTS/run_all_fixtures.sh" "$ROOT_DIR" > "$REPORT_DIR/fixtures.json" || true
 
 echo "  [4/4] Phase 5 — shell portability"
-bash "$SCRIPTS/check_shell_portability.sh" "$ROOT_DIR" > "$REPORT_DIR/portability.json" || PORT_RC=$?
+bash "$SCRIPTS/check_shell_portability.sh" "$ROOT_DIR" > "$REPORT_DIR/portability.json" || true
 
 echo "  [4/4] Phase 6 — repo-style coverage"
 bash "$SCRIPTS/check_repo_style_coverage.sh" --repo-root "$ROOT_DIR" > "$REPORT_DIR/repo-style.json"
 
 echo "  [4/4] Phase 7 — AI-tool parity"
-bash "$SCRIPTS/check_ai_tool_parity.sh" --repo-root "$ROOT_DIR" --all > "$REPORT_DIR/ai-parity.json" || PARITY_RC=$?
+bash "$SCRIPTS/check_ai_tool_parity.sh" --repo-root "$ROOT_DIR" --all > "$REPORT_DIR/ai-parity.json" || true
+
+# Phase exit codes are intentionally absorbed above. The renderer reads all
+# phase JSON outputs, determines the aggregate verdict, and its exit code
+# (0=PASS/WARN, 1=FAIL) becomes this script's exit code via set -e.
 
 echo "  [render] aggregating into $REPORT_DIR/RELEASE-CHECK.md"
 VERSION="$VERSION" \
