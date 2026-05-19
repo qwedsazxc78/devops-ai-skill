@@ -36,11 +36,12 @@ out=$(bash "$P6" \
   --matrix-required "dummy-skill:kustomize-argocd,dummy-skill:helm-only" 2>/dev/null || true)
 verdict=$(echo "$out" | jq -r '.verdict')
 missing=$(echo "$out" | jq -r '.missing[0] // "none"')
-if [[ "$verdict" == "WARN" && "$missing" == "dummy-skill:helm-only" ]]; then
-  echo "  [PASS] verdict=WARN, missing=dummy-skill:helm-only"
+missing_count=$(echo "$out" | jq -r '.missing | length')
+if [[ "$verdict" == "WARN" && "$missing" == "dummy-skill:helm-only" && "$missing_count" == "1" ]]; then
+  echo "  [PASS] verdict=WARN, missing=dummy-skill:helm-only, missing_count=1"
   PASS=$((PASS+1))
 else
-  echo "  [FAIL] expected WARN + helm-only missing; got verdict=$verdict missing=$missing"
+  echo "  [FAIL] expected WARN + helm-only missing (count=1); got verdict=$verdict missing=$missing count=$missing_count"
   echo "  raw: $out"
   FAIL=$((FAIL+1))
 fi

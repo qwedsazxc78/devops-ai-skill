@@ -20,7 +20,7 @@
 #   }
 #
 # Exit codes:
-#   0   all required coverage present (verdict OK or WARN — both informational)
+#   0   verdict OK (full coverage) or WARN (gaps found — advisory only, not blocking)
 #   2   tooling / args missing
 set -uo pipefail
 
@@ -70,8 +70,8 @@ if [[ -z "$MATRIX_SKILLS" ]]; then
       col=$((col+1))
     done
   done < <(awk '/^\| Skill \|/{flag=1;next} /^## /{flag=0} flag' "$MATRIX_FILE")
-  MATRIX_SKILLS="${SKILL_LIST[*]}"
-  MATRIX_REQUIRED=$(IFS=,; echo "${REQUIRED_LIST[*]}")
+  MATRIX_SKILLS="${SKILL_LIST[*]+"${SKILL_LIST[*]}"}"
+  MATRIX_REQUIRED="${REQUIRED_LIST[*]+"$(IFS=,; echo "${REQUIRED_LIST[*]}")"}"
 fi
 
 # Build the matrix array for output
