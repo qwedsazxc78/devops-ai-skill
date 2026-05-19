@@ -65,7 +65,7 @@ npx skills add qwedsazxc78/devops-ai-skill
 
 Auto-detects installed AI agents and copies skills to the appropriate directories.
 
-> **Note**: `npx skills add` installs 12 skills only. For the full experience (agents + 17 pipelines), use the **One-Click Install**.
+> **Note**: `npx skills add` installs 15 skills only. For the full experience (agents + 22 pipelines), use the **One-Click Install**.
 
 ### Tool Check
 

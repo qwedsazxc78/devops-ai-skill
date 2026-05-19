@@ -281,6 +281,36 @@ Or double-click `scripts\setup\install.bat` and choose `[2] Tools`. Requires `wi
 | `*gateway-migrate` | NGINX Ingress → Gateway API migration (default Traefik, opt-in GKE via `--gateway-class gke-l7-*`; master/minion or standalone) |
 | `*nginx-to-traefik` | Class-swap NGINX Ingress to Traefik Ingress with parallel run and DNS A-record cutover |
 | `*nginx-to-gateway` | Chained NGINX → Traefik → Gateway API migration with a single combined report |
+| `*ingress-to-gateway` | Slash-command sugar: auto-detect source class (nginx/traefik) then delegate to `*gateway-migrate` |
+| `*ingress-migration-advisor` | Read-only EOL planner: scores services on 5 dimensions, recommends a path per service. Requires `docs/ingress-tier-map.yaml`. |
+| `*install-traefik` | GitOps Traefik install/upgrade — edits `common.traefik/` Kustomize module (bootstrap/new-env/upgrade modes). Plan-only; ArgoCD applies. |
+| `*decommission-nginx` | GitOps ingress-nginx decommission — archive Kustomize module + ArgoCD prune. Plan-only; never runs `helm uninstall`. |
+| `*migration-quickstart` | 30-second orientation — prints a decision tree + 7-command table + sample invocations |
+
+### Migration journey at a glance
+
+```
+S0 only ingress-nginx ──*install-traefik──▶ S1 both controllers
+                                                │
+                                                ├─▶ *ingress-migration-advisor (whole-repo plan)
+                                                │
+                                                ├─▶ *nginx-to-traefik <env> (class swap)
+                                                │
+                                                └─▶ *nginx-to-gateway <env> (full chain)
+                                                                │
+                                                                ▼
+                                                          S2 mixed classes
+                                                                │
+                                                                ├─▶ *ingress-to-gateway <module> (auto)
+                                                                │
+                                                                └─▶ eventually ──▶ S3 only Traefik
+                                                                                       │
+                                                                                       ▼
+                                                                                  *decommission-nginx
+```
+
+Type `*migration-quickstart` inside Zeus for the full version with sample
+invocations and cluster-state recommendations.
 
 ## Skills
 
@@ -298,6 +328,9 @@ All skills follow the [Open Agent Skills](https://agentskills.io/specification) 
 | gateway-api-migration | Zeus | NGINX Ingress → Gateway API migration with state tracking. Dual-target since v1.2.0: default Traefik, opt-in GKE Gateway. |
 | nginx-to-traefik | Zeus | Class-swap NGINX Ingress to Traefik Ingress with parallel run and DNS A-record cutover. |
 | nginx-to-gateway | Zeus | Thin orchestrator: chains nginx-to-traefik → gateway-api-migration in one session with a combined report. |
+| ingress-migration-advisor | Zeus | Read-only ingress-nginx EOL planner (v1.12.0+). 5-dimension scoring, critical-tier veto, sourceClass shortcut. Output: phased plan with per-batch Zeus commands. |
+| ingress-controller-install | Zeus | GitOps Traefik install/upgrade via Kustomize edits (v1.13.1+). Three modes auto-detected: bootstrap / new-env / upgrade. Plan-only. |
+| traefik-controller-decommission | Zeus | GitOps ingress-nginx decommission via module archive + ArgoCD prune (v1.13.1+). Verify cluster+repo free of nginx-class first (precedence-aware). |
 | repo-detect | Both | Repository type detection |
 | release-validate | Shared | Release readiness validation |
 
@@ -736,7 +769,7 @@ devops-ai-skill/
 │   │   └── zeus.md
 │   ├── commands/devops/          # Command palette TOML
 │   │   ├── agents/               # 2 agent start commands
-│   │   └── pipelines/            # 17 pipeline commands
+│   │   └── pipelines/            # 24 pipeline commands
 │   └── extensions/devops/
 │       └── gemini-extension.json
 │
@@ -745,7 +778,7 @@ devops-ai-skill/
 │   ├── skills/
 │   │   ├── horus/SKILL.md
 │   │   ├── zeus/SKILL.md
-│   │   └── (12 skill symlinks)
+│   │   └── (15 skill symlinks)
 │   └── workflows/               # symlinks → prompts/
 │
 ├── skills/                      # Shared skills (Open Agent Skills standard)
@@ -757,11 +790,17 @@ devops-ai-skill/
 │   ├── kustomize-resource-validation/
 │   ├── yaml-fix-suggestions/
 │   ├── gateway-api-migration/
+│   ├── nginx-to-traefik/
+│   ├── nginx-to-gateway/
+│   ├── ingress-migration-advisor/      # v1.12.0+ Zeus EOL planner
+│   ├── ingress-controller-install/     # v1.13.1 GitOps Zeus
+│   ├── traefik-controller-decommission/# v1.13.1 GitOps Zeus
+│   ├── release-validate/
 │   └── repo-detect/
 │
 ├── prompts/                     # Platform-neutral pipeline definitions
 │   ├── horus/                   # 7 pipelines
-│   ├── zeus/                    # 10 pipelines
+│   ├── zeus/                    # 15 pipelines
 │   └── shared/                  # repo-detect, report-format, tool-check, help
 │
 ├── docs/

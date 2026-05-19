@@ -322,7 +322,7 @@ devops-ai-skill/
 │   │   └── zeus.md
 │   ├── commands/devops/          # 命令面板 TOML 檔
 │   │   ├── agents/               # 2 agent 啟動命令
-│   │   └── pipelines/            # 17 pipeline 命令
+│   │   └── pipelines/            # 24 pipeline 命令
 │   └── extensions/devops/
 │       └── gemini-extension.json
 │
@@ -331,7 +331,7 @@ devops-ai-skill/
 │   ├── skills/
 │   │   ├── horus/SKILL.md
 │   │   ├── zeus/SKILL.md
-│   │   └── (12 skill symlinks)
+│   │   └── (15 skill symlinks)
 │   └── workflows/               # symlinks → prompts/
 │
 ├── skills/                      # 共用技能（Open Agent Skills 標準）
@@ -346,7 +346,7 @@ devops-ai-skill/
 │
 ├── prompts/                     # 平台中立的流水線定義
 │   ├── horus/                   # 7 條流水線
-│   ├── zeus/                    # 10 條流水線
+│   ├── zeus/                    # 15 條流水線
 │   └── shared/                  # repo-detect, report-format, tool-check
 │
 ├── scripts/
