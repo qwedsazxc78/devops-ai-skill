@@ -42,29 +42,29 @@ echo Invalid choice: %CHOICE%
 goto end
 
 :skills
-%PS% -ExecutionPolicy Bypass -NoProfile -File "%~dp0scripts\install-global.ps1"
+%PS% -ExecutionPolicy Bypass -NoProfile -File "%~dp0..\install-global.ps1"
 goto end
 
 :tools
-%PS% -ExecutionPolicy Bypass -NoProfile -File "%~dp0scripts\install-tools.ps1" install
+%PS% -ExecutionPolicy Bypass -NoProfile -File "%~dp0..\install-tools.ps1" install
 goto end
 
 :both
-%PS% -ExecutionPolicy Bypass -NoProfile -File "%~dp0scripts\install-global.ps1"
+%PS% -ExecutionPolicy Bypass -NoProfile -File "%~dp0..\install-global.ps1"
 if errorlevel 1 (
   echo.
   echo Skill install failed -- skipping tool install.
   goto end
 )
-%PS% -ExecutionPolicy Bypass -NoProfile -File "%~dp0scripts\install-tools.ps1" install
+%PS% -ExecutionPolicy Bypass -NoProfile -File "%~dp0..\install-tools.ps1" install
 goto end
 
 :status
-%PS% -ExecutionPolicy Bypass -NoProfile -File "%~dp0scripts\install-global.ps1" -Status
+%PS% -ExecutionPolicy Bypass -NoProfile -File "%~dp0..\install-global.ps1" -Status
 goto end
 
 :uninstall
-%PS% -ExecutionPolicy Bypass -NoProfile -File "%~dp0scripts\install-global.ps1" -Uninstall
+%PS% -ExecutionPolicy Bypass -NoProfile -File "%~dp0..\install-global.ps1" -Uninstall
 goto end
 
 :end

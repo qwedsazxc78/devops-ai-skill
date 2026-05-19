@@ -62,6 +62,8 @@ Expert SRE for Terraform + Helm + GKE platforms. Pipeline-driven, safety-first.
 | terraform-security | Security scanning |
 | cicd-enhancer | CI/CD pipeline improvement |
 | helm-scaffold | New module generation |
+| ingress-controller-install | Plan-only Traefik Helm install/upgrade with ingress-nginx coexistence checks (class/IP/port collision). |
+| traefik-controller-decommission | Plan-only ingress-nginx uninstall — verifies cluster + repo are free of nginx-class Ingresses (precedence-aware), confirms DNS bake, emits helm/LB/IAM cleanup plan. |
 
 ### Horus Pipelines (from `prompts/horus/`)
 
@@ -74,6 +76,8 @@ Expert SRE for Terraform + Helm + GKE platforms. Pipeline-driven, safety-first.
 | *scaffold | scaffold.md | Scaffold new Helm module |
 | *cicd | cicd.md | Improve CI/CD pipeline |
 | *health | health.md | Platform health check |
+| *install-traefik | install-traefik-controller.md | Plan-only Traefik Helm install with ingress-nginx coexistence checks |
+| *decommission-nginx | decommission-nginx-controller.md | Plan-only ingress-nginx uninstall after migrations complete |
 
 ### Horus Core Principles
 
@@ -96,6 +100,7 @@ Pipeline Orchestrator for Kustomize + ArgoCD platforms. Commanding, methodical, 
 | gateway-api-migration | NGINX Ingress → Gateway API migration (master/minion + standalone). Dual-target since v1.2.0: default Traefik (`traefik`), opt-in GKE Gateway (`gke-l7-*`). |
 | nginx-to-traefik | Class-swap NGINX Ingress to Traefik Ingress with parallel run and DNS A-record cutover. |
 | nginx-to-gateway | Thin orchestrator: chains nginx-to-traefik → gateway-api-migration in one session with a combined report. |
+| ingress-migration-advisor | Read-only planner for the ingress-nginx 2025 EOL. Scores services on 5 dimensions and recommends `direct-gateway`, `two-step`, `swap-only`, or `defer` per service. Requires `docs/ingress-tier-map.yaml`. |
 
 ### Shared Skills (from `skills/` directory)
 
@@ -117,6 +122,8 @@ Pipeline Orchestrator for Kustomize + ArgoCD platforms. Commanding, methodical, 
 | *gateway-migrate | gateway-migrate.md | Migrate NGINX Ingress to Gateway API (default Traefik, opt-in GKE via `--gateway-class gke-l7-*`) — per-hostname DNS cutover |
 | *nginx-to-traefik | nginx-to-traefik.md | Class-swap NGINX Ingress to Traefik Ingress with parallel run and DNS A-record cutover |
 | *nginx-to-gateway | nginx-to-gateway.md | Chained NGINX → Traefik → Gateway API migration with a single combined report |
+| *ingress-to-gateway | ingress-to-gateway.md | Slash-command sugar: auto-detect source class (nginx/traefik) then delegate to `*gateway-migrate` |
+| *ingress-migration-advisor | ingress-migration-advisor.md | Read-only ingress-nginx EOL planner — produces a phased plan with per-service path recommendations |
 
 ### Zeus Core Principles
 
@@ -210,6 +217,8 @@ Antigravity uses the `.agents/` directory for workspace-scoped configuration:
 | `/horus-scaffold` | `prompts/horus/scaffold.md` |
 | `/horus-cicd` | `prompts/horus/cicd.md` |
 | `/horus-health` | `prompts/horus/health.md` |
+| `/horus-install-traefik` | `prompts/horus/install-traefik-controller.md` |
+| `/horus-decommission-nginx` | `prompts/horus/decommission-nginx-controller.md` |
 | `/zeus-full` | `prompts/zeus/full-pipeline.md` |
 | `/zeus-pre-merge` | `prompts/zeus/pre-merge.md` |
 | `/zeus-health` | `prompts/zeus/health.md` |
@@ -219,6 +228,8 @@ Antigravity uses the `.agents/` directory for workspace-scoped configuration:
 | `/zeus-status` | `prompts/zeus/status.md` |
 | `/zeus-nginx-to-traefik` | `prompts/zeus/nginx-to-traefik.md` |
 | `/zeus-nginx-to-gateway` | `prompts/zeus/nginx-to-gateway.md` |
+| `/zeus-ingress-to-gateway` | `prompts/zeus/ingress-to-gateway.md` |
+| `/zeus-ingress-migration-advisor` | `prompts/zeus/ingress-migration-advisor.md` |
 
 ## Report Format
 

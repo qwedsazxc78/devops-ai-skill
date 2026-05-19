@@ -1,0 +1,18 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: leftover-service
+  namespace: legacy
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: leftover.dev.example.org
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: leftover
+                port:
+                  number: 80

@@ -44,7 +44,7 @@ bash scripts/install-global.sh          # 自動偵測已安裝的 CLI
 ```powershell
 git clone https://github.com/qwedsazxc78/devops-ai-skill.git
 cd devops-ai-skill
-.\install.bat                            # 互動式選單：skills / tools / both
+.\scripts\setup\install.bat              # 互動式選單：skills / tools / both
 ```
 
 或非互動式：
@@ -86,7 +86,7 @@ powershell -ExecutionPolicy Bypass -File scripts\install-global.ps1 -Status
 powershell -ExecutionPolicy Bypass -File scripts\install-global.ps1 -Uninstall
 ```
 
-或在 repo 根目錄雙擊 `install.bat`，使用互動式選單（skills / tools / both / status / uninstall）。
+或雙擊 `scripts\setup\install.bat`，使用互動式選單（skills / tools / both / status / uninstall）。
 
 </details>
 
@@ -125,7 +125,7 @@ bash devops-ai-skill/scripts/setup.sh --antigravity
 bash devops-ai-skill/scripts/setup.sh --uninstall
 ```
 
-> **Windows 使用者：** Per-repo 流程依賴 Unix symlink（在 Windows 需要管理員或開發者模式）。請改用 **全域安裝**（`install.bat`），同樣四平台齊全且不需要管理員權限。
+> **Windows 使用者：** Per-repo 流程依賴 Unix symlink（在 Windows 需要管理員或開發者模式）。請改用 **全域安裝**（`scripts\setup\install.bat`），同樣四平台齊全且不需要管理員權限。
 
 </details>
 
@@ -208,7 +208,7 @@ npx skills update
 .\scripts\install-tools.ps1 install zeus
 ```
 
-或在 repo 根目錄雙擊 `install.bat`，選擇 `[2] Tools`。需要 `winget`（Windows 10 1809+ / Windows 11 內建）或 `choco` / `scoop`。
+或雙擊 `scripts\setup\install.bat`，選擇 `[2] Tools`。需要 `winget`（Windows 10 1809+ / Windows 11 內建）或 `choco` / `scoop`。
 
 ### 共用工具
 

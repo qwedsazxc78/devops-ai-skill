@@ -128,7 +128,7 @@ bash scripts/install-global.sh --all
 
 ```powershell
 # One-click interactive menu
-.\install.bat
+.\scripts\setup\install.bat
 
 # Or non-interactive
 powershell -ExecutionPolicy Bypass -File scripts\install-global.ps1

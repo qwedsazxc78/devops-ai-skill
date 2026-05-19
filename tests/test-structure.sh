@@ -283,7 +283,7 @@ for agent in horus zeus; do
 done
 
 # Pipeline command TOMLs
-gemini_pipelines=("horus-full" "horus-upgrade" "horus-security" "horus-validate" "horus-scaffold" "horus-cicd" "horus-health" "zeus-full" "zeus-pre-merge" "zeus-health" "zeus-review" "zeus-scaffold" "zeus-diagram" "zeus-status" "zeus-gateway-migrate" "zeus-nginx-to-traefik" "zeus-nginx-to-gateway" "repo-detect" "tool-check")
+gemini_pipelines=("horus-full" "horus-upgrade" "horus-security" "horus-validate" "horus-scaffold" "horus-cicd" "horus-health" "zeus-full" "zeus-pre-merge" "zeus-health" "zeus-review" "zeus-scaffold" "zeus-diagram" "zeus-status" "zeus-gateway-migrate" "zeus-nginx-to-traefik" "zeus-nginx-to-gateway" "zeus-ingress-migration-advisor" "zeus-ingress-to-gateway" "repo-detect" "tool-check")
 for pipeline in "${gemini_pipelines[@]}"; do
     toml_file="$gemini_cmds_dir/pipelines/$pipeline.toml"
     if [ -f "$toml_file" ]; then
@@ -295,10 +295,10 @@ done
 
 # Count total TOML files
 toml_count=$(find "$gemini_cmds_dir" -name "*.toml" 2>/dev/null | wc -l | tr -d ' ')
-if [ "$toml_count" -eq 21 ]; then
+if [ "$toml_count" -eq 23 ]; then
     pass "Correct TOML command count: $toml_count"
 else
-    fail "Expected 21 TOML commands, found $toml_count"
+    fail "Expected 23 TOML commands, found $toml_count"
 fi
 
 # ============================================
@@ -938,21 +938,21 @@ done
 # ============================================
 section "Windows Native Install"
 
-# install.bat exists at repo root
-if [ -f "$ROOT_DIR/install.bat" ]; then
-    pass "install.bat exists at repo root"
-    if grep -q "scripts\\\\install-global.ps1" "$ROOT_DIR/install.bat"; then
-        pass "install.bat references scripts\\install-global.ps1"
+# install.bat exists at scripts/setup/
+if [ -f "$ROOT_DIR/scripts/setup/install.bat" ]; then
+    pass "install.bat exists at scripts/setup/"
+    if grep -q "install-global.ps1" "$ROOT_DIR/scripts/setup/install.bat"; then
+        pass "install.bat references install-global.ps1"
     else
         fail "install.bat does not reference install-global.ps1"
     fi
-    if grep -q "scripts\\\\install-tools.ps1" "$ROOT_DIR/install.bat"; then
-        pass "install.bat references scripts\\install-tools.ps1"
+    if grep -q "install-tools.ps1" "$ROOT_DIR/scripts/setup/install.bat"; then
+        pass "install.bat references install-tools.ps1"
     else
         fail "install.bat does not reference install-tools.ps1"
     fi
 else
-    fail "install.bat missing at repo root"
+    fail "install.bat missing at scripts/setup/"
 fi
 
 # install-global.ps1 exists and references all 4 platforms
@@ -1023,10 +1023,10 @@ if [ -f "$ROOT_DIR/package.json" ]; then
     else
         fail "package.json missing setup:win:tools script"
     fi
-    if grep -q '"install.bat"' "$ROOT_DIR/package.json"; then
-        pass "package.json files whitelist includes install.bat"
+    if grep -q '"scripts/setup/install.bat"' "$ROOT_DIR/package.json"; then
+        pass "package.json files whitelist includes scripts/setup/install.bat"
     else
-        fail "package.json files whitelist missing install.bat"
+        fail "package.json files whitelist missing scripts/setup/install.bat"
     fi
 fi
 

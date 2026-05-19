@@ -1,0 +1,19 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: legacy-ann-service
+  namespace: legacy
+  annotations:
+    kubernetes.io/ingress.class: nginx
+spec:
+  rules:
+    - host: legacy-ann.dev.example.org
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: legacy-ann
+                port:
+                  number: 80

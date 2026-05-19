@@ -37,7 +37,7 @@ bash scripts/install-global.sh
 ```powershell
 git clone https://github.com/qwedsazxc78/devops-ai-skill.git
 cd devops-ai-skill
-.\install.bat                      # 互動式選單，選 [1] Skills
+.\scripts\setup\install.bat        # 互動式選單，選 [1] Skills
 ```
 
 看到 `Global install complete!` 就完成了。
@@ -173,7 +173,7 @@ claude    # 啟動 Agent（或 gemini/codex），輸入 *health
 
 ```powershell
 # 一鍵安裝（互動式選單）
-.\install.bat
+.\scripts\setup\install.bat
 
 # 或非互動執行
 powershell -ExecutionPolicy Bypass -File scripts\install-global.ps1

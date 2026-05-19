@@ -44,7 +44,7 @@ bash scripts/install-global.sh          # Auto-detect installed CLIs
 ```powershell
 git clone https://github.com/qwedsazxc78/devops-ai-skill.git
 cd devops-ai-skill
-.\install.bat                            # Interactive menu: skills / tools / both
+.\scripts\setup\install.bat              # Interactive menu: skills / tools / both
 ```
 
 Or non-interactive on Windows:
@@ -86,7 +86,7 @@ powershell -ExecutionPolicy Bypass -File scripts\install-global.ps1 -Status
 powershell -ExecutionPolicy Bypass -File scripts\install-global.ps1 -Uninstall
 ```
 
-Or use `install.bat` from the repo root for an interactive menu (skills / tools / both / status / uninstall).
+Or use `scripts\setup\install.bat` for an interactive menu (skills / tools / both / status / uninstall).
 
 </details>
 
@@ -122,7 +122,7 @@ bash devops-ai-skill/scripts/setup.sh --antigravity
 bash devops-ai-skill/scripts/setup.sh --uninstall
 ```
 
-> **Windows users:** the per-repo flow relies on Unix symlinks (require Administrator or Developer Mode on Windows). Use **Global Install** (`install.bat`) instead — it gives you all four platforms with no admin rights required.
+> **Windows users:** the per-repo flow relies on Unix symlinks (require Administrator or Developer Mode on Windows). Use **Global Install** (`scripts\setup\install.bat`) instead — it gives you all four platforms with no admin rights required.
 
 </details>
 
@@ -212,7 +212,7 @@ One-command installer supporting macOS (Homebrew), Linux (apt/snap), Windows (wi
 .\scripts\install-tools.ps1 install zeus
 ```
 
-Or double-click `install.bat` from the repo root and choose `[2] Tools`. Requires `winget` (built into Windows 10 1809+ / Windows 11) or `choco` / `scoop`.
+Or double-click `scripts\setup\install.bat` and choose `[2] Tools`. Requires `winget` (built into Windows 10 1809+ / Windows 11) or `choco` / `scoop`.
 
 ### Shared Tools
 
@@ -780,7 +780,8 @@ devops-ai-skill/
 │       ├── setup-claude.sh         # Platform-specific (internal)
 │       ├── setup-codex.sh
 │       ├── setup-gemini.sh
-│       └── setup-antigravity.sh
+│       ├── setup-antigravity.sh
+│       └── install.bat             # Windows one-click launcher
 │
 ├── .claude-plugin/              # Claude Code marketplace
 │   ├── plugin.json

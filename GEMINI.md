@@ -31,6 +31,8 @@ Detect the repository type to choose the right agent:
 | *scaffold | Scaffold new Helm module |
 | *cicd | Improve CI/CD pipeline |
 | *health | Platform health check |
+| *install-traefik | Install/upgrade Traefik controller with ingress-nginx coexistence checks (plan-only) |
+| *decommission-nginx | Safe uninstall plan for ingress-nginx after migrations + DNS bake |
 
 ## Zeus Commands (GitOps — Kustomize + ArgoCD)
 
@@ -46,3 +48,5 @@ Detect the repository type to choose the right agent:
 | *gateway-migrate | Migrate NGINX Ingress to Gateway API (default Traefik, opt-in GKE via `--gateway-class gke-l7-*`) — per-hostname DNS cutover |
 | *nginx-to-traefik | `prompts/zeus/nginx-to-traefik.md` |
 | *nginx-to-gateway | `prompts/zeus/nginx-to-gateway.md` |
+| *ingress-to-gateway | Auto-detect source class (nginx/traefik) then migrate to Gateway API |
+| *ingress-migration-advisor | Read-only EOL planner: scores services and recommends a migration path per service |

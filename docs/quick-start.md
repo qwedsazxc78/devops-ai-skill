@@ -34,7 +34,7 @@ bash scripts/install-global.sh
 ```powershell
 git clone https://github.com/qwedsazxc78/devops-ai-skill.git
 cd devops-ai-skill
-.\install.bat                      # Interactive menu — choose [1] Skills
+.\scripts\setup\install.bat        # Interactive menu — choose [1] Skills
 ```
 
 Done when you see `Global install complete!`
@@ -185,7 +185,7 @@ Native PowerShell install — no Git Bash, no WSL:
 
 ```powershell
 # One-click (interactive menu)
-.\install.bat
+.\scripts\setup\install.bat
 
 # Or non-interactive
 powershell -ExecutionPolicy Bypass -File scripts\install-global.ps1

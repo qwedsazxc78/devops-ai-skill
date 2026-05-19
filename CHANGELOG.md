@@ -5,6 +5,48 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.12.0] - 2026-05-19
+
+### Added
+
+- **Skill — `ingress-migration-advisor` (new Zeus skill)**
+  - Read-only planner for the NGINX Ingress Controller 2025 EOL migration. Inventories every Ingress in the repo, scores each service on five dimensions, and recommends a path per service (`direct-gateway`, `two-step`, `swap-only`, `defer`).
+  - Critical-tier veto (from `docs/ingress-tier-map.yaml`) — critical services are forced to `defer` regardless of score; no `--force-critical` bypass. The tier map is required (HALT if missing).
+  - `sourceClass: traefik` shortcut — services already on Traefik Ingress route directly to `direct-gateway`, skipping a redundant swap phase.
+  - Score range 4–14 (traffic-tier dimension caps at 2 because score-3 is reserved for the veto). Bands: 4–7 → direct-gateway · 8–10 → two-step · 11–13 → swap-only · 14 → defer.
+  - 3 Python scripts: `inventory_all_ingresses.py` (reuses gateway-api-migration's classify_ingress.py via subprocess), `score_services.py` (veto + 5-dim rubric + decision matrix), `render_plan.py` (plan-template substitution with banner for unresolved placeholders).
+  - 3 reference docs: `scoring-model.md` (the rubric, edit via PR), `decision-matrix.md` (bands + sourceClass shortcut), `plan-template.md` (Mermaid Gantt + per-service decision table + per-batch command block).
+  - Output: `docs/reports/ingress-migration-advisor/<slug>/{state.yaml,plan.md}`. Batch commands are deduplicated at overlay-level (overlay-wide skills like `*gateway-migrate <overlay>` process all services in one run).
+  - Test fixtures: `tests/ingress-migration-advisor/` with 4 cases (critical-tier-veto, source-class-traefik-shortcut, score-band-direct-gateway, foreign-class-defer) — all passing.
+  - Gemini TOML command: `zeus-ingress-migration-advisor`.
+  - Design spec: `docs/superpowers/specs/2026-05-19-ingress-migration-advisor-design.md`.
+- **Skill — `traefik-controller-decommission` (new Horus skill)**
+  - SAFE plan-only uninstall of the `ingress-nginx` controller after every Ingress migration completes and DNS bake elapses. Never executes `helm`/`kubectl`; emits `commands.sh` for the operator to run manually.
+  - `verify_no_nginx_class.sh` — dual cluster + repo scan. Mirrors Kubernetes' precedence: an Ingress is nginx-class if `spec.ingressClassName == "nginx"` OR (`spec.ingressClassName == null` AND legacy annotation `kubernetes.io/ingress.class == "nginx"`).
+  - `generate_uninstall_plan.sh` — renders three sections (Helm uninstall + GKE LB IP release + IAM cleanup) to `plan.md` and a copy-paste-ready `commands.sh`.
+  - Verdict: `READY` (all gates pass), `BLOCKED` (any active nginx Ingress or operator declines DNS bake confirmation), `NEEDS_REVIEW` (kubectl/helm unreachable or ambiguous release).
+  - Horus pipeline: `*decommission-nginx`.
+- **Skill — `ingress-controller-install` (new Horus skill)**
+  - Idempotent install or upgrade of Traefik Helm chart, configured for coexistence with `ingress-nginx` (distinct IngressClass, distinct LoadBalancer IP, no port 80/443 conflict).
+  - `detect_existing_install.sh` — helm + kubectl probes; branches into install vs upgrade flow.
+  - `validate_coexistence.sh` — three collision checks (`classCollision`, `ipCollision`, `portCollision`). HALT on any collision; plan files not written.
+  - `references/values-template.yaml` — parameterized Traefik Helm values (`${ENV}`, `${NAMESPACE}`, `${INGRESS_CLASS_NAME}`, `${LB_IP}`, `${GATEWAY_API_ENABLED}`). Keeps `ingressClass.isDefaultClass: false` so Traefik never steals the default class from ingress-nginx.
+  - Output: `docs/reports/ingress-controller-install/<date>/{state.yaml,values.yaml,install.sh}`. Operator runs `install.sh` manually.
+  - Horus pipeline: `*install-traefik`.
+- **Zeus command — `*ingress-to-gateway` (new pipeline, no new skill)**
+  - Slash-command sugar for `*gateway-migrate`. Auto-detects the target module's source class (nginx | traefik | mixed | foreign) via the gateway-api-migration classifier, then delegates with the right `--source-class` flag.
+  - Mixed-class modules WARN with count breakdown and prompt the operator to pick one class; foreign-only modules HALT (out of scope).
+  - Gemini TOML command: `zeus-ingress-to-gateway`.
+- **Test fixtures for advisor** — `tests/ingress-migration-advisor/` with 4 cases + runner. Covers veto, sourceClass shortcut, score band, and foreign-class defer paths. `bash tests/ingress-migration-advisor/run-fixtures.sh` exits 0 with all green.
+
+### Fixed
+
+- `verify_no_nginx_class.sh` precedence rule discovered during smoke-testing against `eye-of-horus-gitops`: original logic checked only `spec.ingressClassName`, missing the (very common) state where an Ingress has `spec.ingressClassName: null` and relies on the legacy `kubernetes.io/ingress.class: nginx` annotation. The script now follows Kubernetes' actual precedence (spec wins, annotation is fallback) so the decommission gate cannot falsely return PASS while controller consumers still exist.
+
+### Known issues
+
+- `gateway-api-migration/scripts/classify_ingress.py` uses annotation-first precedence (annotation wins over `spec.ingressClassName`), the opposite of Kubernetes' actual rule. The `ingress-migration-advisor` inherits this and may classify a migrated `spec=traefik, ann=nginx` Ingress as nginx-source. Aligning the classifier is deferred to a follow-up because it also affects the `gateway-api-migration` and `nginx-to-gateway` skills — needs coordinated review across all three.
+
 ## [1.11.0] - 2026-05-18
 
 ### Added
@@ -293,6 +335,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Bilingual documentation (EN + 繁體中文)
 
 <!-- Links -->
+[1.12.0]: https://github.com/qwedsazxc78/devops-ai-skill/compare/v1.11.0...v1.12.0
 [1.11.0]: https://github.com/qwedsazxc78/devops-ai-skill/compare/v1.10.0...v1.11.0
 [1.10.0]: https://github.com/qwedsazxc78/devops-ai-skill/compare/v1.9.0...v1.10.0
 [1.9.0]: https://github.com/qwedsazxc78/devops-ai-skill/compare/v1.8.0...v1.9.0
