@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.13.0] - 2026-05-19
+
+### Added
+
+- **Zeus command — `*migration-quickstart` (new pipeline, no new skill)**
+  - 30-second orientation for first-time operators staring at the now-7 migration commands. Prints a decision tree (S0 → S1 → S2 → S3 cluster-state machine), the 5-command table with When-to-use, and nginx-first sample invocations. No questions, no scans, no state files.
+  - Pipeline: `prompts/zeus/migration-quickstart.md` (~140 lines of static printout content).
+  - Gemini TOML command: `zeus-migration-quickstart`.
+  - Designed as a pure-documentation slash command — surfaces inline alongside the migration commands it describes so operators discover it via tab-completion rather than hunting docs pages.
+
+### Fixed
+
+- **`classify_ingress.py` precedence aligned with Kubernetes** (v1.12.0 carry-over). The classifier now reads `spec.ingressClassName` first and falls back to the legacy `kubernetes.io/ingress.class` annotation only when spec is absent — matching what the Kubernetes API server actually does. Previous behavior was annotation-first, which mis-classified mid-migration Ingresses where `spec.ingressClassName: traefik` had been set but the legacy annotation was still `nginx` (e.g., the in-flight state common to half-migrated services in eye-of-horus-gitops). Affects three downstream skills: `gateway-api-migration` (Step 1 classification), `nginx-to-gateway` (transitively), and `ingress-migration-advisor` (per-service path recommendations).
+  - New regression test: `tests/gateway-api-migration/fixtures/spec-wins-over-annotation/` exercises the dual-annotated case. All existing fixtures across nginx-to-traefik, nginx-to-gateway, gateway-api-migration, ingress-migration-advisor, traefik-controller-decommission, and ingress-controller-install remain green (16 fixtures total).
+
+### Test infrastructure
+
+- TOML command count bumped 23 → 24 in `tests/test-structure.sh` for the new `zeus-migration-quickstart`. Full suite: 408 (structure) + 83 (setup) + 135 (gateway-api-migration) + 16 across the 5 new skill fixture suites = 642 PASS, 0 FAIL.
+
 ## [1.12.0] - 2026-05-19
 
 ### Added
@@ -335,6 +354,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Bilingual documentation (EN + 繁體中文)
 
 <!-- Links -->
+[1.13.0]: https://github.com/qwedsazxc78/devops-ai-skill/compare/v1.12.0...v1.13.0
 [1.12.0]: https://github.com/qwedsazxc78/devops-ai-skill/compare/v1.11.0...v1.12.0
 [1.11.0]: https://github.com/qwedsazxc78/devops-ai-skill/compare/v1.10.0...v1.11.0
 [1.10.0]: https://github.com/qwedsazxc78/devops-ai-skill/compare/v1.9.0...v1.10.0

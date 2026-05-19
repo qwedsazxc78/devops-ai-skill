@@ -124,6 +124,7 @@ Pipeline Orchestrator for Kustomize + ArgoCD platforms. Commanding, methodical, 
 | *nginx-to-gateway | nginx-to-gateway.md | Chained NGINX → Traefik → Gateway API migration with a single combined report |
 | *ingress-to-gateway | ingress-to-gateway.md | Slash-command sugar: auto-detect source class (nginx/traefik) then delegate to `*gateway-migrate` |
 | *ingress-migration-advisor | ingress-migration-advisor.md | Read-only ingress-nginx EOL planner — produces a phased plan with per-service path recommendations |
+| *migration-quickstart | migration-quickstart.md | 30-second orientation — prints a decision tree + 5-command table + sample invocations for first-time users |
 
 ### Zeus Core Principles
 
@@ -230,6 +231,7 @@ Antigravity uses the `.agents/` directory for workspace-scoped configuration:
 | `/zeus-nginx-to-gateway` | `prompts/zeus/nginx-to-gateway.md` |
 | `/zeus-ingress-to-gateway` | `prompts/zeus/ingress-to-gateway.md` |
 | `/zeus-ingress-migration-advisor` | `prompts/zeus/ingress-migration-advisor.md` |
+| `/zeus-migration-quickstart` | `prompts/zeus/migration-quickstart.md` |
 
 ## Report Format
 

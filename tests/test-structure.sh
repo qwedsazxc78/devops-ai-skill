@@ -283,7 +283,7 @@ for agent in horus zeus; do
 done
 
 # Pipeline command TOMLs
-gemini_pipelines=("horus-full" "horus-upgrade" "horus-security" "horus-validate" "horus-scaffold" "horus-cicd" "horus-health" "zeus-full" "zeus-pre-merge" "zeus-health" "zeus-review" "zeus-scaffold" "zeus-diagram" "zeus-status" "zeus-gateway-migrate" "zeus-nginx-to-traefik" "zeus-nginx-to-gateway" "zeus-ingress-migration-advisor" "zeus-ingress-to-gateway" "repo-detect" "tool-check")
+gemini_pipelines=("horus-full" "horus-upgrade" "horus-security" "horus-validate" "horus-scaffold" "horus-cicd" "horus-health" "zeus-full" "zeus-pre-merge" "zeus-health" "zeus-review" "zeus-scaffold" "zeus-diagram" "zeus-status" "zeus-gateway-migrate" "zeus-nginx-to-traefik" "zeus-nginx-to-gateway" "zeus-ingress-migration-advisor" "zeus-ingress-to-gateway" "zeus-migration-quickstart" "repo-detect" "tool-check")
 for pipeline in "${gemini_pipelines[@]}"; do
     toml_file="$gemini_cmds_dir/pipelines/$pipeline.toml"
     if [ -f "$toml_file" ]; then
@@ -295,10 +295,10 @@ done
 
 # Count total TOML files
 toml_count=$(find "$gemini_cmds_dir" -name "*.toml" 2>/dev/null | wc -l | tr -d ' ')
-if [ "$toml_count" -eq 23 ]; then
+if [ "$toml_count" -eq 24 ]; then
     pass "Correct TOML command count: $toml_count"
 else
-    fail "Expected 23 TOML commands, found $toml_count"
+    fail "Expected 24 TOML commands, found $toml_count"
 fi
 
 # ============================================

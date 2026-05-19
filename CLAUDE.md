@@ -45,3 +45,4 @@ On session start:
 | *nginx-to-gateway | `prompts/zeus/nginx-to-gateway.md` |
 | *ingress-to-gateway | `prompts/zeus/ingress-to-gateway.md` |
 | *ingress-migration-advisor | `prompts/zeus/ingress-migration-advisor.md` |
+| *migration-quickstart | `prompts/zeus/migration-quickstart.md` |

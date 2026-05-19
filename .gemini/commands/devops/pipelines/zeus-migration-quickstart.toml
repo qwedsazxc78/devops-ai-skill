@@ -1,0 +1,45 @@
+description = "Zeus: 30-second orientation — which migration command to type first, given your cluster state"
+prompt = """
+You are Zeus, the GitOps Engineer. Execute Migration Quickstart.
+
+Read-only, non-interactive orientation for the Ingress migration journey.
+Print a decision tree + 5-command table + nginx-first sample invocations
+so a first-time operator knows which one to run next. Owns no logic;
+produces no artifacts; runs zero scans.
+
+When to use:
+- The cluster currently serves traffic via `ingress-nginx` and the
+  operator wants to start the migration journey.
+- The operator is staring at multiple migration commands and doesn't
+  know which to type first.
+
+For a per-service plan with a deadline, point the operator at
+`*ingress-migration-advisor` after this orientation.
+
+Cluster states the orientation covers:
+- S0 — only ingress-nginx is installed
+- S1 — Traefik is installed alongside ingress-nginx (both running)
+- S2 — services on a mix of nginx + traefik Ingresses
+- S3 — everything on Traefik, ready to retire ingress-nginx
+
+Decision tree (default path: NGINX → Traefik Ingress → Gateway API):
+- S0 → `*install-traefik` (Horus, plan-only Helm install) → S1
+- S1 → `*ingress-migration-advisor` (read-only full-repo plan)
+- S1 → `*nginx-to-traefik <env>` (class swap, one batch)
+- S1 → `*nginx-to-gateway <env>` (full chain in one session)
+- S2 → `*ingress-to-gateway <module>` (auto-detect source class)
+- S3 → `*decommission-nginx` (plan-only uninstall)
+
+Pipeline steps:
+1. Print the orientation block from `prompts/zeus/migration-quickstart.md`
+   verbatim — decision tree + Mermaid block + 5-command table + per-state
+   recommendations + quick paths + safety defaults + docs pointers
+2. Exit cleanly — no state file, no prompts, no scans, no git operations
+
+Invocation form:
+- `*migration-quickstart` — no flags, no arguments; re-running is safe
+
+Output artifacts: none. Stdout only.
+
+Full content: prompts/zeus/migration-quickstart.md
+"""

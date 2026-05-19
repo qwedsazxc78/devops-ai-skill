@@ -1,0 +1,10 @@
+# Classifier-only unit fixture — exercised by test_classify_spec_wins_over_annotation
+# at the bottom of run-fixtures.sh. Not a full migration round-trip; no expected/
+# directory. The expectError flag re-uses the framework's hook for skipping the
+# expected/ check (semantic stretch — this isn't an error-path fixture, but the
+# framework otherwise has no way to mark a "unit-test-only" fixture).
+expectError: true
+note: |
+  Pin Kubernetes precedence — when spec.ingressClassName and the legacy
+  kubernetes.io/ingress.class annotation disagree, spec wins. See v1.13.0
+  precedence fix in skills/gateway-api-migration/scripts/classify_ingress.py.

@@ -1,0 +1,27 @@
+# Dual-annotated Ingress: spec.ingressClassName: traefik (the migration target)
+# AND the legacy kubernetes.io/ingress.class: nginx annotation (a leftover from
+# pre-migration that the operator hasn't cleaned up).
+#
+# Per Kubernetes precedence, this Ingress is served by the Traefik controller.
+# The classifier must classify it as sourceClass: traefik regardless of the
+# stale annotation. This fixture pins the precedence behavior down.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: dual-annotated-service
+  namespace: example
+  annotations:
+    kubernetes.io/ingress.class: nginx
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: dual.example.org
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: dual-annotated
+                port:
+                  number: 80

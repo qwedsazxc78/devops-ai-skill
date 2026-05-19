@@ -87,11 +87,12 @@ def _classify(doc: dict) -> tuple[str, str]:
         return "unknown", f"kind={doc.get('kind')!r} not Ingress"
 
     annotations = (doc.get("metadata") or {}).get("annotations") or {}
-    ingress_class = annotations.get("kubernetes.io/ingress.class")
-    # `spec.ingressClassName` is the modern field; honour it if present.
     spec = doc.get("spec") or {}
-    if not ingress_class:
-        ingress_class = spec.get("ingressClassName")
+    # Match Kubernetes precedence: `spec.ingressClassName` wins; the legacy
+    # `kubernetes.io/ingress.class` annotation is the fallback. Reversing this
+    # would mis-classify mid-migration Ingresses where spec is the new class
+    # but the annotation still names the old one.
+    ingress_class = spec.get("ingressClassName") or annotations.get("kubernetes.io/ingress.class")
 
     # Rule 5 — foreign class (non-nginx, non-traefik)
     if ingress_class and ingress_class not in ("nginx", "traefik"):
@@ -131,9 +132,11 @@ def _extract(doc: dict) -> dict:
     spec = doc.get("spec") or {}
     rules = spec.get("rules") or []
     annotations = metadata.get("annotations") or {}
+    # Match Kubernetes precedence: spec wins, annotation is fallback. See
+    # the same precedence in `_classify()` above.
     ingress_class = (
-        annotations.get("kubernetes.io/ingress.class")
-        or spec.get("ingressClassName")
+        spec.get("ingressClassName")
+        or annotations.get("kubernetes.io/ingress.class")
     )
     source_class = "traefik" if ingress_class == "traefik" else "nginx"
     return {

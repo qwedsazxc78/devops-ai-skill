@@ -56,6 +56,7 @@ Detect the repository type to choose the right agent:
 | *nginx-to-gateway | `prompts/zeus/nginx-to-gateway.md` |
 | *ingress-to-gateway | Auto-detect source class (nginx/traefik) then migrate to Gateway API |
 | *ingress-migration-advisor | Read-only EOL planner: scores services and recommends a migration path per service |
+| *migration-quickstart | 30-second orientation: decision tree + 5-command table + sample invocations (no scan, no prompts) |
 
 ### Zeus Skills
 

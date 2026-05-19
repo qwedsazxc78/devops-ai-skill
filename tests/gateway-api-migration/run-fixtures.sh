@@ -80,7 +80,24 @@ test_classify_traefik_source() {
   fi
 }
 
+test_classify_spec_wins_over_annotation() {
+  # Regression test for the v1.13.0 precedence fix. An Ingress with
+  # spec.ingressClassName: traefik AND a stale legacy annotation
+  # kubernetes.io/ingress.class: nginx must classify as sourceClass: traefik
+  # (matching Kubernetes' real precedence).
+  local f="$ROOT_DIR/tests/gateway-api-migration/fixtures/spec-wins-over-annotation/input/dual-annotated-ingress.yaml"
+  local out
+  out=$(python3 "$ROOT_DIR/skills/gateway-api-migration/scripts/classify_ingress.py" "$f")
+  if echo "$out" | jq -e '.sourceClass == "traefik" and .ingressClass == "traefik"' >/dev/null; then
+    pass "classify_ingress: spec wins over annotation (sourceClass=traefik)"
+  else
+    fail "classify_ingress: precedence regression — spec should win over annotation"
+    echo "    actual: $out"
+  fi
+}
+
 test_classify_traefik_source
+test_classify_spec_wins_over_annotation
 
 echo ""
 echo "--- validate_generated unit tests ---"
