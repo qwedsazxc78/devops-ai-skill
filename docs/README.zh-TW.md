@@ -278,22 +278,25 @@ npx skills update
 
 ## 技能模組
 
-所有技能遵循 [Open Agent Skills](https://agentskills.io/specification) 標準（SKILL.md + YAML frontmatter）：
+所有技能遵循 [Open Agent Skills](https://agentskills.io/specification) 標準（SKILL.md + YAML frontmatter）。以 `devops:<技能>` 命名空間呼叫：
 
 | 技能 | 使用者 | 用途 |
 |------|--------|------|
-| terraform-validate | Horus | 驗證與 Lint |
-| terraform-security | Horus | 安全性掃描 |
-| helm-version-upgrade | Horus | Helm Chart 版本管理 |
-| helm-scaffold | Horus | 新模組產生 |
-| cicd-enhancer | Horus | CI/CD 流水線改善 |
-| kustomize-resource-validation | Zeus | Kustomize 建置 + 驗證 |
-| yaml-fix-suggestions | Zeus | YAML 格式修正 |
-| gateway-api-migration | Zeus | NGINX Ingress → Gateway API 遷移，支援狀態追蹤。v1.2.0 起雙目標：預設 Traefik、可選 GKE Gateway。 |
-| nginx-to-traefik | Zeus | NGINX Ingress 類別替換為 Traefik Ingress，支援並行運行與 DNS A-record 切換。 |
-| nginx-to-gateway | Zeus | 薄協調器：在單一 session 中串聯 nginx-to-traefik → gateway-api-migration，產生合併報告。 |
-| repo-detect | 共用 | 儲存庫類型偵測 |
-| release-validate | 共用 | 發佈就緒驗證 — Phase 4~7 全自動檢查（fixture 測試、Shell 可攜性、跨庫樣式覆蓋率、AI 工具同步）。發佈前執行 `pnpm release:check`。(v1.15.0+) |
+| devops:terraform-validate | Horus | 驗證與 Lint |
+| devops:terraform-security | Horus | 安全性掃描 |
+| devops:helm-version-upgrade | Horus | Helm Chart 版本管理 |
+| devops:helm-scaffold | Horus | 新模組產生 |
+| devops:cicd-enhancer | Horus | CI/CD 流水線改善 |
+| devops:kustomize-resource-validation | Zeus | Kustomize 建置 + 驗證 |
+| devops:yaml-fix-suggestions | Zeus | YAML 格式修正 |
+| devops:gateway-api-migration | Zeus | NGINX Ingress → Gateway API 遷移，支援狀態追蹤。v1.2.0 起雙目標：預設 Traefik、可選 GKE Gateway。 |
+| devops:nginx-to-traefik | Zeus | NGINX Ingress 類別替換為 Traefik Ingress，支援並行運行與 DNS A-record 切換。 |
+| devops:nginx-to-gateway | Zeus | 薄協調器：在單一 session 中串聯 nginx-to-traefik → gateway-api-migration，產生合併報告。 |
+| devops:ingress-migration-advisor | Zeus | 唯讀 ingress-nginx EOL 規劃工具（v1.12.0+）。5 維度評分、關鍵層級否決、sourceClass 捷徑。輸出：分階段計劃與每批 Zeus 指令。 |
+| devops:ingress-controller-install | Zeus | GitOps Traefik 安裝/升級（v1.13.1+）。三種模式自動偵測：bootstrap / new-env / upgrade。僅規劃。 |
+| devops:traefik-controller-decommission | Zeus | GitOps ingress-nginx 退役：模組封存 + ArgoCD 清除（v1.13.1+）。先驗證叢集+儲存庫無 nginx-class。僅規劃。 |
+| devops:repo-detect | 共用 | 儲存庫類型偵測 |
+| devops:release-validate | 共用 | 發佈就緒驗證 — Phase 4~7 全自動檢查（fixture 測試、Shell 可攜性、跨庫樣式覆蓋率、AI 工具同步）。發佈前執行 `pnpm release:check`。(v1.15.0+) |
 
 ## 專案結構
 

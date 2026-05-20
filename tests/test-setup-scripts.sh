@@ -62,8 +62,10 @@ create_sandbox() {
     # Skills directory with SKILL.md in each
     local skills=(
         cicd-enhancer gateway-api-migration helm-scaffold helm-version-upgrade
-        kustomize-resource-validation release-validate repo-detect
-        terraform-security terraform-validate yaml-fix-suggestions
+        ingress-controller-install ingress-migration-advisor
+        kustomize-resource-validation nginx-to-gateway nginx-to-traefik
+        release-validate repo-detect terraform-security terraform-validate
+        traefik-controller-decommission yaml-fix-suggestions
     )
     for skill in "${skills[@]}"; do
         mkdir -p "$SANDBOX/skills/$skill"
@@ -158,39 +160,41 @@ section "Setup Claude Code (setup-claude.sh)"
 create_sandbox
 output=$(bash "$SANDBOX/scripts/setup/setup-claude.sh" 2>&1) || true
 
-# Directory created
-if [ -d "$SANDBOX/.claude/skills" ]; then
-    pass ".claude/skills/ directory created"
+# Namespace directory created
+if [ -d "$SANDBOX/.claude/skills/devops" ]; then
+    pass ".claude/skills/devops/ directory created"
 else
-    fail ".claude/skills/ directory not created"
+    fail ".claude/skills/devops/ directory not created"
 fi
 
-# All 10 skills symlinked
+# All 15 skills symlinked under devops/ namespace
 expected_skills=(
     cicd-enhancer gateway-api-migration helm-scaffold helm-version-upgrade
-    kustomize-resource-validation release-validate repo-detect
-    terraform-security terraform-validate yaml-fix-suggestions
+    ingress-controller-install ingress-migration-advisor
+    kustomize-resource-validation nginx-to-gateway nginx-to-traefik
+    release-validate repo-detect terraform-security terraform-validate
+    traefik-controller-decommission yaml-fix-suggestions
 )
 for skill in "${expected_skills[@]}"; do
-    target="$SANDBOX/.claude/skills/$skill"
+    target="$SANDBOX/.claude/skills/devops/$skill"
     if [ -L "$target" ]; then
         # Verify symlink resolves to a valid directory
         if [ -d "$target" ]; then
-            pass "Symlink $skill resolves correctly"
+            pass "Symlink devops:$skill resolves correctly"
         else
-            fail "Symlink $skill exists but target is broken"
+            fail "Symlink devops:$skill exists but target is broken"
         fi
     else
-        fail "Symlink $skill not created"
+        fail "Symlink devops:$skill not created"
     fi
 done
 
 # Count matches expected
-count=$(find "$SANDBOX/.claude/skills" -maxdepth 1 -mindepth 1 | wc -l | tr -d ' ')
-if [ "$count" -eq 10 ]; then
+count=$(find "$SANDBOX/.claude/skills/devops" -maxdepth 1 -mindepth 1 | wc -l | tr -d ' ')
+if [ "$count" -eq 15 ]; then
     pass "Correct skill count: $count"
 else
-    fail "Expected 10 skills, got $count"
+    fail "Expected 15 skills, got $count"
 fi
 
 # Output contains completion message
@@ -203,10 +207,10 @@ fi
 # Idempotent: run again, should skip all
 output2=$(bash "$SANDBOX/scripts/setup/setup-claude.sh" 2>&1) || true
 skip_count=$(echo "$output2" | grep -c "\[skip\]" || true)
-if [ "$skip_count" -eq 10 ]; then
-    pass "Idempotent: all 10 skills skipped on re-run"
+if [ "$skip_count" -eq 15 ]; then
+    pass "Idempotent: all 15 skills skipped on re-run"
 else
-    fail "Idempotent check: expected 10 skips, got $skip_count"
+    fail "Idempotent check: expected 15 skips, got $skip_count"
 fi
 
 cleanup_sandbox
@@ -219,29 +223,29 @@ section "Setup Codex CLI (setup-codex.sh)"
 create_sandbox
 output=$(bash "$SANDBOX/scripts/setup/setup-codex.sh" 2>&1) || true
 
-# Directory created
-if [ -d "$SANDBOX/.codex/skills" ]; then
-    pass ".codex/skills/ directory created"
+# Namespace directory created
+if [ -d "$SANDBOX/.codex/skills/devops" ]; then
+    pass ".codex/skills/devops/ directory created"
 else
-    fail ".codex/skills/ directory not created"
+    fail ".codex/skills/devops/ directory not created"
 fi
 
-# All 10 skills symlinked
+# All 15 skills symlinked under devops/ namespace
 for skill in "${expected_skills[@]}"; do
-    target="$SANDBOX/.codex/skills/$skill"
+    target="$SANDBOX/.codex/skills/devops/$skill"
     if [ -L "$target" ] && [ -d "$target" ]; then
-        pass "Symlink $skill resolves correctly"
+        pass "Symlink devops:$skill resolves correctly"
     else
-        fail "Symlink $skill missing or broken"
+        fail "Symlink devops:$skill missing or broken"
     fi
 done
 
 # Count matches
-count=$(find "$SANDBOX/.codex/skills" -maxdepth 1 -mindepth 1 | wc -l | tr -d ' ')
-if [ "$count" -eq 10 ]; then
+count=$(find "$SANDBOX/.codex/skills/devops" -maxdepth 1 -mindepth 1 | wc -l | tr -d ' ')
+if [ "$count" -eq 15 ]; then
     pass "Correct skill count: $count"
 else
-    fail "Expected 10 skills, got $count"
+    fail "Expected 15 skills, got $count"
 fi
 
 # AGENTS.md check: exists → no warn
@@ -261,10 +265,10 @@ fi
 # Idempotent
 output2=$(bash "$SANDBOX/scripts/setup/setup-codex.sh" 2>&1) || true
 skip_count=$(echo "$output2" | grep -c "\[skip\]" || true)
-if [ "$skip_count" -eq 10 ]; then
-    pass "Idempotent: all 10 skills skipped on re-run"
+if [ "$skip_count" -eq 15 ]; then
+    pass "Idempotent: all 15 skills skipped on re-run"
 else
-    fail "Idempotent check: expected 10 skips, got $skip_count"
+    fail "Idempotent check: expected 15 skips, got $skip_count"
 fi
 
 cleanup_sandbox
@@ -403,11 +407,11 @@ fi
 # Idempotent
 output2=$(bash "$SANDBOX/scripts/setup/setup-antigravity.sh" 2>&1) || true
 skip_count=$(echo "$output2" | grep -c "\[skip\]" || true)
-# 10 skills + 19 workflows = 29 skips
-if [ "$skip_count" -eq 29 ]; then
-    pass "Idempotent: all 29 items skipped on re-run"
+# 15 skills + 19 workflows = 34 skips
+if [ "$skip_count" -eq 34 ]; then
+    pass "Idempotent: all 34 items skipped on re-run"
 else
-    fail "Idempotent check: expected 29 skips, got $skip_count"
+    fail "Idempotent check: expected 34 skips, got $skip_count"
 fi
 
 cleanup_sandbox

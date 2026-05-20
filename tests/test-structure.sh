@@ -230,10 +230,10 @@ else
     fail ".codex/config.toml missing"
 fi
 
-if [ -d "$ROOT_DIR/.codex/skills" ]; then
-    pass ".codex/skills/ directory exists"
+if [ -d "$ROOT_DIR/.codex/skills/devops" ]; then
+    pass ".codex/skills/devops/ directory exists"
 else
-    warn ".codex/skills/ directory missing (run setup-codex.sh to create symlinks)"
+    warn ".codex/skills/devops/ directory missing (run setup-codex.sh to create symlinks)"
 fi
 
 # ============================================

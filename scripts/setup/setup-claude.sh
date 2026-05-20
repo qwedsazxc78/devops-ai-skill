@@ -6,7 +6,8 @@
 #   bash scripts/setup/setup-claude.sh
 #   bash node_modules/devops-ai-skill/scripts/setup/setup-claude.sh
 #
-# Creates .claude/skills/ symlinks pointing to shared skills/ directory.
+# Creates .claude/skills/devops/ symlinks pointing to shared skills/ directory.
+# Skills load as devops:<skill-name> (namespace = plugin name).
 # Safe: skips existing symlinks.
 # =============================================================================
 
@@ -15,7 +16,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 SKILLS_DIR="$ROOT_DIR/skills"
-CLAUDE_SKILLS_DIR="$ROOT_DIR/.claude/skills"
+CLAUDE_SKILLS_DIR="$ROOT_DIR/.claude/skills/devops"
 
 echo "Setting up Claude Code skills..."
 
@@ -28,18 +29,18 @@ for skill_dir in "$SKILLS_DIR"/*/; do
     target="$CLAUDE_SKILLS_DIR/$skill_name"
 
     if [ -L "$target" ]; then
-        echo "  [skip] $skill_name (symlink exists)"
+        echo "  [skip] devops:$skill_name (symlink exists)"
     elif [ -d "$target" ]; then
-        echo "  [skip] $skill_name (directory exists)"
+        echo "  [skip] devops:$skill_name (directory exists)"
     else
         # Use relative symlinks for portability
-        ln -s "../../skills/$skill_name" "$target"
-        echo "  [link] $skill_name → skills/$skill_name"
+        ln -s "../../../skills/$skill_name" "$target"
+        echo "  [link] devops:$skill_name → skills/$skill_name"
     fi
 done
 
 echo ""
 echo "Claude Code setup complete!"
-echo "Skills linked: $(ls -1 "$CLAUDE_SKILLS_DIR" | wc -l | tr -d ' ')"
+echo "Skills linked: $(ls -1 "$CLAUDE_SKILLS_DIR" | wc -l | tr -d ' ') (accessible as devops:<skill-name>)"
 echo ""
 echo "To use: claude --plugin-dir $ROOT_DIR"

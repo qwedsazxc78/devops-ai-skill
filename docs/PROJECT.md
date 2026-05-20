@@ -53,15 +53,15 @@ On activation, detect the repository type:
 
 Expert SRE for Terraform + Helm + GKE platforms. Pipeline-driven, safety-first.
 
-### Horus Skills (from `skills/` directory)
+### Horus Skills (invoke as `devops:<skill>`)
 
 | Skill | Purpose |
 |-------|---------|
-| helm-version-upgrade | Helm chart version management (dynamic discovery) |
-| terraform-validate | Validation and linting |
-| terraform-security | Security scanning |
-| cicd-enhancer | CI/CD pipeline improvement |
-| helm-scaffold | New module generation |
+| devops:helm-version-upgrade | Helm chart version management (dynamic discovery) |
+| devops:terraform-validate | Validation and linting |
+| devops:terraform-security | Security scanning |
+| devops:cicd-enhancer | CI/CD pipeline improvement |
+| devops:helm-scaffold | New module generation |
 
 ### Horus Pipelines (from `prompts/horus/`)
 
@@ -86,25 +86,25 @@ Expert SRE for Terraform + Helm + GKE platforms. Pipeline-driven, safety-first.
 
 Pipeline Orchestrator for Kustomize + ArgoCD platforms. Commanding, methodical, thorough.
 
-### Zeus Skills (from `skills/` directory)
+### Zeus Skills (invoke as `devops:<skill>`)
 
 | Skill | Purpose |
 |-------|---------|
-| kustomize-resource-validation | Kustomize build + resource validation |
-| yaml-fix-suggestions | YAML formatting and validation |
-| repo-detect | Repository type detection |
-| gateway-api-migration | NGINX Ingress → Gateway API migration (master/minion + standalone). Dual-target since v1.2.0: default Traefik (`traefik`), opt-in GKE Gateway (`gke-l7-*`). |
-| nginx-to-traefik | Class-swap NGINX Ingress to Traefik Ingress with parallel run and DNS A-record cutover. |
-| nginx-to-gateway | Thin orchestrator: chains nginx-to-traefik → gateway-api-migration in one session with a combined report. |
-| ingress-migration-advisor | Read-only planner for the ingress-nginx 2025 EOL. Scores services on 5 dimensions and recommends `direct-gateway`, `two-step`, `swap-only`, or `defer` per service. Requires `docs/ingress-tier-map.yaml`. |
-| ingress-controller-install | GitOps Traefik install/upgrade via Kustomize edits under `common.traefik/`. Three modes (bootstrap, new-env, upgrade) auto-detected. Plan-only. |
-| traefik-controller-decommission | GitOps ingress-nginx decommission — verify cluster+repo free of nginx-class (precedence-aware), DNS bake confirmation, archive Kustomize module + ArgoCD prune. Plan-only. |
+| devops:kustomize-resource-validation | Kustomize build + resource validation |
+| devops:yaml-fix-suggestions | YAML formatting and validation |
+| devops:repo-detect | Repository type detection |
+| devops:gateway-api-migration | NGINX Ingress → Gateway API migration (master/minion + standalone). Dual-target since v1.2.0: default Traefik (`traefik`), opt-in GKE Gateway (`gke-l7-*`). |
+| devops:nginx-to-traefik | Class-swap NGINX Ingress to Traefik Ingress with parallel run and DNS A-record cutover. |
+| devops:nginx-to-gateway | Thin orchestrator: chains nginx-to-traefik → gateway-api-migration in one session with a combined report. |
+| devops:ingress-migration-advisor | Read-only planner for the ingress-nginx 2025 EOL. Scores services on 5 dimensions and recommends `direct-gateway`, `two-step`, `swap-only`, or `defer` per service. Requires `docs/ingress-tier-map.yaml`. |
+| devops:ingress-controller-install | GitOps Traefik install/upgrade via Kustomize edits under `common.traefik/`. Three modes (bootstrap, new-env, upgrade) auto-detected. Plan-only. |
+| devops:traefik-controller-decommission | GitOps ingress-nginx decommission — verify cluster+repo free of nginx-class (precedence-aware), DNS bake confirmation, archive Kustomize module + ArgoCD prune. Plan-only. |
 
-### Shared Skills (from `skills/` directory)
+### Shared Skills (invoke as `devops:<skill>`)
 
 | Skill | Purpose |
 |-------|---------|
-| release-validate | Release readiness validation — Phases 1–8. Automated gate: `pnpm release:check` runs Phases 4–7 (fixture suites, shell portability, repo-style coverage, AI-tool parity) and writes `docs/reports/release-validate/<version>/RELEASE-CHECK.md`. Wired into CI on `v*` tags. (v1.15.0+) |
+| devops:release-validate | Release readiness validation — Phases 1–8. Automated gate: `pnpm release:check` runs Phases 4–7 (fixture suites, shell portability, repo-style coverage, AI-tool parity) and writes `docs/reports/release-validate/<version>/RELEASE-CHECK.md`. Wired into CI on `v*` tags. (v1.15.0+) |
 
 ### Zeus Pipelines (from `prompts/zeus/`)
 

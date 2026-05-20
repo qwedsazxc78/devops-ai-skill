@@ -314,25 +314,25 @@ invocations and cluster-state recommendations.
 
 ## Skills
 
-All skills follow the [Open Agent Skills](https://agentskills.io/specification) standard (SKILL.md with YAML frontmatter):
+All skills follow the [Open Agent Skills](https://agentskills.io/specification) standard (SKILL.md with YAML frontmatter). Invoke via `devops:<skill>` namespace:
 
 | Skill | Used By | Purpose |
 |-------|---------|---------|
-| terraform-validate | Horus | Validation and linting |
-| terraform-security | Horus | Security scanning |
-| helm-version-upgrade | Horus | Helm chart version management |
-| helm-scaffold | Horus | New module generation |
-| cicd-enhancer | Horus | CI/CD pipeline improvement |
-| kustomize-resource-validation | Zeus | Kustomize build + validation |
-| yaml-fix-suggestions | Zeus | YAML formatting |
-| gateway-api-migration | Zeus | NGINX Ingress → Gateway API migration with state tracking. Dual-target since v1.2.0: default Traefik, opt-in GKE Gateway. |
-| nginx-to-traefik | Zeus | Class-swap NGINX Ingress to Traefik Ingress with parallel run and DNS A-record cutover. |
-| nginx-to-gateway | Zeus | Thin orchestrator: chains nginx-to-traefik → gateway-api-migration in one session with a combined report. |
-| ingress-migration-advisor | Zeus | Read-only ingress-nginx EOL planner (v1.12.0+). 5-dimension scoring, critical-tier veto, sourceClass shortcut. Output: phased plan with per-batch Zeus commands. |
-| ingress-controller-install | Zeus | GitOps Traefik install/upgrade via Kustomize edits (v1.13.1+). Three modes auto-detected: bootstrap / new-env / upgrade. Plan-only. |
-| traefik-controller-decommission | Zeus | GitOps ingress-nginx decommission via module archive + ArgoCD prune (v1.13.1+). Verify cluster+repo free of nginx-class first (precedence-aware). |
-| repo-detect | Both | Repository type detection |
-| release-validate | Shared | Release readiness validation — Phases 4–7: fixture suites, shell portability, repo-style coverage, AI-tool parity. Run `pnpm release:check` before `pnpm release`. (v1.15.0+) |
+| devops:terraform-validate | Horus | Validation and linting |
+| devops:terraform-security | Horus | Security scanning |
+| devops:helm-version-upgrade | Horus | Helm chart version management |
+| devops:helm-scaffold | Horus | New module generation |
+| devops:cicd-enhancer | Horus | CI/CD pipeline improvement |
+| devops:kustomize-resource-validation | Zeus | Kustomize build + validation |
+| devops:yaml-fix-suggestions | Zeus | YAML formatting |
+| devops:gateway-api-migration | Zeus | NGINX Ingress → Gateway API migration with state tracking. Dual-target since v1.2.0: default Traefik, opt-in GKE Gateway. |
+| devops:nginx-to-traefik | Zeus | Class-swap NGINX Ingress to Traefik Ingress with parallel run and DNS A-record cutover. |
+| devops:nginx-to-gateway | Zeus | Thin orchestrator: chains nginx-to-traefik → gateway-api-migration in one session with a combined report. |
+| devops:ingress-migration-advisor | Zeus | Read-only ingress-nginx EOL planner (v1.12.0+). 5-dimension scoring, critical-tier veto, sourceClass shortcut. Output: phased plan with per-batch Zeus commands. |
+| devops:ingress-controller-install | Zeus | GitOps Traefik install/upgrade via Kustomize edits (v1.13.1+). Three modes auto-detected: bootstrap / new-env / upgrade. Plan-only. |
+| devops:traefik-controller-decommission | Zeus | GitOps ingress-nginx decommission via module archive + ArgoCD prune (v1.13.1+). Verify cluster+repo free of nginx-class first (precedence-aware). |
+| devops:repo-detect | Both | Repository type detection |
+| devops:release-validate | Shared | Release readiness validation — Phases 4–7: fixture suites, shell portability, repo-style coverage, AI-tool parity. Run `pnpm release:check` before `pnpm release`. (v1.15.0+) |
 
 ## Hooks
 

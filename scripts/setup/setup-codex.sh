@@ -6,7 +6,8 @@
 #   bash scripts/setup/setup-codex.sh
 #   bash node_modules/devops-ai-skill/scripts/setup/setup-codex.sh
 #
-# Creates .codex/skills/ symlinks pointing to shared skills/ directory.
+# Creates .codex/skills/devops/ symlinks pointing to shared skills/ directory.
+# Skills load as devops:<skill-name> (namespace = plugin name).
 # Safe: skips existing symlinks.
 # =============================================================================
 
@@ -15,7 +16,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 SKILLS_DIR="$ROOT_DIR/skills"
-CODEX_SKILLS_DIR="$ROOT_DIR/.codex/skills"
+CODEX_SKILLS_DIR="$ROOT_DIR/.codex/skills/devops"
 
 echo "Setting up OpenAI Codex CLI skills..."
 
@@ -28,12 +29,12 @@ for skill_dir in "$SKILLS_DIR"/*/; do
     target="$CODEX_SKILLS_DIR/$skill_name"
 
     if [ -L "$target" ]; then
-        echo "  [skip] $skill_name (symlink exists)"
+        echo "  [skip] devops:$skill_name (symlink exists)"
     elif [ -d "$target" ]; then
-        echo "  [skip] $skill_name (directory exists)"
+        echo "  [skip] devops:$skill_name (directory exists)"
     else
-        ln -s "../../skills/$skill_name" "$target"
-        echo "  [link] $skill_name → skills/$skill_name"
+        ln -s "../../../skills/$skill_name" "$target"
+        echo "  [link] devops:$skill_name → skills/$skill_name"
     fi
 done
 
@@ -44,6 +45,6 @@ fi
 
 echo ""
 echo "Codex CLI setup complete!"
-echo "Skills linked: $(ls -1 "$CODEX_SKILLS_DIR" | wc -l | tr -d ' ')"
+echo "Skills linked: $(ls -1 "$CODEX_SKILLS_DIR" | wc -l | tr -d ' ') (accessible as devops:<skill-name>)"
 echo ""
 echo "Start Codex in this directory to use the skills."
