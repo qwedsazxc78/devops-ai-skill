@@ -72,18 +72,25 @@ fi
 section "Skills Directory"
 
 EXPECTED_SKILLS=(
-    "terraform-validate"
-    "terraform-security"
     "helm-version-upgrade"
-    "helm-scaffold"
-    "cicd-enhancer"
     "kustomize-resource-validation"
     "yaml-fix-suggestions"
-    "repo-detect"
     "release-validate"
     "gateway-api-migration"
     "nginx-to-traefik"
     "nginx-to-gateway"
+    "ingress-controller-install"
+    "ingress-migration-advisor"
+    "traefik-controller-decommission"
+)
+
+# Horus-internal guides (GUIDE.md — hidden from command palette)
+EXPECTED_GUIDES=(
+    "terraform-validate"
+    "terraform-security"
+    "helm-scaffold"
+    "cicd-enhancer"
+    "repo-detect"
 )
 
 for skill in "${EXPECTED_SKILLS[@]}"; do
@@ -137,6 +144,31 @@ for skill in "${EXPECTED_SKILLS[@]}"; do
         pass "skills/$skill/SKILL.md has version: field"
     else
         fail "skills/$skill/SKILL.md missing version: field"
+    fi
+done
+
+for guide in "${EXPECTED_GUIDES[@]}"; do
+    guide_dir="$ROOT_DIR/skills/$guide"
+    guide_md="$guide_dir/GUIDE.md"
+
+    if [ -d "$guide_dir" ]; then
+        pass "skills/$guide/ directory exists"
+    else
+        fail "skills/$guide/ directory missing"
+        continue
+    fi
+
+    if [ -f "$guide_md" ]; then
+        pass "skills/$guide/GUIDE.md exists (hidden guide)"
+    else
+        fail "skills/$guide/GUIDE.md missing"
+        continue
+    fi
+
+    if [ -f "$guide_dir/SKILL.md" ]; then
+        fail "skills/$guide/SKILL.md still exists — would re-expose as plugin command"
+    else
+        pass "skills/$guide/SKILL.md absent (correctly hidden)"
     fi
 done
 

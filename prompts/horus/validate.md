@@ -11,7 +11,7 @@ Full validation with format check, file analysis, and consistency verification.
 
 ### Step 1: Full Validation
 
-- Skill: `terraform-validate`
+- Read `skills/terraform-validate/GUIDE.md` and follow its step-by-step instructions
 - `cd $TF_DIR && terraform fmt -check -recursive`
 - `cd $TF_DIR && terraform validate` (syntax + schema) — requires init; skip if .terraform missing
 - JSON schema validation (infra/*.json)
@@ -20,7 +20,7 @@ Full validation with format check, file analysis, and consistency verification.
 
 ### Step 2: Light Security Scan
 
-- Skill: `terraform-security`
+- Read `skills/terraform-security/GUIDE.md` and follow its step-by-step instructions
 - Critical findings only
 - Hardcoded secrets check
 - Abbreviated security report

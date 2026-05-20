@@ -21,7 +21,7 @@ Safely upgrade Helm chart versions with validation and security checks.
 
 ### Step 3: Validate Changed Files
 
-- Skill: `terraform-validate`
+- Read `skills/terraform-validate/GUIDE.md` and follow its step-by-step instructions
 - Discover TF_DIR (same as full pipeline Step 0)
 - `cd $TF_DIR && terraform fmt -check`
 - `cd $TF_DIR && terraform validate` (skip if .terraform missing)
@@ -30,7 +30,7 @@ Safely upgrade Helm chart versions with validation and security checks.
 
 ### Step 4: Quick Security Scan
 
-- Skill: `terraform-security`
+- Read `skills/terraform-security/GUIDE.md` and follow its step-by-step instructions
 - Check changed modules for new vulnerabilities
 - Verify no new hardcoded secrets introduced
 - Report any new findings

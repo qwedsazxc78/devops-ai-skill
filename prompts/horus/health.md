@@ -13,14 +13,14 @@ Comprehensive health assessment of the IaC platform.
 
 ### Step 2: Full Security Posture
 
-- Skill: `terraform-security`
+- Read `skills/terraform-security/GUIDE.md` and follow its step-by-step instructions
 - GKE hardening check
 - Helm security assessment
 - IAM review
 
 ### Step 3: Full Consistency Check
 
-- Skill: `terraform-validate`
+- Read `skills/terraform-validate/GUIDE.md` and follow its step-by-step instructions
 - Format + validate + schema + consistency
 - Naming conventions
 

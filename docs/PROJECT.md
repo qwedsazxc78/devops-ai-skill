@@ -58,10 +58,15 @@ Expert SRE for Terraform + Helm + GKE platforms. Pipeline-driven, safety-first.
 | Skill | Purpose |
 |-------|---------|
 | devops:helm-version-upgrade | Helm chart version management (dynamic discovery) |
-| devops:terraform-validate | Validation and linting |
-| devops:terraform-security | Security scanning |
-| devops:cicd-enhancer | CI/CD pipeline improvement |
-| devops:helm-scaffold | New module generation |
+
+### Horus Internal Guides (read via `Read` — hidden from command palette)
+
+| Guide (GUIDE.md) | Purpose |
+|-----------------|---------|
+| terraform-validate | Validation and linting |
+| terraform-security | Security scanning |
+| cicd-enhancer | CI/CD pipeline improvement |
+| helm-scaffold | New module generation |
 
 ### Horus Pipelines (from `prompts/horus/`)
 
@@ -92,7 +97,6 @@ Pipeline Orchestrator for Kustomize + ArgoCD platforms. Commanding, methodical, 
 |-------|---------|
 | devops:kustomize-resource-validation | Kustomize build + resource validation |
 | devops:yaml-fix-suggestions | YAML formatting and validation |
-| devops:repo-detect | Repository type detection |
 | devops:gateway-api-migration | NGINX Ingress → Gateway API migration (master/minion + standalone). Dual-target since v1.2.0: default Traefik (`traefik`), opt-in GKE Gateway (`gke-l7-*`). |
 | devops:nginx-to-traefik | Class-swap NGINX Ingress to Traefik Ingress with parallel run and DNS A-record cutover. |
 | devops:nginx-to-gateway | Thin orchestrator: chains nginx-to-traefik → gateway-api-migration in one session with a combined report. |

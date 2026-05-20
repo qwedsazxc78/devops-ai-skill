@@ -6,21 +6,21 @@ Analyze and improve CI/CD pipeline configuration.
 
 ### Step 1: Analyze Current Pipeline
 
-- Skill: `cicd-enhancer`
+- Read `skills/cicd-enhancer/GUIDE.md` and follow its step-by-step instructions
 - Read CI/CD configuration files
 - Identify missing stages
 - Gap analysis against best practices
 
 ### Step 2: Generate Recommendations
 
-- Skill: `cicd-enhancer`
+- Read `skills/cicd-enhancer/GUIDE.md` and follow its step-by-step instructions
 - CI job YAML snippets for each missing stage
 - Quality gate definitions
 - Caching and optimization suggestions
 
 ### Step 3: Validate CI Changes
 
-- Skill: `terraform-validate`
+- Read `skills/terraform-validate/GUIDE.md` and follow its step-by-step instructions
 - YAML syntax check on generated snippets
 - Verify job dependencies and stage ordering
 

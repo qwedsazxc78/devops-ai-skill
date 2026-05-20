@@ -6,7 +6,7 @@ Scaffold a new Helm module with full validation and security checks.
 
 ### Step 1: Gather Inputs and Generate
 
-- Skill: `helm-scaffold`
+- Read `skills/helm-scaffold/GUIDE.md` and follow its step-by-step instructions
 - Ask for chart name, repo, version, namespace
 - Select pattern (simple/standard/workload-identity/OCI/multi)
 - Generate all module files
@@ -16,14 +16,14 @@ Scaffold a new Helm module with full validation and security checks.
 
 ### Step 2: Validate Generated Module
 
-- Skill: `terraform-validate`
+- Read `skills/terraform-validate/GUIDE.md` and follow its step-by-step instructions
 - terraform fmt on new files
 - terraform validate
 - Cross-file consistency check
 
 ### Step 3: Security Check
 
-- Skill: `terraform-security`
+- Read `skills/terraform-security/GUIDE.md` and follow its step-by-step instructions
 - Review generated RBAC/SA config
 - Check for security best practices
 - Report any concerns

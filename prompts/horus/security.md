@@ -6,7 +6,7 @@ Full security audit by reading and analyzing files (no CLI tool execution).
 
 ### Step 1: Full Security Audit
 
-- Skill: `terraform-security`
+- Read `skills/terraform-security/GUIDE.md` and follow its step-by-step instructions
 - GKE cluster hardening check
 - IAM and workload identity review
 - Helm chart security assessment (all modules)
@@ -14,7 +14,7 @@ Full security audit by reading and analyzing files (no CLI tool execution).
 
 ### Step 2: Cross-Reference Findings
 
-- Skill: `terraform-validate`
+- Read `skills/terraform-validate/GUIDE.md` and follow its step-by-step instructions
 - Verify findings against validation rules
 - Check for configuration inconsistencies
 - Map findings to CIS benchmarks
