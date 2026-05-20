@@ -5,7 +5,7 @@
 [![DEVOPS](https://img.shields.io/badge/DEVOPS-SKILL-blue?style=flat-square)](https://github.com/qwedsazxc78/devops-ai-skill)
 [![LICENSE](https://img.shields.io/badge/LICENSE-MIT-green?style=flat-square)](https://github.com/qwedsazxc78/devops-ai-skill/blob/main/LICENSE)
 [![FILES](https://img.shields.io/badge/FILES-65+-orange?style=flat-square)](#專案結構)
-[![SKILLS](https://img.shields.io/badge/SKILLS-12-blueviolet?style=flat-square)](#技能模組)
+[![SKILLS](https://img.shields.io/badge/SKILLS-10-blueviolet?style=flat-square)](#技能模組)
 [![PIPELINES](https://img.shields.io/badge/PIPELINES-17-ff6f61?style=flat-square)](#horus-流水線iac)
 [![AGENTS](https://img.shields.io/badge/AGENTS-2-critical?style=flat-square)](#agent-代理)
 [![PLATFORMS](https://img.shields.io/badge/PLATFORMS-4-teal?style=flat-square)](#平台支援)
@@ -278,25 +278,33 @@ npx skills update
 
 ## 技能模組
 
-所有技能遵循 [Open Agent Skills](https://agentskills.io/specification) 標準（SKILL.md + YAML frontmatter）。以 `devops:<技能>` 命名空間呼叫：
+所有技能遵循 [Open Agent Skills](https://agentskills.io/specification) 標準（SKILL.md + YAML frontmatter）。以 `devops:<技能>` 命名空間呼叫，或直接用自然語言描述需求，Agent 會自動路由到對應技能。
+
+### 用戶可見技能
 
 | 技能 | 使用者 | 用途 |
 |------|--------|------|
-| devops:terraform-validate | Horus | 驗證與 Lint |
-| devops:terraform-security | Horus | 安全性掃描 |
 | devops:helm-version-upgrade | Horus | Helm Chart 版本管理 |
-| devops:helm-scaffold | Horus | 新模組產生 |
-| devops:cicd-enhancer | Horus | CI/CD 流水線改善 |
 | devops:kustomize-resource-validation | Zeus | Kustomize 建置 + 驗證 |
 | devops:yaml-fix-suggestions | Zeus | YAML 格式修正 |
 | devops:gateway-api-migration | Zeus | NGINX Ingress → Gateway API 遷移，支援狀態追蹤。v1.2.0 起雙目標：預設 Traefik、可選 GKE Gateway。 |
 | devops:nginx-to-traefik | Zeus | NGINX Ingress 類別替換為 Traefik Ingress，支援並行運行與 DNS A-record 切換。 |
 | devops:nginx-to-gateway | Zeus | 薄協調器：在單一 session 中串聯 nginx-to-traefik → gateway-api-migration，產生合併報告。 |
-| devops:ingress-migration-advisor | Zeus | 唯讀 ingress-nginx EOL 規劃工具（v1.12.0+）。5 維度評分、關鍵層級否決、sourceClass 捷徑。輸出：分階段計劃與每批 Zeus 指令。 |
+| devops:ingress-migration-advisor | Zeus | 唯讀 ingress-nginx EOL 規劃工具（v1.12.0+）。5 維度評分、關鍵層級否決、sourceClass 捷徑。 |
 | devops:ingress-controller-install | Zeus | GitOps Traefik 安裝/升級（v1.13.1+）。三種模式自動偵測：bootstrap / new-env / upgrade。僅規劃。 |
-| devops:traefik-controller-decommission | Zeus | GitOps ingress-nginx 退役：模組封存 + ArgoCD 清除（v1.13.1+）。先驗證叢集+儲存庫無 nginx-class。僅規劃。 |
-| devops:repo-detect | 共用 | 儲存庫類型偵測 |
-| devops:release-validate | 共用 | 發佈就緒驗證 — Phase 4~7 全自動檢查（fixture 測試、Shell 可攜性、跨庫樣式覆蓋率、AI 工具同步）。發佈前執行 `pnpm release:check`。(v1.15.0+) |
+| devops:traefik-controller-decommission | Zeus | GitOps ingress-nginx 退役：模組封存 + ArgoCD 清除（v1.13.1+）。僅規劃。 |
+| devops:release-validate | 共用 | 發佈就緒驗證 — Phase 4~7 全自動檢查（fixture 測試、Shell 可攜性、跨庫樣式覆蓋率、AI 工具同步）。(v1.15.0+) |
+
+### Horus 內部指南
+
+隱藏於命令面板，由 Horus Agent Pipeline 透過 `Read GUIDE.md` 呼叫：
+
+| 指南 | 用途 |
+|------|------|
+| terraform-validate | 驗證與 Lint |
+| terraform-security | 安全性掃描 |
+| helm-scaffold | 新模組產生 |
+| cicd-enhancer | CI/CD 流水線改善 |
 
 ## 專案結構
 
