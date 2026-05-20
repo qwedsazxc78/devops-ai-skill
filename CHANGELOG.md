@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.15.1] - 2026-05-20
+
+### Changed
+
+- **Two-tier command architecture** — Reduced `/devops` command palette from 17 to 12 entries by converting 5 Horus-internal skills to `GUIDE.md` (hidden from plugin discovery). Migration/Ingress/Traefik skills retain `SKILL.md` for natural-language triggering.
+  - Converted to `GUIDE.md` (Horus agent reads via `Read`): `terraform-validate`, `terraform-security`, `helm-scaffold`, `cicd-enhancer`, `repo-detect`
+  - Horus pipeline files (`validate.md`, `scaffold.md`, `cicd.md`, `upgrade.md`, `security.md`, `health.md`) updated to reference `GUIDE.md` paths
+  - `horus.md` agent definition updated: new **Internal Guides** table distinguishes agent-only guides from user-visible skills
+
+### Documentation
+
+- README (EN / zh-TW / zh-CN): Skills section restructured into **User-Visible Skills** and **Horus Internal Guides** tables; badge updated `SKILLS-12 → SKILLS-10`
+- `docs/PROJECT.md`: Horus Skills section split into Skills (user-visible) and Internal Guides
+
 ## [1.15.0] - 2026-05-19
 
 ### Added
