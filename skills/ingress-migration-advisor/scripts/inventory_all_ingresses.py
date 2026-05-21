@@ -17,7 +17,7 @@ Output (JSON, on stdout):
       "sourceClass": "nginx" | "traefik" | "foreign",
       "envs": ["dev", "stg", "prd"],
       "modulePathPerEnv": {"dev": "common.service/overlays/dev", ...},
-      "hostsPerEnv": {"dev": ["argocd.dev.awoo.org"], ...},
+      "hostsPerEnv": {"dev": ["argocd.dev.example.com"], ...},
       "annotations": {
         "total": 12,
         "unknownLikely": 1,

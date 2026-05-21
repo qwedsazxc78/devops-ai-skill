@@ -12,7 +12,7 @@
         "dev": "common.service/overlays/dev"
       },
       "hostsPerEnv": {
-        "dev": ["grafana.dev.awoo.org"]
+        "dev": ["grafana.dev.example.com"]
       },
       "annotations": {
         "total": 2,
@@ -34,7 +34,7 @@
         "dev": "common.service/overlays/dev"
       },
       "hostsPerEnv": {
-        "dev": ["kibana.dev.awoo.org"]
+        "dev": ["kibana.dev.example.com"]
       },
       "annotations": {
         "total": 3,

@@ -17,16 +17,16 @@ metadata:
     # nginx.org/proxy-send-timeout: "300s"       #<=== default 60s
 spec:
   rules:
-    - host: base-argocd.awoo.org
-    - host: base-grafana.awoo.org
-    - host: base-airflow.awoo.org
+    - host: base-argocd.example.com
+    - host: base-grafana.example.com
+    - host: base-airflow.example.com
   tls:
     - hosts:
-        - base-argocd.awoo.org
+        - base-argocd.example.com
       secretName: argocd-ingress-nginx-crt
     - hosts:
-        - base-grafana.awoo.org
+        - base-grafana.example.com
       secretName: grafana-ingress-nginx-crt
     - hosts:
-        - base-airflow.awoo.org
+        - base-airflow.example.com
       secretName: airflow-ingress-nginx-crt

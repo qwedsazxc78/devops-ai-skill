@@ -362,10 +362,10 @@ metadata:
     cert-manager.io/cluster-issuer: letsencrypt-prod
 spec:
   tls:
-  - hosts: ["argocd.dev.awoo.org"]
+  - hosts: ["argocd.dev.example.com"]
     secretName: argocd-server-tls
   rules:
-  - host: argocd.dev.awoo.org
+  - host: argocd.dev.example.com
     http:
       paths:
       - path: /
@@ -390,10 +390,10 @@ metadata:
     cert-manager.io/cluster-issuer: letsencrypt-prod
 spec:
   tls:
-  - hosts: ["grafana.dev.awoo.org"]
+  - hosts: ["grafana.dev.example.com"]
     secretName: grafana-tls
   rules:
-  - host: grafana.dev.awoo.org
+  - host: grafana.dev.example.com
     http:
       paths:
       - path: /
@@ -416,10 +416,10 @@ metadata:
 spec:
   ingressClassName: traefik
   tls:
-  - hosts: ["temporal.dev.awoo.org"]
+  - hosts: ["temporal.dev.example.com"]
     secretName: temporal-web-tls
   rules:
-  - host: temporal.dev.awoo.org
+  - host: temporal.dev.example.com
     http:
       paths:
       - path: /
@@ -499,7 +499,7 @@ array (single document on stdout) with one entry per Ingress:
     "name": "argocd-server",
     "namespace": "argocd",
     "ingressClass": "nginx" | "traefik" | null,
-    "hosts": ["argocd.dev.awoo.org"],
+    "hosts": ["argocd.dev.example.com"],
     "backendServices": [{"service": "argocd-server", "port": 80}],
     "annotations": {"key": "value", ...}
   }, ...]
@@ -643,10 +643,10 @@ metadata:
 spec:
   ingressClassName: traefik
   tls:
-  - hosts: ["argocd.dev.awoo.org"]
+  - hosts: ["argocd.dev.example.com"]
     secretName: argocd-server-tls
   rules:
-  - host: argocd.dev.awoo.org
+  - host: argocd.dev.example.com
     http:
       paths:
       - path: /
@@ -671,10 +671,10 @@ metadata:
 spec:
   ingressClassName: traefik
   tls:
-  - hosts: ["grafana.dev.awoo.org"]
+  - hosts: ["grafana.dev.example.com"]
     secretName: grafana-tls
   rules:
-  - host: grafana.dev.awoo.org
+  - host: grafana.dev.example.com
     http:
       paths:
       - path: /
@@ -1082,9 +1082,9 @@ Create `tests/nginx-to-traefik/fixtures/cross-consistency-stale-dns/input/script
 #!/usr/bin/env bash
 # Stub of eye-of-horus-gitops dns script — only the host list matters for tests
 HOSTS_DEV_B1=(
-  "argocd.dev.awoo.org"
-  "grafana.dev.awoo.org"
-  "stale.dev.awoo.org"
+  "argocd.dev.example.com"
+  "grafana.dev.example.com"
+  "stale.dev.example.com"
 )
 ```
 
@@ -1093,8 +1093,8 @@ Create `tests/nginx-to-traefik/fixtures/cross-consistency-stale-dns/input/script
 ```bash
 #!/usr/bin/env bash
 URLS_DEV_B1=(
-  "https://argocd.dev.awoo.org/"
-  "https://grafana.dev.awoo.org/"
+  "https://argocd.dev.example.com/"
+  "https://grafana.dev.example.com/"
 )
 ```
 
@@ -1117,7 +1117,7 @@ test_cross_consistency_detects_stale_dns() {
     --app-ingress "$fdir/common.traefik/overlays/dev/app.ingress.yaml" 2>&1)
   local rc=$?
   set -e
-  if [[ "$rc" != "0" ]] && [[ "$out" == *"stale.dev.awoo.org"* ]]; then
+  if [[ "$rc" != "0" ]] && [[ "$out" == *"stale.dev.example.com"* ]]; then
     echo "  [PASS] cross-consistency: stale host detected"
     PASS=$((PASS+1))
   else
@@ -1456,12 +1456,12 @@ envConfig:
   envs:
     dev: { nginxLbIp: ..., traefikLbIp: ..., certIssuer: ..., managedCertNamespace: ..., managedCertResourceName: ... }
 inventory:
-  - { file: argocd-nginx-ingress.yaml, name: argocd-server, namespace: argocd, hosts: [argocd.dev.awoo.org] }
+  - { file: argocd-nginx-ingress.yaml, name: argocd-server, namespace: argocd, hosts: [argocd.dev.example.com] }
 batchPlan:
   b1: [argocd-server, grafana]
 outputs:
   traefikIngresses:
-    - { file: argocd-traefik-ingress.yaml, host: argocd.dev.awoo.org, namespace: argocd, backend: argocd-server, port: 80, sha256: <hex> }
+    - { file: argocd-traefik-ingress.yaml, host: argocd.dev.example.com, namespace: argocd, backend: argocd-server, port: 80, sha256: <hex> }
 backups:
   - { path: argocd-nginx-ingress.yaml, restorePath: archive/argocd-nginx-ingress.yaml }
 steps:
@@ -1699,10 +1699,10 @@ metadata:
 spec:
   ingressClassName: traefik
   tls:
-  - hosts: ["argocd.dev.awoo.org"]
+  - hosts: ["argocd.dev.example.com"]
     secretName: argocd-server-tls
   rules:
-  - host: argocd.dev.awoo.org
+  - host: argocd.dev.example.com
     http:
       paths:
       - path: /
@@ -1953,10 +1953,10 @@ metadata:
 spec:
   ingressClassName: traefik
   tls:
-  - hosts: ["argocd.dev.awoo.org"]
+  - hosts: ["argocd.dev.example.com"]
     secretName: argocd-server-tls
   rules:
-  - host: argocd.dev.awoo.org
+  - host: argocd.dev.example.com
     http:
       paths:
       - path: /
@@ -2566,8 +2566,8 @@ schemaVersion: 1
 verdict: COMPLETE
 outputs:
   traefikIngresses:
-    - { file: argocd-traefik-ingress.yaml, host: argocd.dev.awoo.org, namespace: argocd, backend: argocd-server, port: 80, sha256: deadbeef }
-    - { file: grafana-traefik-ingress.yaml, host: grafana.dev.awoo.org, namespace: monitoring, backend: grafana, port: 3000, sha256: cafebabe }
+    - { file: argocd-traefik-ingress.yaml, host: argocd.dev.example.com, namespace: argocd, backend: argocd-server, port: 80, sha256: deadbeef }
+    - { file: grafana-traefik-ingress.yaml, host: grafana.dev.example.com, namespace: monitoring, backend: grafana, port: 3000, sha256: cafebabe }
 YAML
 echo "stub-a: wrote $out_dir/state.yaml"
 ```

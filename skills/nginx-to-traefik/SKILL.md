@@ -175,12 +175,12 @@ envConfig:
   envs:
     dev: { nginxLbIp: ..., traefikLbIp: ..., certIssuer: ..., managedCertNamespace: ..., managedCertResourceName: ... }
 inventory:
-  - { file: argocd-nginx-ingress.yaml, name: argocd-server, namespace: argocd, hosts: [argocd.dev.awoo.org] }
+  - { file: argocd-nginx-ingress.yaml, name: argocd-server, namespace: argocd, hosts: [argocd.dev.example.com] }
 batchPlan:
   b1: [argocd-server, grafana]
 outputs:
   traefikIngresses:
-    - { file: argocd-traefik-ingress.yaml, host: argocd.dev.awoo.org, namespace: argocd, backend: argocd-server, port: 80, sha256: <hex> }
+    - { file: argocd-traefik-ingress.yaml, host: argocd.dev.example.com, namespace: argocd, backend: argocd-server, port: 80, sha256: <hex> }
 backups:
   - { path: argocd-nginx-ingress.yaml, restorePath: archive/argocd-nginx-ingress.yaml }
 steps:

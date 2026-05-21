@@ -8,10 +8,10 @@ metadata:
 spec:
   ingressClassName: traefik
   tls:
-  - hosts: ["grafana.dev.awoo.org"]
+  - hosts: ["grafana.dev.example.com"]
     secretName: grafana-tls
   rules:
-  - host: grafana.dev.awoo.org
+  - host: grafana.dev.example.com
     http:
       paths:
       - path: /

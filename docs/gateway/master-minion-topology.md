@@ -48,14 +48,14 @@ metadata:
     kubernetes.io/ingress.class: nginx
 spec:
   rules:
-    - host: argocd.awoo.org
-    - host: grafana.awoo.org
-    - host: airflow.awoo.org
+    - host: argocd.example.com
+    - host: grafana.example.com
+    - host: airflow.example.com
   tls:
     - hosts:
-        - argocd.awoo.org
-        - grafana.awoo.org
-        - airflow.awoo.org
+        - argocd.example.com
+        - grafana.example.com
+        - airflow.example.com
       secretName: managed-cert
 ```
 
@@ -71,7 +71,7 @@ metadata:
     kubernetes.io/ingress.class: nginx
 spec:
   rules:
-    - host: argocd.awoo.org
+    - host: argocd.example.com
       http:
         paths:
           - path: /
@@ -83,9 +83,9 @@ spec:
                   number: 80
 ```
 
-**Result:** The master's host `argocd.awoo.org` matches the minion's host
+**Result:** The master's host `argocd.example.com` matches the minion's host
 exactly (case-insensitive). The pair is formed: the master drives the
-`Gateway` listener for `argocd.awoo.org`; the minion is converted to an
+`Gateway` listener for `argocd.example.com`; the minion is converted to an
 `HTTPRoute` in the `argocd` namespace with `parentRef` pointing at that
 `Gateway`.
 
@@ -116,8 +116,8 @@ files on disk. Three reasons:
 
 1. **Base templates carry placeholder hostnames.** A file like
    `common.service/base/mlflow-nginx-ingress.yaml` often declares a fake
-   host such as `base-mlflow.awoo.org` that every overlay overrides to
-   the real per-env value (`dev-mlflow.awoo.org`, `stg-mlflow.awoo.org`,
+   host such as `base-mlflow.example.com` that every overlay overrides to
+   the real per-env value (`dev-mlflow.example.com`, `stg-mlflow.example.com`,
    etc.) via patches. A classifier that reads the raw base file will see
    the placeholder and fail to pair it with any master — producing a
    spurious "orphan minion" halt.

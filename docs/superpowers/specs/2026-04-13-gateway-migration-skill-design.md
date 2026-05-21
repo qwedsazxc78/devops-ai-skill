@@ -346,9 +346,9 @@ minions:
       stg: common.service/overlays/stg/argocd-nginx-ingress.yaml
       prd: common.service/overlays/prd/argocd-nginx-ingress.yaml
     hostnames:
-      dev: dev-argocd.awoo.org
-      stg: stg-argocd.awoo.org
-      prd: argocd.awoo.org
+      dev: dev-argocd.example.com
+      stg: stg-argocd.example.com
+      prd: argocd.example.com
   - service: grafana
     module: common.service
     namespace: monitoring
@@ -362,12 +362,12 @@ minions:
       stg: common.service/overlays/stg/grafana-nginx-ingress.yaml
       prd: common.service/overlays/prd/grafana-nginx-ingress.yaml
     hostnames:
-      dev: dev-grafana.awoo.org
-      stg: stg-grafana.awoo.org
-      prd: grafana.awoo.org
+      dev: dev-grafana.example.com
+      stg: stg-grafana.example.com
+      prd: grafana.example.com
   # ... (11+ minion entries for eye-of-horus-gitops)
 orphanHosts:
-  - host: dev-alertmanager.awoo.org
+  - host: dev-alertmanager.example.com
     declaredIn: common.ingress/overlays/dev/app.ingress.yaml
     reason: no minion Ingress found with this host
 orphanMinions: []
@@ -555,7 +555,7 @@ spec:
     - name: argocd-https
       port: 443
       protocol: HTTPS
-      hostname: argocd.awoo.org
+      hostname: argocd.example.com
       allowedRoutes:
         namespaces:
           from: Selector
@@ -595,7 +595,7 @@ spec:
       namespace: ingress-nginx
       sectionName: argocd-https
   hostnames:
-    - dev-argocd.awoo.org
+    - dev-argocd.example.com
   rules:
     - matches:
         - path:
@@ -735,9 +735,9 @@ present as a migration unit:
 Discovered migration unit: master/minion topology
   Master:  common.ingress/               (4 files, 14 hostnames declared)
   Minions: common.service/overlays/      (11 services across 3 envs = 33 files)
-    ✓ argocd        → dev/stg/prd-argocd.awoo.org     → argocd-server:80
-    ✓ grafana       → dev/stg/prd-grafana.awoo.org    → grafana:80
-    ✓ airflow       → dev/stg/prd-airflow.awoo.org    → airflow-webserver:8080
+    ✓ argocd        → dev/stg/prd-argocd.example.com     → argocd-server:80
+    ✓ grafana       → dev/stg/prd-grafana.example.com    → grafana:80
+    ✓ airflow       → dev/stg/prd-airflow.example.com    → airflow-webserver:8080
     ... (11 services total)
   Orphan hosts:   2  (dev-alertmanager, dev-n8n — declared in master, no minion)
   Orphan minions: 0
@@ -937,8 +937,8 @@ Cutover phases:
   Phase 3 — Per-hostname DNS cutover (gradual, reversible)
     For each hostname (start with the lowest-risk one, e.g. a dashboard):
       a. Test the new path directly:
-           curl --resolve dev-argocd.awoo.org:443:<new-gateway-ip> \
-                https://dev-argocd.awoo.org
+           curl --resolve dev-argocd.example.com:443:<new-gateway-ip> \
+                https://dev-argocd.example.com
       b. Update the DNS A/AAAA record to point at the new Gateway IP.
       c. Wait for DNS TTL + a monitoring soak (15 min minimum).
       d. Check error rates, latency, cert serving.

@@ -244,7 +244,7 @@ listeners:
   - name: https-dev-argocd
     protocol: HTTPS
     port: 443
-    hostname: dev-argocd.awoo.org
+    hostname: dev-argocd.example.com
     tls:
       mode: Terminate
       certificateRefs:

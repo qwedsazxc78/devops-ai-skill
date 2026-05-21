@@ -240,12 +240,12 @@ Ingress per line of JSONL output) followed by `scripts/pair_minions.py`
 
 **Classify what Kustomize actually applies, not what the repo has on disk.**
 For any repo using overlays with base templates, the raw source files contain
-placeholder hostnames (`base-mlflow.awoo.org`) that get overridden in each
+placeholder hostnames (`base-mlflow.example.com`) that get overridden in each
 overlay via patches. A classifier that reads raw files will:
 
 1. See the placeholder hostnames as literal values.
 2. Fail to pair those placeholders with master hostnames (because no master
-   declares `base-mlflow.awoo.org` — only the overlay-patched `dev-mlflow`,
+   declares `base-mlflow.example.com` — only the overlay-patched `dev-mlflow`,
    `stg-mlflow`, `prd-mlflow`).
 3. HALT with a spurious "orphan minion" error.
 
@@ -1125,7 +1125,7 @@ Five invariants the skill maintains no matter what:
    builds each overlay with `kustomize build` and classifies the
    rendered Ingress documents, not the raw source files. This avoids
    false-positive orphan-minion halts caused by base-template
-   placeholder hostnames (e.g., `base-mlflow.awoo.org` that never
+   placeholder hostnames (e.g., `base-mlflow.example.com` that never
    appears in any master). It also automatically excludes dead
    files — YAML on disk that no overlay's `kustomization.yaml`
    references — so the skill never tries to migrate code that

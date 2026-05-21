@@ -118,7 +118,7 @@ metadata:
 spec:
   ingressClassName: traefik
   rules:
-  - host: argocd.dev.awoo.org
+  - host: argocd.dev.example.com
     http:
       paths:
       - path: /
@@ -138,7 +138,7 @@ metadata:
   namespace: argocd
 spec:
   hostnames:
-  - argocd.dev.awoo.org
+  - argocd.dev.example.com
   rules:
   - backendRefs:
     - name: argocd-server

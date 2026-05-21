@@ -12,7 +12,7 @@
         "dev": "common.service/overlays/dev"
       },
       "hostsPerEnv": {
-        "dev": ["legacy.dev.awoo.org"]
+        "dev": ["legacy.dev.example.com"]
       },
       "annotations": {
         "total": 3,

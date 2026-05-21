@@ -10,7 +10,7 @@ spec:
     - name: argocd-https
       port: 443
       protocol: HTTPS
-      hostname: argocd.awoo.org
+      hostname: argocd.example.com
       allowedRoutes:
         namespaces:
           from: Selector
@@ -26,7 +26,7 @@ spec:
     - name: grafana-https
       port: 443
       protocol: HTTPS
-      hostname: grafana.awoo.org
+      hostname: grafana.example.com
       allowedRoutes:
         namespaces:
           from: Selector
@@ -42,7 +42,7 @@ spec:
     - name: airflow-https
       port: 443
       protocol: HTTPS
-      hostname: airflow.awoo.org
+      hostname: airflow.example.com
       allowedRoutes:
         namespaces:
           from: Selector

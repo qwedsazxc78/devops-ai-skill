@@ -14,7 +14,7 @@ emit one JSON line per Ingress to stdout with:
       "reason": "<one-line justification>",
       "ingressClass": "nginx" | "traefik" | "gce" | null,
       "sourceClass": "nginx" | "traefik",
-      "hosts": ["argocd.awoo.org", ...],
+      "hosts": ["argocd.example.com", ...],
       "hasPaths": true | false,
       "hasTls": true | false,
       "mergeableIngressType": "master" | "minion" | null,

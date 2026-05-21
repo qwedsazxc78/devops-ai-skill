@@ -77,7 +77,7 @@ test_cross_consistency_detects_stale_dns() {
     --app-ingress "$fdir/common.traefik/overlays/dev/app.ingress.yaml" 2>&1)
   local rc=$?
   set -e
-  if [[ "$rc" != "0" ]] && [[ "$out" == *"stale.dev.awoo.org"* ]]; then
+  if [[ "$rc" != "0" ]] && [[ "$out" == *"stale.dev.example.com"* ]]; then
     echo "  [PASS] cross-consistency: stale host detected"
     PASS=$((PASS+1))
   else

@@ -10,7 +10,7 @@ array (single document on stdout) with one entry per Ingress:
     "name": "argocd-server",
     "namespace": "argocd",
     "ingressClass": "nginx" | "traefik" | null,
-    "hosts": ["argocd.dev.awoo.org"],
+    "hosts": ["argocd.dev.example.com"],
     "backendServices": [{"service": "argocd-server", "port": 80}],
     "annotations": {"key": "value", ...}
   }, ...]

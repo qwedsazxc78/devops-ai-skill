@@ -9,9 +9,9 @@ spec:
   ingressClassName: traefik
   tls:
   - hosts:
-    - argocd.dev.awoo.org
-    - grafana.dev.awoo.org
+    - argocd.dev.example.com
+    - grafana.dev.example.com
     secretName: app-managed-cert-tls
   rules:
-  - host: argocd.dev.awoo.org
-  - host: grafana.dev.awoo.org
+  - host: argocd.dev.example.com
+  - host: grafana.dev.example.com

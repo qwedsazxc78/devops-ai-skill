@@ -12,7 +12,7 @@
         "dev": "common.service/overlays/dev"
       },
       "hostsPerEnv": {
-        "dev": ["argocd.dev.awoo.org"]
+        "dev": ["argocd.dev.example.com"]
       },
       "annotations": {
         "total": 4,

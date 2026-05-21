@@ -31,7 +31,7 @@ Output JSON structure:
       "topology": "master-minion" | "standalone" | "none",
       "pairs": [
         {
-          "hostname": "argocd.awoo.org",
+          "hostname": "argocd.example.com",
           "master": {"file": "...", "name": "app-master", "namespace": "ingress-nginx"},
           "minion": {"file": "...", "name": "argocd-minion", "namespace": "argocd",
                      "service": "argocd-server", "port": 80}

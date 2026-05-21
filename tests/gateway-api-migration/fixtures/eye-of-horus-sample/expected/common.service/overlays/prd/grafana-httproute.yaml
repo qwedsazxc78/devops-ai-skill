@@ -12,7 +12,7 @@ spec:
       namespace: ingress-nginx
       sectionName: grafana-https
   hostnames:
-    - grafana.awoo.org
+    - grafana.example.com
   rules:
     - matches:
         - path:

@@ -441,9 +441,9 @@ Step 1 · Discovery
 Discovered migration unit: master/minion topology
   Master:  common.ingress/                 (4 files, 14 hostnames declared)
   Minions: common.service/overlays/        (11 services × 3 envs = 33 files)
-    ✓ argocd      → dev/stg/prd-argocd.awoo.org     → argocd-server:80
-    ✓ grafana     → dev/stg/prd-grafana.awoo.org    → grafana:80
-    ✓ airflow     → dev/stg/prd-airflow.awoo.org    → airflow-webserver:8080
+    ✓ argocd      → dev/stg/prd-argocd.example.com     → argocd-server:80
+    ✓ grafana     → dev/stg/prd-grafana.example.com    → grafana:80
+    ✓ airflow     → dev/stg/prd-airflow.example.com    → airflow-webserver:8080
     ... (11 services total)
   Orphan hosts:   2  (dev-alertmanager, dev-n8n — declared in master, no minion)
   Orphan minions: 0
@@ -528,9 +528,9 @@ metadata:
       add_header X-Frame-Options "SAMEORIGIN" always;
 spec:
   rules:
-    - host: argocd.awoo.org    # host-only, no paths (this is the "master" pattern)
+    - host: argocd.example.com    # host-only, no paths (this is the "master" pattern)
   tls:
-    - hosts: [argocd.awoo.org]
+    - hosts: [argocd.example.com]
       secretName: prd-argocd-ingress-nginx-crt
 ```
 
@@ -546,7 +546,7 @@ metadata:
     kubernetes.io/ingress.class: nginx
 spec:
   rules:
-    - host: argocd.awoo.org
+    - host: argocd.example.com
       http:
         paths:
           - path: /
@@ -571,7 +571,7 @@ spec:
     - name: argocd-https
       port: 443
       protocol: HTTPS
-      hostname: argocd.awoo.org
+      hostname: argocd.example.com
       allowedRoutes:
         namespaces:
           from: Selector
@@ -602,7 +602,7 @@ spec:
       namespace: ingress-nginx
       sectionName: argocd-https
   hostnames:
-    - argocd.awoo.org
+    - argocd.example.com
   rules:
     - matches:
         - path: { type: PathPrefix, value: / }
@@ -695,7 +695,7 @@ For each hostname, one at a time:
 
 ```bash
 # Smoke-test the new path via curl before touching DNS
-curl --resolve argocd.awoo.org:443:<new-gateway-ip> https://argocd.awoo.org
+curl --resolve argocd.example.com:443:<new-gateway-ip> https://argocd.example.com
 
 # If healthy, update the DNS A/AAAA record to point at the new Gateway IP
 # Wait for TTL + 15 minutes of monitoring (error rates, latency, cert serving)

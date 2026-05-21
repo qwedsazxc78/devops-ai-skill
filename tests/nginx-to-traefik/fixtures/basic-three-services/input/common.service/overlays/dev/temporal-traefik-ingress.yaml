@@ -6,10 +6,10 @@ metadata:
 spec:
   ingressClassName: traefik
   tls:
-  - hosts: ["temporal.dev.awoo.org"]
+  - hosts: ["temporal.dev.example.com"]
     secretName: temporal-web-tls
   rules:
-  - host: temporal.dev.awoo.org
+  - host: temporal.dev.example.com
     http:
       paths:
       - path: /

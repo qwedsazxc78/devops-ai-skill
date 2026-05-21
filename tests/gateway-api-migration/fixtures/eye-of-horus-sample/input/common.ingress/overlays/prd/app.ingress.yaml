@@ -22,16 +22,16 @@ metadata:
       }
 spec:
   rules:
-    - host: argocd.awoo.org
-    - host: grafana.awoo.org
-    - host: airflow.awoo.org
+    - host: argocd.example.com
+    - host: grafana.example.com
+    - host: airflow.example.com
   tls:
     - hosts:
-        - argocd.awoo.org
+        - argocd.example.com
       secretName: prd-argocd-ingress-nginx-crt
     - hosts:
-        - grafana.awoo.org
+        - grafana.example.com
       secretName: prd-grafana-ingress-nginx-crt
     - hosts:
-        - airflow.awoo.org
+        - airflow.example.com
       secretName: prd-airflow-ingress-nginx-crt

@@ -9,7 +9,7 @@ spec:
   ingressClassName: traefik
   tls:
   - hosts:
-    - temporal.dev.awoo.org
+    - temporal.dev.example.com
     secretName: app-managed-cert-tls
   rules:
-  - host: temporal.dev.awoo.org
+  - host: temporal.dev.example.com

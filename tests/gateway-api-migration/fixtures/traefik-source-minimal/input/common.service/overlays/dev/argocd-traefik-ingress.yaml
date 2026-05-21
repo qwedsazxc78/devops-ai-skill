@@ -6,10 +6,10 @@ metadata:
 spec:
   ingressClassName: traefik
   tls:
-  - hosts: ["argocd.dev.awoo.org"]
+  - hosts: ["argocd.dev.example.com"]
     secretName: argocd-server-tls
   rules:
-  - host: argocd.dev.awoo.org
+  - host: argocd.dev.example.com
     http:
       paths:
       - path: /

@@ -11,7 +11,7 @@ schemaVersion: 1
 verdict: COMPLETE
 outputs:
   traefikIngresses:
-    - { file: argocd-traefik-ingress.yaml, host: argocd.dev.awoo.org, namespace: argocd, backend: argocd-server, port: 80, sha256: deadbeef }
-    - { file: grafana-traefik-ingress.yaml, host: grafana.dev.awoo.org, namespace: monitoring, backend: grafana, port: 3000, sha256: cafebabe }
+    - { file: argocd-traefik-ingress.yaml, host: argocd.dev.example.com, namespace: argocd, backend: argocd-server, port: 80, sha256: deadbeef }
+    - { file: grafana-traefik-ingress.yaml, host: grafana.dev.example.com, namespace: monitoring, backend: grafana, port: 3000, sha256: cafebabe }
 YAML
 echo "stub-a: wrote $out_dir/state.yaml"

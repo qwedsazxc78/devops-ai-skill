@@ -12,7 +12,7 @@
         "dev": "common.service/overlays/dev"
       },
       "hostsPerEnv": {
-        "dev": ["dashboard.dev.awoo.org", "panel.dev.awoo.org"]
+        "dev": ["dashboard.dev.example.com", "panel.dev.example.com"]
       },
       "annotations": {
         "total": 16,

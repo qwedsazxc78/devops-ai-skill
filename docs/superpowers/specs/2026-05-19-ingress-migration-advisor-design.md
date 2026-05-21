@@ -163,9 +163,9 @@ inventory:
     sourceClass: nginx     # nginx | traefik | foreign
     envs: [dev, stg, prd]
     hostsPerEnv:
-      dev:  [argocd.dev.awoo.org]
-      stg:  [argocd.stg.awoo.org]
-      prd:  [argocd.awoo.org]
+      dev:  [argocd.dev.example.com]
+      stg:  [argocd.stg.example.com]
+      prd:  [argocd.example.com]
     annotations:
       total: 12
       cors: false
