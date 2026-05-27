@@ -232,30 +232,325 @@ kubectl get crd | grep traefik.io
 #   tlsstores.traefik.io
 ```
 
-## cert-manager integration
+## CRITICAL: Gateway listener port = internal container port (not LB exposedPort)
 
-Unchanged from the GKE setup. The eye-of-horus-gitops reference repo uses
-cert-manager with a DNS-01 ClusterIssuer (`clouddns-dns01-clusterissuer`)
-to mint Certificate resources that create Secrets. Traefik listeners
-reference those Secrets directly via `listener.tls.certificateRefs`:
+Traefik's Gateway API provider maps Gateway listeners to entrypoints by
+**matching the listener's `port` to the entrypoint's internal container port**,
+not the LoadBalancer's `exposedPort`. This is the single most common cause of
+`PortUnavailable` and the Traefik default-cert fallback.
 
+Default Traefik Helm chart entrypoint ports:
+
+| Entrypoint | Container port | LB `exposedPort` | Listener `port` to use |
+|---|---|---|---|
+| `web` | 8000 | 80 | **8000** |
+| `websecure` | 8443 | 443 | **8443** |
+| `traefik` (dashboard) | 8080 | 8080 | 8080 |
+
+**Wrong:**
 ```yaml
 listeners:
-  - name: https-dev-argocd
+  - name: websecure
+    port: 443          # ← LB port — Traefik finds no matching entrypoint
     protocol: HTTPS
-    port: 443
-    hostname: dev-argocd.example.com
-    tls:
-      mode: Terminate
-      certificateRefs:
-        - kind: Secret
-          name: dev-argocd-ingress-nginx-crt
 ```
 
-The `cert-manager.io/cluster-issuer` annotation on the original master
-Ingress is **drop-info** for a Traefik target — cert-manager continues
-to populate the Secrets from the existing Certificate resources; no new
-Certificates are emitted by the migration.
+**Correct:**
+```yaml
+listeners:
+  - name: websecure
+    port: 8443         # ← container port — matches the websecure entrypoint
+    protocol: HTTPS
+```
+
+Symptom of wrong port: `status.conditions[reason=PortUnavailable]` on the
+Gateway + `PROGRAMMED: false` + Traefik serving `TRAEFIK DEFAULT CERT` for
+the hostname (because no listener is configured, Traefik falls back to its
+self-signed default).
+
+Verify correct port by checking the chart-generated `traefik-gateway`:
+```bash
+kubectl get gateway traefik-gateway -n traefik \
+  -o jsonpath='{.spec.listeners[*].port}'
+# Should show: 8000 (for web) — confirms 8443 is needed for websecure
+```
+
+---
+
+## Kustomize-managed Traefik (helmCharts: valuesInline pattern)
+
+Repos like eye-of-horus-gitops manage Traefik via Kustomize `helmCharts:` with
+`valuesInline` overrides rather than a standalone `helm install`. Gateway API
+support is enabled through the overlay's `kustomization.yaml`, not via
+`helm upgrade --set`.
+
+### Enabling the provider
+
+Add to the target overlay's `helmCharts[].valuesInline` block — **not** to the
+shared `base/app.values.yaml` (which is copied across all envs — see
+`traefik-values-drift` pre-commit hook):
+
+```yaml
+helmCharts:
+  - name: traefik
+    # ... (existing chart config unchanged)
+    valuesInline:
+      gatewayClass:
+        enabled: true          # chart renders GatewayClass named "traefik"
+      providers:
+        kubernetesGateway:
+          enabled: true        # activates --providers.kubernetesgateway arg in pod
+```
+
+Both flags work together: `gatewayClass.enabled` gates the chart template that
+emits the `GatewayClass` object; `providers.kubernetesGateway.enabled` adds the
+`--providers.kubernetesgateway` flag to the Traefik pod args. Neither alone
+is sufficient.
+
+### CRITICAL: never add GatewayClass to Kustomize resources when chart owns it
+
+When these `valuesInline` flags are set, the Helm chart generates the
+`GatewayClass` object as part of its rendered output. If you also declare a
+`GatewayClass` in your overlay's `resources:` list, Kustomize throws a merge
+conflict at build time:
+
+```
+Error: id resid.ResId{..., Kind:"GatewayClass", Name:"traefik"} exists;
+       can not use behavior: 'unspecified', behavior must be merge or replace
+```
+
+**Rule: only add `Gateway` and `HTTPRoute` to `resources:`. Let the chart own
+`GatewayClass`.**
+
+Correct overlay `resources:` list:
+
+```yaml
+resources:
+  - ../../base
+  - app.dashboard-gateway.yaml   # contains Gateway + HTTPRoute only
+```
+
+`app.dashboard-gateway.yaml` content — GatewayClass omitted:
+
+```yaml
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: <gateway-name>
+  namespace: traefik
+spec:
+  gatewayClassName: traefik
+  listeners:
+    - name: websecure
+      hostname: <your-host>
+      port: 443
+      protocol: HTTPS
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - kind: Secret
+            name: <existing-cert-secret>
+      allowedRoutes:
+        namespaces:
+          from: Same
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: <route-name>
+  namespace: traefik
+spec:
+  parentRefs:
+    - name: <gateway-name>
+      namespace: traefik
+      sectionName: websecure
+  hostnames:
+    - <your-host>
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: <service-name>
+          port: <port>
+```
+
+### Expected chart-generated objects (not migration artifacts)
+
+When `providers.kubernetesGateway.enabled: true`, the Helm chart also renders a
+default `traefik-gateway` Gateway object (listening on port 8000, the `web`
+entrypoint). This is the chart's own Gateway for general traffic — it is **not**
+a naming conflict with migration-created Gateways and should not be deleted.
+Expect two Gateway objects in the namespace: the chart's `traefik-gateway` and
+your migration Gateway.
+
+```bash
+kubectl get gateway -n traefik
+# NAME                   CLASS     ADDRESS      PROGRAMMED   AGE
+# traefik-gateway        traefik   11.0.0.14    True         5m   ← chart default
+# traefik-dashboard-gw   traefik   11.0.0.14    True         2m   ← migration target
+```
+
+## cert-manager integration
+
+cert-manager handles TLS for Traefik Gateway resources via two mechanisms.
+Use the annotation approach (preferred) when cert-manager ≥1.15 is available;
+fall back to an explicit Certificate CR otherwise.
+
+### Preferred: Gateway annotation (cert-manager ≥1.15 gateway-shim)
+
+Add `cert-manager.io/cluster-issuer` directly to the Gateway's annotations.
+cert-manager's gateway-shim watches Gateway objects, reads the annotation +
+`listener.tls.certificateRefs[name]`, and auto-creates and renews the
+Certificate CR — no explicit `Certificate` resource is needed.
+
+```yaml
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: traefik-dashboard-gw
+  namespace: traefik
+  annotations:
+    cert-manager.io/cluster-issuer: clouddns-dns01-clusterissuer
+spec:
+  gatewayClassName: traefik
+  listeners:
+    - name: websecure
+      hostname: dev-dashboard-traefik.awoo.org
+      port: 443
+      protocol: HTTPS
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - kind: Secret
+            name: dev-dashboard-traefik-crt  # cert-manager creates + renews this
+```
+
+This is the **recommended best practice** — mirrors the Ingress annotation pattern
+exactly, auto-rotates before expiry, and keeps the Gateway self-sufficient
+(no dependency on a parallel Ingress to provision the secret).
+
+Rotation policy defaults to `Always`; control with:
+```yaml
+annotations:
+  cert-manager.io/cluster-issuer: clouddns-dns01-clusterissuer
+  cert-manager.io/private-key-rotation-policy: Always  # default; explicit for clarity
+```
+
+### Fallback: explicit Certificate CR (any cert-manager version)
+
+When cert-manager <1.15 or the gateway-shim feature is not enabled, emit
+a `Certificate` resource alongside the Gateway:
+
+```yaml
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: dev-dashboard-traefik-crt
+  namespace: traefik
+spec:
+  secretName: dev-dashboard-traefik-crt
+  issuerRef:
+    name: clouddns-dns01-clusterissuer
+    kind: ClusterIssuer
+  dnsNames:
+    - dev-dashboard-traefik.awoo.org
+```
+
+The Gateway then references `dev-dashboard-traefik-crt` via `certificateRefs`
+as before — cert-manager manages renewal via the Certificate object directly.
+
+### Migration action (annotation-map row 2)
+
+The `cert-manager.io/cluster-issuer` annotation on the source Ingress is **not
+dropped** — it is **moved to the Gateway**. The converter action is:
+
+```
+source Ingress annotation → Gateway.metadata.annotations (same key, same value)
+```
+
+This is a change from the v1.1 behaviour (which classified the annotation as
+drop-info). The updated annotation-map row 2 documents this correction.
+
+## Gateway topology: default pattern for Traefik (Option A)
+
+When migrating a batch of Traefik Ingresses where each backend lives in a
+different namespace (e.g. `monitoring`, `argocd`, `airflow`), two layouts
+are possible:
+
+| Option | Gateway location | HTTPRoute location | `backendRefs` | `ReferenceGrant` needed? |
+|---|---|---|---|---|
+| **A — Gateway per host in `traefik` ns** *(default)* | `traefik` | `traefik` | cross-ns to backend service | **No** — Traefik's `allowCrossNamespace: true` covers it |
+| B — Single shared Gateway + ReferenceGrant | `traefik` | `traefik` | cross-ns via ReferenceGrant in each backend ns | Yes, one per backend namespace |
+
+**The skill defaults to Option A.** Rationale:
+
+- Matches the dashboard POC pattern — proven on real cluster.
+- `allowCrossNamespace: true` is standard in the Traefik Helm chart
+  (`providers.kubernetesCRD.allowCrossNamespace: true` and
+  `providers.kubernetesGateway.experimentalChannel: true` cover it).
+  `backendRefs` pointing to another namespace work without any extra
+  manifest.
+- No `ReferenceGrant` objects to maintain.
+- Each host gets its own named Gateway → independent cert lifecycle,
+  independent `PROGRAMMED` status, easy per-host rollback.
+- `allowedRoutes.namespaces.from: Same` keeps the listener tight
+  (only HTTPRoutes in the `traefik` namespace can attach).
+
+**Option A canonical template** (one file per migrated Ingress):
+
+```yaml
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: <service>-gw
+  namespace: traefik
+  annotations:
+    cert-manager.io/cluster-issuer: <issuer>   # triggers cert-manager gateway-shim
+spec:
+  gatewayClassName: traefik
+  listeners:
+    - name: websecure
+      hostname: <host>
+      port: 8443          # CRITICAL: internal container port, not LB exposedPort (443)
+      protocol: HTTPS
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - kind: Secret
+            name: <service>-crt
+      allowedRoutes:
+        namespaces:
+          from: Same      # only traefik-ns HTTPRoutes attach
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: <service>-gw
+  namespace: traefik      # same ns as Gateway → satisfies allowedRoutes: Same
+spec:
+  parentRefs:
+    - name: <service>-gw
+      namespace: traefik
+      sectionName: websecure
+  hostnames:
+    - <host>
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: <service-name>   # service in a DIFFERENT namespace — works via
+          namespace: <backend-ns> # Traefik allowCrossNamespace: true (no ReferenceGrant)
+          port: <port>
+```
+
+**To override to Option B** (single shared Gateway + ReferenceGrant), pass
+`--gateway-topology shared` to the skill. The skill will emit one
+`ReferenceGrant` per backend namespace. Option B is recommended only when
+the cluster operator needs to minimise the total number of Gateway objects.
 
 ## cross-namespace HTTPRoute attachment
 
@@ -267,7 +562,7 @@ with the existing master/minion topology).
 
 No `ReferenceGrant` is needed when the HTTPRoute's backendRefs are in
 the same namespace as the HTTPRoute — which is the default for the
-master/minion migration pattern.
+master/minion migration pattern (Option A).
 
 ## Known limitations for v1.2
 

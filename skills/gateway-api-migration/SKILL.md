@@ -97,6 +97,10 @@ Triggered explicitly by `*gateway-migrate` from Zeus. Not auto-triggered.
 *gateway-migrate <module-path> --gateway-class gke-l7-global-external-managed
 *gateway-migrate <module-path> --gateway-class gke-l7-rilb
 
+# Gateway topology (Traefik targets only; default: per-host):
+*gateway-migrate <module-path> --gateway-topology per-host   # default: one Gateway per host in traefik ns, HTTPRoute in traefik ns, backendRefs cross-ns (no ReferenceGrant)
+*gateway-migrate <module-path> --gateway-topology shared     # one shared Gateway + one ReferenceGrant per backend namespace
+
 # Preflight and generation controls:
 *gateway-migrate <module-path> --skip-preflight <n>   # skip individual preflight check N
 *gateway-migrate <module-path> --include-orphan-hosts # emit listeners for hosts without minions
@@ -559,6 +563,30 @@ branches on the target prefix:
   refs). Read `references/gke-gateway-notes.md` for resource shapes.
 - anything else → vanilla Gateway API only; no provider-specific policy
   files. Record in risk register that policies were skipped.
+
+**Resolve the Gateway topology (Traefik targets only).** Read
+`state.yaml.header.gateway_topology` (set from `--gateway-topology`,
+default `per-host`):
+
+- **`per-host` (default)**: emit one `Gateway` + one `HTTPRoute` per
+  migrated host, both in the `traefik` namespace. `backendRefs` point
+  cross-namespace to the actual backend Service (works without
+  `ReferenceGrant` when `providers.kubernetesCRD.allowCrossNamespace: true`
+  is set in Traefik — the Helm chart default). `allowedRoutes.namespaces.from: Same`.
+  - Emit one file per host: `<service>-gateway.yaml` in the overlay.
+  - Port: use internal container port (`8443` for websecure, `8000` for web) —
+    not LB `exposedPort`. See §CRITICAL in `references/traefik-gateway-notes.md`.
+  - cert-manager annotation: `cert-manager.io/cluster-issuer: <issuer>` on
+    the Gateway (not a separate Certificate CR). Requires cert-manager ≥1.15.
+
+- **`shared`**: emit a single `Gateway` in `traefik` namespace with one
+  listener per host, and one `ReferenceGrant` per backend namespace granting
+  the HTTPRoutes in `traefik` ns permission to reference Services there.
+  Use this only when minimising Gateway object count is a hard requirement.
+
+Record the resolved topology in `state.yaml.header.gateway_topology`.
+See `references/traefik-gateway-notes.md §Gateway topology` for the
+canonical template for each option.
 
 1. **`common.gateway/base/kustomization.yaml`**:
 
@@ -1063,6 +1091,7 @@ Required top-level fields:
 - `topology: master-minion | standalone | master-only | none`
 - `targetGatewayClass`: the value passed via `--gateway-class` (default `traefik`)
 - `targetFamily`: derived — one of `traefik` | `gke` | `vanilla` (based on the class prefix)
+- `gatewayTopology`: the value passed via `--gateway-topology` (default `per-host`); one of `per-host` | `shared`
 - `generatedModule: common.gateway`
 - `createdAt`, `updatedAt`: ISO 8601 timestamps
 - `status`: `in_progress | discovering | analyzing | converting | validating | rendering | completed | failed | aborted`

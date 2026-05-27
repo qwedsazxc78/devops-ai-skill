@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- **`gateway-api-migration` skill** — cert-manager annotation correction (sourced from live POC 2026-05-27):
+  - `docs/gateway/annotation-map.md` row 2: `cert-manager.io/cluster-issuer` Traefik action changed from **drop-info → migrate to Gateway annotation**. The annotation is moved from the source Ingress to `Gateway.metadata.annotations`; cert-manager v1.15+ gateway-shim auto-creates/renews the Certificate CR from it.
+  - `docs/gateway/traefik-gateway-notes.md` cert-manager section rewritten: documents the preferred Gateway annotation pattern (v1.15+, auto-rotation, no explicit Certificate CR) and the explicit Certificate CR fallback (pre-v1.15).
+- **`gateway-api-migration` skill** — `docs/gateway/traefik-gateway-notes.md` + `skills/gateway-api-migration/references/preflight-checks.md`: add Kustomize `helmCharts: valuesInline` deployment pattern (eye-of-horus-gitops style).
+  - New section "Kustomize-managed Traefik (helmCharts: valuesInline pattern)" documents the `gatewayClass.enabled + providers.kubernetesGateway.enabled` valuesInline approach and the critical rule: **never add a standalone `GatewayClass` to kustomize `resources:` when the chart generates it** — doing so causes `"id exists; can not use behavior: 'unspecified'"` merge conflict.
+  - Documents the chart-generated `traefik-gateway` default Gateway (port 8000, web entrypoint) as expected and non-conflicting with migration Gateways.
+  - Check 3 in `preflight-checks.md` now includes a Kustomize fix path alongside the existing `helm install --set` path.
+  - Sourced from live POC: `common.traefik/overlays/dev/app.dashboard-gateway.yaml` migration on 2026-05-27.
+
 ## [1.15.1] - 2026-05-20
 
 ### Changed

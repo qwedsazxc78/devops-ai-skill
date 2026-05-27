@@ -103,7 +103,7 @@ kubectl get gatewayclass -o jsonpath='{.items[*].metadata.name}'
   Cause: The skill was invoked with --gateway-class <name> but no such
          GatewayClass exists on the cluster.
 
-  For Traefik targets:
+  For Traefik targets (standalone helm install):
     Install Traefik v3.1+ with Gateway API support:
       helm repo add traefik https://traefik.github.io/charts
       helm install traefik traefik/traefik \
@@ -112,6 +112,20 @@ kubectl get gatewayclass -o jsonpath='{.items[*].metadata.name}'
         --set gateway.enabled=true \
         --set image.tag=v3.1.6
     Verify: kubectl get gatewayclass traefik
+
+  For Traefik targets (Kustomize helmCharts: managed deployment):
+    The Helm chart renders the GatewayClass automatically — no standalone
+    GatewayClass resource is needed. Add to the overlay's valuesInline:
+      gatewayClass:
+        enabled: true
+      providers:
+        kubernetesGateway:
+          enabled: true
+    Then ArgoCD sync / kustomize build will emit the GatewayClass.
+    WARNING: do NOT also add a GatewayClass to kustomize resources: — the
+    chart and the resource list will conflict with:
+      "id exists; can not use behavior: 'unspecified'"
+    See traefik-gateway-notes.md §Kustomize-managed Traefik for the full pattern.
 
   For GKE targets:
     Enable the GKE Gateway controller add-on on your cluster:
@@ -313,6 +327,54 @@ reads it (e.g., with `jq`) into `state.yaml.environment.cluster`:
 When `halts[]` is non-empty, the skill prints the halt reasons and exits
 with code 2. When only `warnings[]` is populated, the skill continues and
 surfaces them in the report's **Risk Register** section.
+
+---
+
+## Check 7 — Traefik entrypoint port mapping (Traefik targets only)
+
+When the target is Traefik, Gateway listeners must use the **internal container
+port** of each entrypoint, not the LoadBalancer's `exposedPort`. Using the
+wrong port causes `PortUnavailable` + `PROGRAMMED: false` + Traefik default
+cert served for the hostname.
+
+**Probe:** read entrypoint ports from the live Traefik deployment args:
+
+```bash
+kubectl get deployment traefik -n traefik \
+  -o jsonpath='{.spec.template.spec.containers[0].args}' \
+  | tr ' ' '\n' | grep "entryPoints\|entrypoints" | grep -i "address\|port"
+```
+
+Or read from the chart-generated Gateway (always correct):
+
+```bash
+kubectl get gateway traefik-gateway -n traefik \
+  -o jsonpath='{.spec.listeners}' | jq '.[] | {name, port, protocol}'
+```
+
+**Standard ports** (Traefik Helm chart defaults):
+
+| Entrypoint | Container port | LB `exposedPort` | Use in listener |
+|---|---|---|---|
+| `web` | 8000 | 80 | **8000** |
+| `websecure` | 8443 | 443 | **8443** |
+| `traefik` | 8080 | 8080 | 8080 |
+
+**Pass condition:** every `port:` in every generated `Gateway.spec.listeners[]`
+matches a container port from the above table (or from the live probe).
+
+**Failure mode:** WARN (not HALT) with:
+
+```
+[WARN] Gateway listener port <N> does not match any known Traefik entrypoint
+       container port. Traefik will report PortUnavailable and serve the
+       default self-signed cert for this hostname.
+  Fix: change listener port to the container port (e.g., 8443 for websecure,
+       not 443). See traefik-gateway-notes.md §CRITICAL for the full table.
+```
+
+Record the port map in `state.yaml.environment.cluster.traefikEntrypointPorts`
+so the converter can reference it during Step 3A listener generation.
 
 ---
 
