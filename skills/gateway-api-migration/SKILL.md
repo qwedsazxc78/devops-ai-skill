@@ -1051,6 +1051,158 @@ git add docs/reports/gateway-migration/<slug>/state.yaml \
 
 **Gate:** informational.
 
+## Step 7b — Cross-repo HTTPRoute handoff (new v1.16.0)
+
+Some services have their `Service` and `Deployment` defined in a separate
+GitOps repository (e.g., `proposal-review-machine`). For these services, the
+HTTPRoute must be committed to **the service's own repo**, not to
+`common.service/`, because:
+
+1. The service's repo has its own ArgoCD Application per environment.
+2. The service team owns routing config alongside their deployment.
+3. The HTTPRoute's `parentRef` can still target the Gateway in the central
+   repo as long as `allowedRoutes.namespaces.from: All` is set on the
+   listener (or a `ReferenceGrant` exists).
+
+### Detection
+
+At Step 1 (Discover), after backends are resolved, classify each backend by
+the location of its `Service` manifest:
+
+- **In-repo backend** — `Service` found under the same module root.
+  HTTPRoute lands in `common.service/overlays/<env>/<svc>-httproute.yaml`.
+- **Cross-repo backend** — `Service` not found in this repo, but the
+  hostname appears in the master Gateway-source. Record under
+  `state.yaml.crossRepo[]` with the operator-provided repo path:
+
+```yaml
+state.yaml:
+  crossRepo:
+    - service: proposal-review-machine
+      hostname: dev-proposal-review.awoo.org
+      repo_path: ../proposal-review-machine   # operator confirms
+      httproute_target: overlays/<env>/httproute.yaml
+      kustomization_target: overlays/<env>/kustomization.yaml
+```
+
+### Generation
+
+For each `crossRepo[]` entry, **emit the file to the foreign repo path**.
+Do NOT auto-`cd` and `git add` there — the operator drives git in each
+repo separately. The skill prints, per cross-repo service:
+
+```
+✦ Cross-repo HTTPRoute prepared:
+  Repo: ../proposal-review-machine
+  File: overlays/dev/httproute.yaml
+  Action: cd ../proposal-review-machine && git checkout -b <branch> && \
+          git add overlays/dev/{httproute,kustomization}.yaml && git commit
+```
+
+### Report integration
+
+`report.md` Section 4 (Host inventory) gains a "Repo" column. Section 10
+(Pre-commit / MR URLs) gains per-repo subsections so the operator gets
+one MR URL per repo.
+
+**Gate:** halt if `crossRepo[]` is non-empty AND the operator did not
+provide repo paths via prompt; ask interactively then continue.
+
+## Step 7c — DNS cutover script alignment (new v1.16.0)
+
+When the migration introduces **new hostnames** (services that weren't
+previously on Traefik), the operator's DNS cutover script must list them
+in the appropriate batch — otherwise `./scripts/dns-create-traefik.sh dev`
+silently skips the new hosts.
+
+### Discovery
+
+After Step 3B, glob for `scripts/dns-*.sh` (or `scripts/dns/*.sh`,
+configurable). For each script found, grep for hostname arrays / batch
+declarations and compare against the migration's host list.
+
+### Output
+
+For each gap, print:
+
+```
+✦ DNS script gap detected:
+  Script: scripts/dns-create-traefik.sh
+  Batch:  dev-b2
+  Missing: dev-langfuse.awoo.org, dev-litellm.awoo.org
+
+  Suggested patch:
+  --- a/scripts/dns-create-traefik.sh
+  +++ b/scripts/dns-create-traefik.sh
+  @@ run_dev_b2 domains
+       dev-qdrant-devops.awoo.org
+  +    dev-langfuse.awoo.org
+  +    dev-litellm.awoo.org
+  )
+```
+
+Pass `--update-dns` to apply the patch automatically (still requires
+operator commit).
+
+**Gate:** WARN-only. The migration is still committable; the DNS gap
+only manifests at cutover time.
+
+## Step 7d — Multi-env staging activation (new v1.16.0)
+
+By default the skill generates Gateway + HTTPRoute files for every env
+(`overlays/{dev,stg,prd}/`) but only **registers** them in the
+`kustomization.yaml` of the env passed via `--activation-env` (default
+`dev`).
+
+### Behaviour
+
+| Env | `app.gateway.yaml` exists | Registered in kustomization | Gateway provider enabled in valuesInline |
+|---|---|---|---|
+| activation-env (e.g., dev) | yes | yes (uncommented) | yes |
+| other envs (stg, prd) | yes | no — commented out with activation hint | no |
+
+The other-env `kustomization.yaml` gets a block like:
+
+```yaml
+resources:
+  - ../../base
+  # app.gateway.yaml — NOT active yet. Uncomment together with enabling
+  # kubernetesGateway in the Traefik helmChart valuesInline below.
+  # - app.gateway.yaml
+```
+
+And for `common.service/overlays/<other-env>/kustomization.yaml`:
+
+```yaml
+  # Gateway API HTTPRoutes — NOT active yet. Enable after
+  # kubernetesGateway is turned on in common.traefik/overlays/<env>/.
+  # - grafana-httproute.yaml
+  # - ... (all httproute entries commented)
+```
+
+### Activation steps emitted to state.yaml
+
+`state.yaml.envStrategy.<env>.activationSteps[]` records the exact
+file + change for each not-yet-active env. Operators can later run:
+
+```bash
+*gateway-activate stg     # planned future command
+```
+
+to flip all the commented entries in one shot. For now the skill prints
+the diff and the operator applies it manually.
+
+### Why this matters
+
+Without staged activation, merging a single MR pushes Gateway + HTTPRoute
+to every env simultaneously. If `kubernetesGateway` is not enabled in
+stg/prd Traefik instances, ArgoCD sync **fails** with
+"GatewayClass not found". Staged activation lets the operator validate
+in dev for days before flipping each higher env independently.
+
+**Gate:** informational, but the v1.16.0 default for `--activation-env`
+is `dev` — overriding to `prd` triggers an interactive confirmation.
+
 ## Halt / resume semantics
 
 | Failure point | State | Resume behaviour |

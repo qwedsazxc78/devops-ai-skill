@@ -90,6 +90,34 @@ ANNOTATION_MAP: list[dict] = [
      "category": "convertible-lossy", "target": "GCPBackendPolicy.spec.timeoutSec"},
     {"row": 10, "match": "prefix", "key": "nginx.ingress.kubernetes.io/proxy-send-timeout",
      "category": "convertible-lossy", "target": "GCPBackendPolicy.spec.timeoutSec"},
+    # -----------------------------------------------------------------------------
+    # Traefik source annotations (--source-class traefik)
+    # Mirrors "Traefik source annotations" section in references/annotation-map.md.
+    # Added v1.16.0 from CTS-9681 live migration. Before this, router.middlewares
+    # was bucketed as "unknown" and showed as S1 risk; now classified explicitly.
+    # -----------------------------------------------------------------------------
+    {"row": "T1", "match": "exact", "key": "traefik.ingress.kubernetes.io/router.middlewares",
+     "category": "translated-by-coexistence",
+     "target": "Middleware stays attached to Ingress during parallel-run; to "
+               "reattach under HTTPRoute, emit per-namespace Middleware copies "
+               "with extensionRef filters"},
+    {"row": "T2", "match": "exact", "key": "traefik.ingress.kubernetes.io/router.tls.options",
+     "category": "portable",
+     "target": "promoted to Gateway listener TLSOption reference"},
+    {"row": "T3", "match": "exact", "key": "traefik.ingress.kubernetes.io/router.entrypoints",
+     "category": "drop-info",
+     "target": "implicit in Gateway listener (HTTPS=websecure, HTTP=web)"},
+    {"row": "T4", "match": "prefix", "key": "traefik.ingress.kubernetes.io/service.serversscheme",
+     "category": "convertible",
+     "target": "ServersTransport.spec.serverName or BackendTLSPolicy"},
+    {"row": "T5", "match": "prefix", "key": "traefik.ingress.kubernetes.io/service.passhostheader",
+     "category": "drop-info",
+     "target": "Gateway API defaults to host-header pass-through; explicit "
+               "false-value would need RequestHeaderModifier filter"},
+    {"row": "T6", "match": "prefix", "key": "traefik.ingress.kubernetes.io/",
+     "category": "drop-info",
+     "target": "Unrecognized traefik.* annotation — drop with INFO; if "
+               "operationally critical, manual review required"},
 ]
 
 
@@ -232,6 +260,12 @@ def _bucket(category: str) -> str:
         return "dropInfo"
     if category == "convertible-lossy":
         return "translatedLossy"
+    if category == "translated-by-coexistence":
+        # Annotation effect is preserved by leaving the source resource in place
+        # during parallel-run (e.g., Traefik Middleware stays attached to the
+        # original Ingress). Surface separately so the operator knows to
+        # revisit before full cutover. Promoted to S2 risk in the report.
+        return "translatedByCoexistence"
     if "stub" in category:
         return "stubbed"
     return "translated"
@@ -278,6 +312,7 @@ def main() -> int:
     buckets: dict[str, list] = {
         "translated": [],
         "translatedLossy": [],
+        "translatedByCoexistence": [],  # Traefik source: middleware stays on Ingress
         "stubbed": [],
         "unknown": [],
         "dropInfo": [],

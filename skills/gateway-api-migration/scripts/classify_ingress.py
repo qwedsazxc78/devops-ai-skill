@@ -116,9 +116,19 @@ def _classify(doc: dict) -> tuple[str, str]:
     if has_host and has_paths and has_tls:
         return "standalone", "host+paths+tls in single Ingress"
 
-    # Rule 2 — heuristic master
+    # Rule 2 — heuristic master (or TLS-only declaration host)
     if has_host and not has_paths:
-        return "master", "host-only (heuristic; no paths anywhere)"
+        # v1.16.0: distinguish "real master" (host-only, paths land in minions)
+        # from "TLS-only declaration" (host listed for cert provisioning only,
+        # no actual backend anywhere in the repo). The TLS-only case is common
+        # for GKE managed-certs / cert-manager Gateway-shim style: an Ingress
+        # exists solely to enrol hosts into a cert lifecycle. These hosts have
+        # NO matching minion or standalone Ingress carrying the routing.
+        # The pair_minions.py step turns unmatched master hosts into
+        # `orphanHosts[]`, but the operator needs to see them flagged here too
+        # so a "no-backend host" interactive prompt can fire early. The flag
+        # is also written through to state.yaml.discovery.classifications[].
+        return "master", "host-only (master OR TLS-only declaration)"
 
     # Rule 3 — minion
     if has_paths and not has_tls and (ingress_class == "nginx" or ingress_class is None):
@@ -139,14 +149,23 @@ def _extract(doc: dict) -> dict:
         or annotations.get("kubernetes.io/ingress.class")
     )
     source_class = "traefik" if ingress_class == "traefik" else "nginx"
+    has_paths = any((r.get("http") or {}).get("paths") for r in rules)
+    has_tls = bool(spec.get("tls"))
+    has_host = any("host" in r for r in rules)
+    # v1.16.0: "tlsOnly" — declared hosts + TLS refs but no routing paths.
+    # Common pattern for GKE managed-cert master Ingresses and Traefik-source
+    # "app.ingress.yaml" host-list patterns. Surface so the operator gets a
+    # no-backend-host prompt at Step 1 instead of a silent orphan later.
+    tls_only = has_host and has_tls and not has_paths
     return {
         "name": metadata.get("name"),
         "namespace": metadata.get("namespace"),
         "ingressClass": ingress_class,
         "sourceClass": source_class,
         "hosts": [r["host"] for r in rules if "host" in r],
-        "hasPaths": any((r.get("http") or {}).get("paths") for r in rules),
-        "hasTls": bool(spec.get("tls")),
+        "hasPaths": has_paths,
+        "hasTls": has_tls,
+        "tlsOnly": tls_only,
         "mergeableIngressType": annotations.get("nginx.ingress/mergeable-ingress-type"),
         "annotations": annotations,
     }
