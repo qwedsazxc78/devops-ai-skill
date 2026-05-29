@@ -1,146 +1,188 @@
 ---
 name: painter
 description: >
-  根據程式碼、系統架構或 DevOps 流程繪製清晰易懂的架構圖、流程圖與功能說明圖。
-  輸出為 HTML Artifact（內嵌 CSS 與 SVG），套用藍白科技感配色、扁平向量圖示、
-  卡片式多步驟版面、流程箭頭串接與暗色系程式碼區塊。支援兩種產出層級：`basic`（單頁總覽）
-  與 `detailed`（總覽 + 可點擊下鑽的各元件詳細頁），並可用 multi-agent 平行掃描加速大型
-  架構分析。當使用者要求「繪製架構圖 / 流程圖」或呼叫 `*diagram` / `devops:painter` 時觸發。
-  產出可於瀏覽器直接檢視與截圖，適合做為技術文件與簡報素材。
+  Draw clear, easy-to-understand architecture diagrams, flow charts, and feature
+  explainer graphics from code, system architecture, or DevOps pipelines. Output is
+  an HTML artifact (inline CSS and SVG) styled with a blue-white tech palette, flat
+  vector icons, a card-based multi-step layout, flow arrows, and dark code blocks.
+  Supports two output levels: `basic` (single-page overview) and `detailed`
+  (overview plus clickable drill-down per-component pages), and can use multi-agent
+  parallel scanning to speed up analysis of large architectures. Triggered when the
+  user asks to "draw an architecture diagram / flow chart" or invokes `*diagram` /
+  `devops:painter`. Output renders directly in a browser for review and screenshots,
+  suitable for technical documentation and presentation material.
 version: "1.1.0"
 ---
 
-# Painter (架構與流程圖繪製專家)
+# Painter (Architecture & Flow Diagram Expert)
 
-當使用者要求「繪製架構圖」、「繪製流程圖」、「畫出系統元件關係」，或透過 `devops:painter`
-／Zeus `*diagram` 觸發時，請使用此 Skill。你的任務是分析使用者的程式碼、架構或概念，
-並將其轉化為具備極高視覺品質、清晰易懂的視覺圖表。
+Use this Skill when the user asks to "draw an architecture diagram", "draw a flow
+chart", "visualize the relationships between system components", or triggers it via
+`devops:painter` / Zeus `*diagram`. Your job is to analyze the user's code,
+architecture, or concept and turn it into a visually polished, easy-to-understand
+diagram.
 
 ## Purpose
 
-將抽象的系統架構、DevOps 流程或程式邏輯，設計成高資訊密度但不雜亂的視覺呈現。因為這類圖表
-需要精準的排版與設計（卡片、陰影、程式碼區塊），請優先**建立一個 HTML Artifact
-（例如 `diagram.html`）** 作為輸出，利用 HTML 與 CSS（內嵌 `<style>`）搭配 SVG 箭頭與圖示
-來達成完美效果，讓使用者可以在瀏覽器中直接檢視與截圖。
+Turn an abstract system architecture, DevOps pipeline, or program logic into a
+high-information-density yet uncluttered visual. Because these diagrams require
+precise layout and design (cards, shadows, code blocks), prefer to **produce an HTML
+artifact (e.g. `diagram.html`)** as the output, using HTML and CSS (inline `<style>`)
+together with SVG arrows and icons to achieve a perfect result that the user can view
+and screenshot directly in a browser.
 
-## 參數 (Invocation Parameters)
+## Invocation Parameters
 
-呼叫時可帶入參數決定產出規模；若使用者未指定，**先以一句話詢問要 `basic` 還是 `detailed`**，
-無回應則預設 `basic`。
+Parameters at invocation time control the output scale. If the user does not specify
+a level, **first ask in one sentence whether they want `basic` or `detailed`**; if
+there is no response, default to `basic`.
 
-| 參數 | 值 | 預設 | 說明 |
-|------|-----|------|------|
-| `--level` | `basic` \| `detailed` | `basic` | `basic`＝單頁總覽（即原本行為）；`detailed`＝總覽頁 + 各元件可點擊下鑽的詳細頁 |
-| `--output` | 路徑 | 目前目錄 | 產出目錄；`detailed` 會在其下建立 `diagrams/` 子目錄 |
-| `--parallel` | `auto` \| `off` \| 數字 | `auto` | 是否啟用 multi-agent 平行掃描；`auto`＝元件數 ≥ 5 時自動開啟 |
+| Parameter | Values | Default | Description |
+|-----------|--------|---------|-------------|
+| `--level` | `basic` \| `detailed` | `basic` | `basic` = single-page overview (the original behavior); `detailed` = overview page plus clickable drill-down detail pages per component |
+| `--output` | path | current directory | Output directory; `detailed` creates a `diagrams/` subdirectory underneath it |
+| `--parallel` | `auto` \| `off` \| number | `auto` | Whether to enable multi-agent parallel scanning; `auto` = enabled automatically when component count ≥ 5 |
 
-範例：`devops:painter --level detailed --output sre/app/nununi-infra`
+Example: `devops:painter --level detailed --output sre/app/nununi-infra`
 
-判斷準則：當「頂層元件數量多」（例如 ≥ 5 個 Helm chart / 模組 / 服務）或使用者明確要求
-「更詳細」時，採用 `detailed`；簡報或快速總覽用 `basic`。
+Decision guidance: when there are **many top-level components** (e.g. ≥ 5 Helm charts /
+modules / services) or the user explicitly asks for "more detail", use `detailed`.
+Use `basic` for presentations or a quick overview.
 
-## 視覺風格規範 (嚴格遵守)
+## Visual Style Rules (strictly enforced)
 
-1. **配色與背景**：
-   - **藍白科技感配色**：主色調使用科技藍（例如：`#0052CC`, `#0D6EFD`, `#2563EB`），
-     次要點綴色可搭配淺藍或青色。背景使用乾淨的純白（`#FFFFFF`）或極淺灰
-     （`#F8F9FA`, `#F3F4F6`）。
-   - **高解析度、乾淨背景**：避免花俏的背景，保持畫面乾淨俐落。
+1. **Colors & background**:
+   - **Blue-white tech palette**: use tech blue as the primary color (e.g. `#0052CC`,
+     `#0D6EFD`, `#2563EB`), with light blue or cyan as secondary accents. Use a clean
+     pure white (`#FFFFFF`) or very light gray (`#F8F9FA`, `#F3F4F6`) background.
+   - **High resolution, clean background**: avoid fancy backgrounds; keep the canvas
+     clean and crisp.
 
-2. **圖示與字體**：
-   - **扁平化向量圖示 (Flat Vector Icons)**：在卡片中使用簡潔的 SVG 圖示來代表各個元件
-     （如伺服器、資料庫、API、齒輪等）。
-   - **專業排版**：使用乾淨的無襯線字體（如 `system-ui`, `-apple-system`, `Segoe UI`,
-     `Inter`），文字排版對齊整齊，適合做為技術文件與簡報素材。
+2. **Icons & fonts**:
+   - **Flat vector icons**: use simple SVG icons inside cards to represent each
+     component (e.g. server, database, API, gear).
+   - **Professional typography**: use clean sans-serif fonts (e.g. `system-ui`,
+     `-apple-system`, `Segoe UI`, `Inter`), with neatly aligned text suitable for
+     technical documents and presentation material.
 
-3. **版面結構 (類似 Kubernetes / DevOps 官方架構圖 / Migration Guide)**：
-   - **上方主標題**：清晰的大標題與副標題。
-   - **主體佈局**：三欄式或多步驟的**卡片式版面**，依據流程順序水平或垂直排列。
-   - **流程式串接**：各階段或卡片之間，必須以**流程箭頭**（可用 SVG 箭頭，帶有科技藍色或
-     灰色）清晰串接。
-   - **卡片設計 (Card UI)**：每個步驟使用**獨立資訊框**。必須具備「步驟編號」、「標題」，
-     並利用 **陰影 (box-shadow)** 與 **圓角 (border-radius: 8px~12px)** 增加層次感。
-   - **卡片內容**：卡片內可包含文字說明、精簡的**程式碼區塊 (Code Block，搭配深色背景與
-     語法顏色)**、或**設定範例**。
-   - **下方區塊**：在流程底部，設計一個「完成檢查 (Checklist)」或「結果摘要」的區塊。
+3. **Layout structure (similar to Kubernetes / official DevOps architecture diagrams / migration guides)**:
+   - **Top main title**: a clear main title and subtitle.
+   - **Main body layout**: a **card-based layout** in three columns or multiple steps,
+     arranged horizontally or vertically according to the flow order.
+   - **Flow connections**: each stage or card must be **clearly connected with flow
+     arrows** (SVG arrows in tech blue or gray).
+   - **Card design (Card UI)**: each step uses a **standalone info box**. It must have
+     a "step number" and a "title", and use **shadows (box-shadow)** and **rounded
+     corners (border-radius: 8px~12px)** to add depth.
+   - **Card content**: a card may contain text descriptions, concise **code blocks
+     (with a dark background and syntax colors)**, or **configuration examples**.
+   - **Bottom section**: at the bottom of the flow, design a "completion checklist" or
+     "result summary" section.
 
-4. **語言與內容**：
-   - 強制使用**繁體中文 (Traditional Chinese)** 進行說明。
-   - **資訊密度高但不雜亂**：善用留白 (padding, margin)，清楚區分標題、內文與程式碼。
+4. **Language & content**:
+   - Use **clear, professional English** for the explanations (match the user's
+     requested language if they ask for another one).
+   - **High information density without clutter**: use whitespace (padding, margin)
+     well and clearly separate titles, body text, and code.
 
-## 多層下鑽架構圖 (`--level detailed`)
+## Multi-Level Drill-Down Diagrams (`--level detailed`)
 
-當架構龐大時，單張圖無法承載細節。`detailed` 模式產出**一張總覽頁 + 每個主要元件一張詳細頁**，
-使用者可在瀏覽器中**點擊總覽頁的卡片直接跳轉**到該元件的細節說明，並可一鍵返回。
+When the architecture is large, a single diagram cannot carry all the detail. The
+`detailed` mode produces **one overview page plus one detail page per major
+component**. The user can **click a card on the overview page to jump straight** to
+that component's detail explanation, and return with one click.
 
-### 輸出檔案結構
+### Output file structure
 
 ```
 <output>/
-├── diagram.html              # 總覽頁（index）：各元件以可點擊卡片呈現
+├── diagram.html              # Overview page (index): components as clickable cards
 └── diagrams/
-    ├── prometheus.html       # 單一元件詳細頁
+    ├── prometheus.html       # Detail page for a single component
     ├── keda.html
-    └── argo-rollouts.html    # 檔名用元件 slug（小寫、空白換 -）
+    └── argo-rollouts.html    # File name uses the component slug (lowercase, spaces → -)
 ```
 
-### 連結與導覽規範
+### Linking & navigation rules
 
-1. **卡片即連結**：總覽頁每張元件卡片用 `<a class="card" href="diagrams/<slug>.html">` 包裹
-   （或 `onclick="location.href=..."`），並加上 hover 視覺回饋（陰影加深、邊框轉科技藍、
-   游標 `cursor: pointer`）與右下角「查看詳情 →」提示，讓使用者一眼看出可點擊。
-2. **詳細頁內容**：沿用相同視覺風格，聚焦單一元件，建議包含：用途說明、關鍵設定
-   （`values.yaml` / Terraform 變數片段，暗色程式碼區塊）、相依關係、版本資訊、注意事項。
-3. **返回導覽**：每張詳細頁**左上角放一個「← 返回總覽」連結**（`href="../diagram.html"`），
-   並可加麵包屑（總覽 / 元件名）。
-4. **相對路徑**：一律使用相對路徑，確保整個資料夾可直接打包、搬移或離線開啟。
-5. **可遞迴**：若某元件本身仍龐大，詳細頁的子項目可再連到下一層 `diagrams/<slug>/...`，
-   形成多層下鑽；每層都保留返回上一層的連結。
+1. **Cards are links**: wrap each component card on the overview page in
+   `<a class="card" href="diagrams/<slug>.html">` (or `onclick="location.href=..."`),
+   and add hover feedback (deeper shadow, border turning tech blue, `cursor: pointer`)
+   plus a "View details →" hint in the bottom-right so it is obvious the card is
+   clickable.
+2. **Detail page content**: keep the same visual style, focused on a single component.
+   Recommended content: purpose description, key configuration (`values.yaml` /
+   Terraform variable snippets in dark code blocks), dependencies, version info, and
+   caveats.
+3. **Back navigation**: each detail page must have a **"← Back to overview" link in the
+   top-left** (`href="../diagram.html"`), and may include a breadcrumb
+   (Overview / Component name).
+4. **Relative paths**: always use relative paths so the whole folder can be packaged,
+   moved, or opened offline directly.
+5. **Recursive**: if a component is itself large, its detail page's sub-items can link
+   to a further level `diagrams/<slug>/...`, forming a multi-level drill-down; each
+   level keeps a link back to the level above.
 
-`basic` 模式維持單一 `diagram.html`，所有資訊集中於一頁，不產生 `diagrams/` 子目錄。
+`basic` mode keeps a single `diagram.html` with all information on one page and does
+not create a `diagrams/` subdirectory.
 
-## Multi-Agent 平行掃描 (`--parallel`)
+## Multi-Agent Parallel Scanning (`--parallel`)
 
-大型 repo（多個 Helm chart / Kustomize 模組 / 服務）逐一序列分析很慢。當頂層元件數量多
-（`auto`：≥ 5）或使用者要求加速時，採用 fan-out 平行掃描：
+For large repos (many Helm charts / Kustomize modules / services), analyzing each one
+sequentially is slow. When there are many top-level components (`auto`: ≥ 5) or the
+user asks to speed it up, use fan-out parallel scanning:
 
-1. **快速盤點 (序列)**：先用一次淺層掃描列出頂層元件清單（例如 `helm/` 下的子目錄、
-   Terraform module 區塊、`kustomization.yaml` resources），得到工作清單。
-2. **Fan-out (平行)**：為**每個元件派發一個掃描 agent**，各自獨立深入分析該元件的設定、
-   相依與用途，回傳**結構化結果**（建議 JSON：`{name, slug, purpose, config_snippets,
-   dependencies, version, notes}`），彼此互不阻塞。
-3. **彙整 (序列)**：主流程收集所有 agent 結果，去重、排序，再據此產生總覽頁與各詳細頁。
+1. **Quick inventory (sequential)**: first do one shallow scan to list the top-level
+   components (e.g. subdirectories under `helm/`, Terraform module blocks,
+   `kustomization.yaml` resources) to get a work list.
+2. **Fan-out (parallel)**: dispatch **one scan agent per component**, each
+   independently analyzing that component's configuration, dependencies, and purpose,
+   returning **structured results** (recommended JSON: `{name, slug, purpose,
+   config_snippets, dependencies, version, notes}`), without blocking each other.
+3. **Aggregate (sequential)**: the main flow collects all agent results, deduplicates,
+   sorts, and then generates the overview page and each detail page.
 
-### 各平台對應機制
+### Per-platform mapping
 
-| 平台 | Fan-out 方式 |
-|------|--------------|
-| Claude Code | 對每個元件呼叫 `Agent`（subagent，可 `run_in_background`）或用 `Workflow` 以 `pipeline()` / `parallel()` 平行派發；建議搭配 `schema` 取得結構化輸出 |
-| Gemini CLI | 以平行 subagent / 多個 `run_shell_command` 掃描任務分頭執行後彙整 |
-| Codex CLI | 拆分為可平行的子任務分批執行後彙整 |
+| Platform | Fan-out mechanism |
+|----------|-------------------|
+| Claude Code | Call `Agent` (subagent, optionally `run_in_background`) per component, or use `Workflow` with `pipeline()` / `parallel()` to dispatch in parallel; pair with `schema` for structured output |
+| Gemini CLI | Run parallel subagents / multiple `run_shell_command` scan tasks separately, then aggregate |
+| Codex CLI | Split into parallelizable subtasks, run in batches, then aggregate |
 
-注意事項：
-- **保留序列備援**：`--parallel off` 或工具不支援平行時，退化為逐一序列掃描，產出不變。
-- **限制並發**：元件極多時分批（例如一次 8–16 個），避免資源耗盡。
-- **彙整才繪圖**：所有掃描完成、結果彙整後才開始產生 HTML，確保跨元件一致性。
+Notes:
+- **Keep a sequential fallback**: with `--parallel off` or when the tool does not
+  support parallelism, degrade to sequential scanning; the output is unchanged.
+- **Limit concurrency**: with very many components, run in batches (e.g. 8–16 at a
+  time) to avoid resource exhaustion.
+- **Draw only after aggregation**: start generating HTML only after all scans complete
+  and results are aggregated, to ensure cross-component consistency.
 
-## 執行步驟
+## Execution Steps
 
-1. **確認參數**：解析 `--level` / `--output` / `--parallel`。若使用者未指定層級，先簡短詢問
-   要 `basic` 還是 `detailed`（或依元件數量自動判斷），再繼續。
-2. **盤點與分析程式碼**：仔細閱讀要呈現的程式碼或架構，提取出主要的模組、API 呼叫順序、
-   或是邏輯流程。元件多時依「Multi-Agent 平行掃描」fan-out 加速，彙整成結構化清單。
-3. **規劃版面配置**：
-   - 決定要用幾個步驟（卡片）來呈現。
-   - 準備每個步驟的標題、簡要說明，以及要在卡片內顯示的關鍵程式碼 snippets。
-   - 決定底部的檢查項目或預期結果。
-   - `detailed` 模式：另外規劃每個元件詳細頁的內容與下鑽連結結構。
-4. **撰寫與產生 Artifact**：
-   - 使用工具建立 HTML 檔案作為 Artifact。
-   - `basic`：單一 `diagram.html`。
-   - `detailed`：總覽 `diagram.html`（卡片為可點擊連結）＋ `diagrams/<slug>.html` 各詳細頁
-     （含「← 返回總覽」），全部使用相對路徑。
-   - 撰寫精美的 CSS 確保「藍白科技感」、「陰影與圓角」、「箭頭連接」、「暗色系程式碼區塊」、
-     以及可點擊卡片的 hover 回饋等視覺要求都完美達成。
-5. **展示結果**：向使用者回報 Artifact 已建立（列出總覽與各詳細頁路徑），簡單解說圖表設計
-   重點與下鑽方式，請使用者點擊預覽或開啟 `diagram.html` 查看。
+1. **Confirm parameters**: parse `--level` / `--output` / `--parallel`. If the user did
+   not specify a level, briefly ask whether they want `basic` or `detailed` (or decide
+   automatically based on component count), then continue.
+2. **Inventory & analyze code**: carefully read the code or architecture to present and
+   extract the main modules, API call order, or logic flow. When there are many
+   components, follow "Multi-Agent Parallel Scanning" to fan out and speed up, then
+   aggregate into a structured list.
+3. **Plan the layout**:
+   - Decide how many steps (cards) to use.
+   - Prepare each step's title, brief description, and the key code snippets to show in
+     the card.
+   - Decide the bottom checklist items or expected results.
+   - `detailed` mode: additionally plan each component detail page's content and
+     drill-down link structure.
+4. **Write & produce the artifact**:
+   - Use tools to create the HTML file(s) as the artifact.
+   - `basic`: a single `diagram.html`.
+   - `detailed`: an overview `diagram.html` (cards are clickable links) plus
+     `diagrams/<slug>.html` detail pages (each with "← Back to overview"), all using
+     relative paths.
+   - Write polished CSS so the visual requirements are perfectly met: "blue-white tech
+     style", "shadows and rounded corners", "arrow connections", "dark code blocks",
+     and hover feedback on clickable cards.
+5. **Present the result**: report to the user that the artifact has been created (list
+   the overview and each detail page path), briefly explain the design highlights and
+   how to drill down, and ask the user to click preview or open `diagram.html` to view.
