@@ -74,6 +74,11 @@
       "name": "nginx-to-gateway",
       "description": "Orchestrate chained NGINX → Traefik → Gateway API migration with a single combined report.",
       "path": "../../../skills/nginx-to-gateway/SKILL.md"
+    },
+    {
+      "name": "painter",
+      "description": "Draw architecture/flow diagrams as a polished HTML artifact — blue-white tech style, flat SVG icons, card-based layout. Supports basic (single page) and detailed (clickable drill-down sub-pages) levels, plus multi-agent parallel scanning for large architectures.",
+      "path": "../../../skills/painter/SKILL.md"
     }
   ]
 }
