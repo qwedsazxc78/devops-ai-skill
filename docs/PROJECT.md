@@ -109,6 +109,7 @@ Pipeline Orchestrator for Kustomize + ArgoCD platforms. Commanding, methodical, 
 | Skill | Purpose |
 |-------|---------|
 | devops:release-validate | Release readiness validation — Phases 1–8. Automated gate: `pnpm release:check` runs Phases 4–7 (fixture suites, shell portability, repo-style coverage, AI-tool parity) and writes `docs/reports/release-validate/<version>/RELEASE-CHECK.md`. Wired into CI on `v*` tags. (v1.15.0+) |
+| devops:painter | Draw architecture/flow/concept diagrams from code as a polished HTML artifact — blue-white tech palette, flat SVG icons, card-based multi-step layout with flow arrows and dark code blocks. `--level basic` = single page; `--level detailed` = overview + clickable drill-down per-component pages. Multi-agent parallel scanning (`--parallel`) speeds up large architectures. Output renders in-browser for review and screenshots. (v1.1.0+) |
 
 ### Zeus Pipelines (from `prompts/zeus/`)
 

@@ -82,6 +82,7 @@ EXPECTED_SKILLS=(
     "ingress-controller-install"
     "ingress-migration-advisor"
     "traefik-controller-decommission"
+    "painter"
 )
 
 # Horus-internal guides (GUIDE.md — hidden from command palette)

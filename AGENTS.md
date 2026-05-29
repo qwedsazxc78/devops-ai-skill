@@ -71,3 +71,4 @@ Detect the repository type to choose the right agent:
 ### Shared Skills
 
 - `$release-validate` — Release readiness validation (versions, cross-platform links, setup smoke tests)
+- `$painter` — Draw architecture/flow diagrams as a polished HTML artifact (blue-white tech style, card layout, SVG arrows). `--level basic|detailed` (clickable drill-down) + `--parallel` multi-agent scanning

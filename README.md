@@ -330,6 +330,7 @@ All skills follow the [Open Agent Skills](https://agentskills.io/specification) 
 | devops:ingress-controller-install | Zeus | GitOps Traefik install/upgrade via Kustomize edits (v1.13.1+). Three modes auto-detected: bootstrap / new-env / upgrade. Plan-only. |
 | devops:traefik-controller-decommission | Zeus | GitOps ingress-nginx decommission via module archive + ArgoCD prune (v1.13.1+). |
 | devops:release-validate | Shared | Release readiness validation — Phases 4–7: fixture suites, shell portability, repo-style coverage, AI-tool parity. (v1.15.0+) |
+| devops:painter | Shared | Draw architecture/flow diagrams from code as a polished HTML artifact — blue-white tech style, flat SVG icons, card-based layout. `--level basic\|detailed` (clickable drill-down sub-pages) + multi-agent parallel scanning for large architectures. (v1.1.0+) |
 
 ### Horus Internal Guides
 
@@ -804,6 +805,7 @@ devops-ai-skill/
 │   ├── ingress-controller-install/     # v1.13.1 GitOps Zeus
 │   ├── traefik-controller-decommission/# v1.13.1 GitOps Zeus
 │   ├── release-validate/
+│   ├── painter/                        # diagram artifact generator
 │   └── repo-detect/
 │
 ├── prompts/                     # Platform-neutral pipeline definitions
