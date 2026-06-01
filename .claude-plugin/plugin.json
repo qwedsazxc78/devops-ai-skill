@@ -1,7 +1,7 @@
 {
   "name": "devops",
   "description": "Cross-platform DevOps AI Skill Pack — two agents (Horus IaC + Zeus GitOps) with automated pipelines for Terraform, Helm, Kustomize, and ArgoCD workflows.",
-  "version": "1.15.1",
+  "version": "1.16.0",
   "author": {
     "name": "alexhsieh"
   },

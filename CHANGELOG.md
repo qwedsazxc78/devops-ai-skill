@@ -5,10 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.16.0] - 2026-06-01
 
 ### Added
 
+- **`*diagram` pipeline** (`prompts/zeus/diagram.md`) rewired as a thin recipe layer over `devops:painter`. Three ready-made recipes with dual-format output:
+  - **Zeus (GitOps)** — `common.service/base + overlays` → ArgoCD `Application` → GKE, with `common.traefik` controller / `common.service` data-plane split
+  - **Horus (IaC)** — Terraform modules + Helm releases → ArtifactHub version discovery → GKE
+  - **Migration** — S0→S3 ingress-nginx → Traefik → Gateway API state journey (7 Zeus commands)
+- **3 sample diagrams × 2 formats** shipped as static committed artifacts:
+  - Mermaid (`.md`) — renders inline on GitHub; `flowchart` for Zeus/Horus, `stateDiagram-v2` for Migration
+  - Painter HTML (`detailed`) — overview page + 4 clickable drill-down pages per diagram (12 detail pages total); blue-white palette, card UI, SVG arrows, dark code blocks, `← Back to overview` links
+- **`docs/diagrams/README.md`** — gallery index linking all Mermaid + HTML overviews with a format comparison table
+- **`docs/diagrams-guide.md`** — usage guide: `*diagram` vs `devops:painter` decision table, 3 recipes, params (`--level`/`--output`/`--parallel`), dual-format output paths, regenerate instructions
 - **`gateway-api-migration` skill v1.16.0 (sourced from CTS-9681 live migration, 2026-05-28)** — five enrichments lifted from a 15-host Traefik-source migration across 2 repos and 3 environments:
   - **SE1 — Traefik source annotation classification.** `scripts/inventory_annotations.py` now recognises 6 `traefik.ingress.kubernetes.io/*` annotations (T1–T6) and adds a new `translatedByCoexistence` bucket alongside `translated`/`translatedLossy`/`stubbed`/`unknown`/`dropInfo`. The `router.middlewares` annotation (the most common case) was previously bucketed as `unknown` and surfaced as S1 risk; it now classifies correctly as `translated-by-coexistence` with S2 risk.
   - **SE2 — Cross-repo HTTPRoute handoff (new Step 7b in SKILL.md).** When a service's backend lives in a separate GitOps repo, the HTTPRoute is emitted into that repo's `overlays/<env>/httproute.yaml` rather than `common.service/`. `state.yaml.crossRepo[]` records the handoff. The Gateway listener uses `allowedRoutes.namespaces.from: All` so the cross-repo HTTPRoute attaches.
@@ -19,6 +28,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **README** (EN / zh-TW / zh-CN) — ASCII migration block replaced with Mermaid `stateDiagram-v2`; new **Architecture Diagrams** section links the gallery and diagrams-guide
+- **GitHub repo description** — updated to include Antigravity platform and diagram/painter capability; `gateway-api` topic added
 - **`gateway-api-migration` skill** — cert-manager annotation correction (sourced from live POC 2026-05-27):
   - `docs/gateway/annotation-map.md` row 2: `cert-manager.io/cluster-issuer` Traefik action changed from **drop-info → migrate to Gateway annotation**. The annotation is moved from the source Ingress to `Gateway.metadata.annotations`; cert-manager v1.15+ gateway-shim auto-creates/renews the Certificate CR from it.
   - `docs/gateway/traefik-gateway-notes.md` cert-manager section rewritten: documents the preferred Gateway annotation pattern (v1.15+, auto-rotation, no explicit Certificate CR) and the explicit Certificate CR fallback (pre-v1.15).
@@ -513,3 +524,5 @@ Dry-run smoke-tested against eye-of-horus-gitops.
 [1.15.0]: https://github.com/qwedsazxc78/devops-ai-skill/compare/v1.14.0...v1.15.0
 [1.14.0]: https://github.com/qwedsazxc78/devops-ai-skill/compare/v1.13.1...v1.14.0
 [1.13.1]: https://github.com/qwedsazxc78/devops-ai-skill/releases/tag/v1.13.1
+[1.16.0]: https://github.com/qwedsazxc78/devops-ai-skill/compare/v1.15.1...v1.16.0
+[1.15.1]: https://github.com/qwedsazxc78/devops-ai-skill/releases/tag/v1.15.1
