@@ -1,7 +1,7 @@
 # Diagram Capability Enhancement — Design
 
 **Date:** 2026-06-01
-**Status:** Approved (pending spec review)
+**Status:** Approved — reviewed; implementation plan written at `docs/superpowers/plans/2026-06-01-diagram-enhancement.md`
 **Author:** Zeus pipeline maintainers
 
 ## Problem
