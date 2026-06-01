@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zeus — GitOps Architecture (Kustomize + ArgoCD)</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", Inter, sans-serif;
+    background: #F3F4F6;
+    color: #1E293B;
+    min-height: 100vh;
+    padding: 2rem 1rem 4rem;
+  }
+  .page-header {
+    text-align: center;
+    margin-bottom: 2.5rem;
+  }
+  .page-header h1 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #0052CC;
+    margin-bottom: 0.5rem;
+  }
+  .page-header p {
+    font-size: 0.95rem;
+    color: #64748B;
+    max-width: 680px;
+    margin: 0 auto;
+  }
+  .pipeline-label {
+    display: inline-block;
+    background: #0052CC;
+    color: #fff;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 0.2rem 0.6rem;
+    border-radius: 4px;
+    margin-top: 0.75rem;
+  }
+
+  /* Flow layout */
+  .flow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0;
+    max-width: 1100px;
+    margin: 0 auto 2rem;
+  }
+  .arrow {
+    display: flex;
+    align-items: center;
+    padding: 0 0.25rem;
+    flex-shrink: 0;
+  }
+  .arrow svg { display: block; }
+
+  /* Cards */
+  a.card {
+    display: block;
+    text-decoration: none;
+    color: inherit;
+  }
+  .card {
+    background: #fff;
+    border: 1.5px solid #E2E8F0;
+    border-radius: 12px;
+    padding: 1.25rem 1rem;
+    width: 210px;
+    box-shadow: 0 2px 8px rgba(0,82,204,0.07);
+    transition: box-shadow 0.18s, border-color 0.18s, transform 0.18s;
+    position: relative;
+    cursor: pointer;
+  }
+  a.card:hover .card, .card:hover {
+    box-shadow: 0 6px 24px rgba(0,82,204,0.18);
+    border-color: #0052CC;
+    transform: translateY(-2px);
+  }
+  .card-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background: #EFF6FF;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 0.75rem;
+  }
+  .card-icon svg { display: block; }
+  .card-step {
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #0052CC;
+    margin-bottom: 0.25rem;
+  }
+  .card h3 {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #0F172A;
+    margin-bottom: 0.4rem;
+    line-height: 1.3;
+  }
+  .card p {
+    font-size: 0.78rem;
+    color: #475569;
+    line-height: 1.5;
+    margin-bottom: 0.6rem;
+  }
+  .card-hint {
+    font-size: 0.7rem;
+    color: #0052CC;
+    font-weight: 600;
+    text-align: right;
+    display: block;
+    margin-top: 0.5rem;
+  }
+  .card code {
+    background: #1E293B;
+    color: #7DD3FC;
+    font-size: 0.72rem;
+    padding: 0.15rem 0.4rem;
+    border-radius: 4px;
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  }
+
+  /* Subgroup labels */
+  .subgroup {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  .subgroup-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #94A3B8;
+    text-align: center;
+    margin-bottom: 0.25rem;
+  }
+
+  /* Split group (common-traefik + common-service side by side) */
+  .split-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  /* Section dividers */
+  .section-title {
+    text-align: center;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #94A3B8;
+    margin: 0 auto 1rem;
+    max-width: 1100px;
+  }
+
+  /* Checklist */
+  .checklist {
+    background: #fff;
+    border: 1.5px solid #E2E8F0;
+    border-radius: 12px;
+    padding: 1.25rem 1.5rem;
+    max-width: 680px;
+    margin: 0 auto 2rem;
+    box-shadow: 0 2px 8px rgba(0,82,204,0.06);
+  }
+  .checklist h2 {
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #0052CC;
+    margin-bottom: 0.75rem;
+  }
+  .checklist ul {
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.5rem;
+  }
+  .checklist li {
+    font-size: 0.82rem;
+    color: #334155;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  .checklist li::before {
+    content: "✓";
+    color: #16A34A;
+    font-weight: 700;
+    font-size: 0.9rem;
+  }
+
+  /* Commands legend */
+  .cmd-legend {
+    background: #EFF6FF;
+    border: 1px solid #BFDBFE;
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    max-width: 680px;
+    margin: 0 auto;
+    font-size: 0.78rem;
+    color: #1E40AF;
+    text-align: center;
+  }
+  .cmd-legend strong { font-weight: 700; }
+  .cmd-legend code {
+    background: #0052CC;
+    color: #fff;
+    padding: 0.1rem 0.4rem;
+    border-radius: 4px;
+    font-size: 0.72rem;
+    font-family: "SFMono-Regular", Consolas, monospace;
+    margin: 0 0.1rem;
+  }
+</style>
+</head>
+<body>
+<div class="page-header">
+  <h1>Zeus — GitOps Architecture</h1>
+  <p>Kustomize renders per-environment manifests; ArgoCD continuously syncs them to GKE.
+     The ingress layer splits into a <strong>controller plane</strong> (<code>common.traefik/</code>)
+     and a <strong>data plane</strong> (<code>common.service/</code>).</p>
+  <span class="pipeline-label">devops:zeus · *diagram · detailed</span>
+</div>
+
+<div class="section-title">GitOps Flow — click any card to drill in</div>
+
+<div class="flow">
+  <!-- Card 1: Kustomize -->
+  <a class="card" href="diagrams/kustomize.html">
+    <div class="card">
+      <div class="card-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="3" y="3" width="8" height="8" rx="2" fill="#0052CC"/>
+          <rect x="13" y="3" width="8" height="8" rx="2" fill="#93C5FD"/>
+          <rect x="3" y="13" width="8" height="8" rx="2" fill="#93C5FD"/>
+          <rect x="13" y="13" width="8" height="8" rx="2" fill="#BFDBFE"/>
+        </svg>
+      </div>
+      <div class="card-step">Step 1</div>
+      <h3>Kustomize</h3>
+      <p>base/ + overlays/{dev,stg,prd} — renders per-env manifests from a single source of truth.</p>
+      <code>kustomize build overlays/prd</code>
+      <span class="card-hint">View details →</span>
+    </div>
+  </a>
+
+  <!-- Arrow -->
+  <div class="arrow">
+    <svg width="40" height="24" viewBox="0 0 40 24">
+      <line x1="4" y1="12" x2="32" y2="12" stroke="#0052CC" stroke-width="2"/>
+      <polygon points="30,7 40,12 30,17" fill="#0052CC"/>
+    </svg>
+  </div>
+
+  <!-- Card 2: ArgoCD -->
+  <a class="card" href="diagrams/argocd.html">
+    <div class="card">
+      <div class="card-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+          <circle cx="12" cy="12" r="9" stroke="#0052CC" stroke-width="2"/>
+          <path d="M12 7v5l3 3" stroke="#0052CC" stroke-width="2" stroke-linecap="round"/>
+          <circle cx="12" cy="12" r="2" fill="#0052CC"/>
+        </svg>
+      </div>
+      <div class="card-step">Step 2</div>
+      <h3>ArgoCD</h3>
+      <p>Application per env with auto-sync + prune. Watches the Git repo and reconciles continuously.</p>
+      <code>syncPolicy.automated</code>
+      <span class="card-hint">View details →</span>
+    </div>
+  </a>
+
+  <!-- Arrow -->
+  <div class="arrow">
+    <svg width="40" height="24" viewBox="0 0 40 24">
+      <line x1="4" y1="12" x2="32" y2="12" stroke="#0052CC" stroke-width="2"/>
+      <polygon points="30,7 40,12 30,17" fill="#0052CC"/>
+    </svg>
+  </div>
+
+  <!-- Split: common-traefik + common-service -->
+  <div class="split-group">
+    <a class="card" href="diagrams/common-traefik.html">
+      <div class="card">
+        <div class="card-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+            <path d="M12 3L3 8v8l9 5 9-5V8L12 3z" stroke="#0052CC" stroke-width="2" fill="#EFF6FF"/>
+          </svg>
+        </div>
+        <div class="card-step">Step 3a · Controller</div>
+        <h3>common.traefik</h3>
+        <p>Traefik controller plane. Deployed with <code>--enable-helm</code>; manages Ingress + HTTPRoute admission.</p>
+        <span class="card-hint">View details →</span>
+      </div>
+    </a>
+
+    <a class="card" href="diagrams/common-service.html">
+      <div class="card">
+        <div class="card-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+            <rect x="3" y="6" width="18" height="12" rx="3" stroke="#0052CC" stroke-width="2" fill="#EFF6FF"/>
+            <line x1="3" y1="11" x2="21" y2="11" stroke="#0052CC" stroke-width="1.5"/>
+          </svg>
+        </div>
+        <div class="card-step">Step 3b · Data Plane</div>
+        <h3>common.service</h3>
+        <p>Service Kustomize base + overlays. Ingresses or HTTPRoutes per module — managed independently from the controller.</p>
+        <span class="card-hint">View details →</span>
+      </div>
+    </a>
+  </div>
+
+  <!-- Arrow -->
+  <div class="arrow">
+    <svg width="40" height="24" viewBox="0 0 40 24">
+      <line x1="4" y1="12" x2="32" y2="12" stroke="#0052CC" stroke-width="2"/>
+      <polygon points="30,7 40,12 30,17" fill="#0052CC"/>
+    </svg>
+  </div>
+
+  <!-- Card 4: GKE -->
+  <div class="card" style="cursor:default;">
+    <div class="card-icon">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+        <circle cx="12" cy="12" r="9" fill="#EFF6FF" stroke="#0052CC" stroke-width="2"/>
+        <path d="M8 12l2.5 2.5L16 9" stroke="#0052CC" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <div class="card-step">Target</div>
+    <h3>GKE Cluster</h3>
+    <p>Controller pod + service workloads live here. ArgoCD prunes stale resources automatically.</p>
+    <code>kubectl get pods -n traefik</code>
+  </div>
+</div>
+
+<!-- Checklist -->
+<div class="checklist">
+  <h2>Deployment health checklist</h2>
+  <ul>
+    <li>kustomize build green (no errors)</li>
+    <li>ArgoCD Application synced</li>
+    <li>Traefik controller healthy</li>
+    <li>HTTPRoutes Accepted=True</li>
+  </ul>
+</div>
+
+<!-- Commands legend -->
+<div class="cmd-legend">
+  <strong>Zeus pipeline touchpoints:</strong>
+  <code>*full</code> / <code>*review</code> validate overlays ·
+  <code>*scaffold</code> adds service to base/ ·
+  <code>*install-traefik</code> edits controller plane ·
+  <code>*pre-merge</code> gates before MR
+</div>
+</body>
+</html>
