@@ -16,14 +16,9 @@
   ],
   "skills": [
     {
-      "name": "terraform-validate",
-      "description": "Comprehensive validation and linting of Terraform configurations",
-      "path": "../../../skills/terraform-validate/SKILL.md"
-    },
-    {
-      "name": "terraform-security",
-      "description": "Security scanning for Terraform and Helm configurations",
-      "path": "../../../skills/terraform-security/SKILL.md"
+      "name": "gateway-api-migration",
+      "description": "NGINX Ingress → GKE Gateway API migration (master/minion or standalone)",
+      "path": "../../../skills/gateway-api-migration/SKILL.md"
     },
     {
       "name": "helm-version-upgrade",
@@ -31,19 +26,14 @@
       "path": "../../../skills/helm-version-upgrade/SKILL.md"
     },
     {
-      "name": "gateway-api-migration",
-      "description": "NGINX Ingress → GKE Gateway API migration (master/minion or standalone)",
-      "path": "../../../skills/gateway-api-migration/SKILL.md"
+      "name": "ingress-controller-install",
+      "description": "GitOps-flavored Traefik Ingress Controller bootstrap, env addition, or chart upgrade in a Kustomize + ArgoCD repo",
+      "path": "../../../skills/ingress-controller-install/SKILL.md"
     },
     {
-      "name": "helm-scaffold",
-      "description": "New Helm module generation from templates",
-      "path": "../../../skills/helm-scaffold/SKILL.md"
-    },
-    {
-      "name": "cicd-enhancer",
-      "description": "CI/CD pipeline analysis and improvement",
-      "path": "../../../skills/cicd-enhancer/SKILL.md"
+      "name": "ingress-migration-advisor",
+      "description": "Read-only planner that inventories every Ingress in a Kustomize repo, scores migration-readiness, and recommends one of four paths per service",
+      "path": "../../../skills/ingress-migration-advisor/SKILL.md"
     },
     {
       "name": "kustomize-resource-validation",
@@ -51,19 +41,9 @@
       "path": "../../../skills/kustomize-resource-validation/SKILL.md"
     },
     {
-      "name": "repo-detect",
-      "description": "Repository type detection (IaC vs GitOps)",
-      "path": "../../../skills/repo-detect/SKILL.md"
-    },
-    {
-      "name": "yaml-fix-suggestions",
-      "description": "YAML formatting and validation suggestions",
-      "path": "../../../skills/yaml-fix-suggestions/SKILL.md"
-    },
-    {
-      "name": "release-validate",
-      "description": "Release readiness validation across versions, cross-platform links, and setup scripts",
-      "path": "../../../skills/release-validate/SKILL.md"
+      "name": "nginx-to-gateway",
+      "description": "Orchestrate chained NGINX → Traefik → Gateway API migration with a single combined report.",
+      "path": "../../../skills/nginx-to-gateway/SKILL.md"
     },
     {
       "name": "nginx-to-traefik",
@@ -71,14 +51,24 @@
       "path": "../../../skills/nginx-to-traefik/SKILL.md"
     },
     {
-      "name": "nginx-to-gateway",
-      "description": "Orchestrate chained NGINX → Traefik → Gateway API migration with a single combined report.",
-      "path": "../../../skills/nginx-to-gateway/SKILL.md"
-    },
-    {
       "name": "painter",
       "description": "Draw architecture/flow diagrams as a polished HTML artifact — blue-white tech style, flat SVG icons, card-based layout. Supports basic (single page) and detailed (clickable drill-down sub-pages) levels, plus multi-agent parallel scanning for large architectures.",
       "path": "../../../skills/painter/SKILL.md"
+    },
+    {
+      "name": "release-validate",
+      "description": "Release readiness validation across versions, cross-platform links, and setup scripts",
+      "path": "../../../skills/release-validate/SKILL.md"
+    },
+    {
+      "name": "traefik-controller-decommission",
+      "description": "GitOps-flavored safe uninstall of the ingress-nginx controller in a Kustomize + ArgoCD repo — verifies zero nginx Ingresses remain before archiving the module and letting ArgoCD prune",
+      "path": "../../../skills/traefik-controller-decommission/SKILL.md"
+    },
+    {
+      "name": "yaml-fix-suggestions",
+      "description": "YAML formatting and validation suggestions",
+      "path": "../../../skills/yaml-fix-suggestions/SKILL.md"
     }
   ]
 }

@@ -5,8 +5,8 @@
 [![DEVOPS](https://img.shields.io/badge/DEVOPS-SKILL-blue?style=flat-square)](https://github.com/qwedsazxc78/devops-ai-skill)
 [![LICENSE](https://img.shields.io/badge/LICENSE-MIT-green?style=flat-square)](https://github.com/qwedsazxc78/devops-ai-skill/blob/main/LICENSE)
 [![FILES](https://img.shields.io/badge/FILES-65+-orange?style=flat-square)](#project-structure)
-[![SKILLS](https://img.shields.io/badge/SKILLS-10-blueviolet?style=flat-square)](#skills)
-[![PIPELINES](https://img.shields.io/badge/PIPELINES-17-ff6f61?style=flat-square)](#horus-pipelines-iac)
+[![SKILLS](https://img.shields.io/badge/SKILLS-16-blueviolet?style=flat-square)](#skills)
+[![PIPELINES](https://img.shields.io/badge/PIPELINES-22-ff6f61?style=flat-square)](#horus-pipelines-iac)
 [![AGENTS](https://img.shields.io/badge/AGENTS-2-critical?style=flat-square)](#agents)
 [![PLATFORMS](https://img.shields.io/badge/PLATFORMS-4-teal?style=flat-square)](#platform-support)
 
