@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`gateway-api-migration` skill v1.16.0 (sourced from CTS-9681 live migration, 2026-05-28)** — five enrichments lifted from a 15-host Traefik-source migration across 2 repos and 3 environments:
+  - **SE1 — Traefik source annotation classification.** `scripts/inventory_annotations.py` now recognises 6 `traefik.ingress.kubernetes.io/*` annotations (T1–T6) and adds a new `translatedByCoexistence` bucket alongside `translated`/`translatedLossy`/`stubbed`/`unknown`/`dropInfo`. The `router.middlewares` annotation (the most common case) was previously bucketed as `unknown` and surfaced as S1 risk; it now classifies correctly as `translated-by-coexistence` with S2 risk.
+  - **SE2 — Cross-repo HTTPRoute handoff (new Step 7b in SKILL.md).** When a service's backend lives in a separate GitOps repo, the HTTPRoute is emitted into that repo's `overlays/<env>/httproute.yaml` rather than `common.service/`. `state.yaml.crossRepo[]` records the handoff. The Gateway listener uses `allowedRoutes.namespaces.from: All` so the cross-repo HTTPRoute attaches.
+  - **SE3 — Multi-env staged activation (new Step 7d).** `--activation-env <env>` (default `dev`) controls which environment is wired up immediately; other envs get files on disk plus commented-out `kustomization.yaml` entries with activation hints. Prevents ArgoCD sync failures when `kubernetesGateway` isn't enabled in stg/prd Traefik instances.
+  - **SE4 — TLS-only host detection.** `scripts/classify_ingress.py` emits a new `tlsOnly: true` flag when an Ingress declares hosts + TLS refs but has no `http.paths`. Lets the operator decide alias / skip / abort at Step 1 instead of getting a silent orphan-host warning later.
+  - **SE5 — DNS cutover script alignment (new Step 7c).** After generation, the skill globs `scripts/dns-*.sh` and reports any new hostnames that aren't yet listed in the appropriate DNS batch. Emits a diff snippet; optional `--update-dns` flag to apply.
+  - **`docs/gateway/annotation-map.md`** — "Traefik source annotations" section expanded from a 4-row table to a 6-row classification matrix + a "Middleware coexistence" subsection documenting the three resolutions (keep-as-is / per-namespace copies / ReferenceGrant) + a "Bucket: translatedByCoexistence" subsection documenting the new output schema.
+
 ### Changed
 
 - **`gateway-api-migration` skill** — cert-manager annotation correction (sourced from live POC 2026-05-27):
