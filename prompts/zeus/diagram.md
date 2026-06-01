@@ -1,28 +1,62 @@
 # Generate Architecture Diagrams
 
-Generate visual architecture documentation.
+Generate visual architecture documentation. This pipeline is a **thin recipe layer**
+over the `devops:painter` skill (the rendering engine). See
+[`docs/diagrams-guide.md`](../../docs/diagrams-guide.md) and the
+[gallery](../../docs/diagrams/README.md).
 
-## Pipeline Steps
+## Step 0: Delegate to the painter skill
 
-### Step 1: Parse Repository Structure
+The painter skill owns rendering (blue-white style, card UI, SVG arrows, dark code
+blocks, `basic|detailed` drill-down, multi-agent parallel scanning). This pipeline
+supplies the **recipe** (which components, which flow) and the **output contract**.
 
-- Discover all modules, overlays, ArgoCD apps
-- Map dependencies
+Parameters passed through to painter:
 
-### Step 2: Architecture Diagrams
+| Param | Values | Default |
+|-------|--------|---------|
+| `--level` | `basic` \| `detailed` | `basic` |
+| `--output` | path | `docs/diagrams/html/<name>` |
+| `--parallel` | `auto` \| `off` \| N | `auto` |
 
-- Mermaid: module dependency graph
-- Mermaid: ArgoCD application topology
-- Mermaid: Kustomize overlay tree
-- D2 or KubeDiagrams (if available)
+If the user does not pick a recipe, ask which one (Zeus / Horus / Migration) and
+whether they want `basic` or `detailed`.
 
-### Step 3: Workflow Flowcharts
+## Step 1: Detect repository type & parse structure
 
-- CI/CD pipeline flow
-- Deployment workflow
-- Sync/reconciliation flow
+- Run `prompts/shared/repo-detect.md` to detect IaC vs GitOps.
+- Discover modules, overlays, ArgoCD apps (GitOps) or Terraform modules + Helm releases
+  (IaC). Map dependencies.
 
-### Step 4: Render and Output
+## Step 2: Pick a recipe
 
-- Save diagrams to docs/diagrams/
-- Print paths and preview
+### Zeus (GitOps) — `--output docs/diagrams/html/zeus`
+
+`common.service/base + overlays/{dev,stg,prd}` → ArgoCD `Application` → GKE, plus the
+`common.traefik` controller / `common.service` data-plane split. Components:
+kustomize, argocd, common-traefik, common-service.
+
+### Horus (IaC) — `--output docs/diagrams/html/horus`
+
+Terraform modules + Helm releases → ArtifactHub version discovery → GKE. Components:
+terraform, helm, gke, artifacthub.
+
+### Migration — `--output docs/diagrams/html/migration`
+
+S0→S1→S2→S3 ingress-nginx → Traefik → Gateway API journey (7 commands). Components:
+install-traefik, nginx-to-traefik, gateway-migrate, decommission-nginx.
+
+## Step 3: Render (dual format)
+
+- **Mermaid** → `docs/diagrams/<name>.md` (`flowchart` for Zeus/Horus,
+  `stateDiagram-v2` for Migration). Renders inline on GitHub.
+- **Painter HTML** → `docs/diagrams/html/<name>/diagram.html` (+ `diagrams/<slug>.html`
+  drill-downs when `--level detailed`). Invoke `devops:painter` with the recipe's
+  component inventory.
+- Workflow flowcharts (optional): CI/CD, deployment, sync/reconciliation flow.
+
+## Step 4: Output & index
+
+- Save Mermaid to `docs/diagrams/`, HTML under `docs/diagrams/html/<name>/`.
+- Update / link the [gallery](../../docs/diagrams/README.md).
+- Print the overview path and tell the user to open `diagram.html` in a browser.

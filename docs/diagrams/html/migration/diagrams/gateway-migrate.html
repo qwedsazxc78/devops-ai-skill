@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>*gateway-migrate — Migration Journey</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, -apple-system, "Segoe UI", Inter, sans-serif; background: #F3F4F6; color: #1E293B; min-height: 100vh; padding: 2rem 1rem 4rem; }
+  .back-link { display: inline-flex; align-items: center; gap: 0.4rem; color: #0052CC; font-size: 0.82rem; font-weight: 600; text-decoration: none; margin-bottom: 2rem; padding: 0.4rem 0.75rem; border-radius: 6px; border: 1.5px solid #BFDBFE; background: #EFF6FF; transition: background 0.15s; }
+  .back-link:hover { background: #DBEAFE; }
+  .breadcrumb { font-size: 0.72rem; color: #94A3B8; margin-bottom: 0.5rem; }
+  .breadcrumb a { color: #0052CC; text-decoration: none; }
+  .page-header { margin-bottom: 2rem; }
+  .page-header h1 { font-size: 1.5rem; font-weight: 700; color: #0052CC; margin-bottom: 0.4rem; font-family: "SFMono-Regular", Consolas, monospace; }
+  .page-header p { font-size: 0.9rem; color: #475569; max-width: 640px; line-height: 1.6; }
+  .transition-badge { display: inline-block; font-size: 0.72rem; font-weight: 700; padding: 0.15rem 0.6rem; border-radius: 20px; background: #DBEAFE; color: #1E40AF; border: 1px solid #93C5FD; margin-bottom: 0.75rem; }
+  .section { background: #fff; border: 1.5px solid #E2E8F0; border-radius: 12px; padding: 1.25rem 1.5rem; margin-bottom: 1.25rem; max-width: 760px; box-shadow: 0 2px 8px rgba(0,82,204,0.07); }
+  .section h2 { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #0052CC; margin-bottom: 0.75rem; }
+  .section p { font-size: 0.85rem; color: #334155; line-height: 1.6; margin-bottom: 0.6rem; }
+  .section ul { padding-left: 1.2rem; }
+  .section li { font-size: 0.85rem; color: #334155; line-height: 1.8; }
+  pre { background: #1E293B; color: #E2E8F0; border-radius: 8px; padding: 1rem 1.25rem; font-size: 0.78rem; font-family: "SFMono-Regular", Consolas, monospace; overflow-x: auto; line-height: 1.6; margin-top: 0.75rem; }
+  .hl-key { color: #7DD3FC; }
+  .hl-val { color: #86EFAC; }
+  .hl-comment { color: #64748B; }
+  .hl-del { color: #FCA5A5; }
+  .hl-add { color: #86EFAC; }
+  .tag { display: inline-block; background: #0052CC; color: #fff; font-size: 0.68rem; font-weight: 600; padding: 0.15rem 0.5rem; border-radius: 4px; margin-right: 0.3rem; }
+  .tag.green { background: #16A34A; }
+  .dep-list { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem; }
+</style>
+</head>
+<body>
+<a class="back-link" href="../diagram.html">← Back to overview</a>
+<div class="breadcrumb"><a href="../diagram.html">Overview</a> / *gateway-migrate</div>
+
+<div class="page-header">
+  <div class="transition-badge">S1/S2 → S2/S3 · Full Gateway API Chain</div>
+  <h1>*gateway-migrate</h1>
+  <p>Replaces the Ingress API with Gateway API (<code>Gateway</code> + <code>HTTPRoute</code>).
+     The master Ingress becomes a <code>Gateway</code>; each minion Ingress becomes an
+     <code>HTTPRoute</code> that references it. Introduced in v1.7.0 of the skill pack.</p>
+</div>
+
+<div class="section">
+  <h2>What it does</h2>
+  <ul>
+    <li>Detects master Ingress (no path rules, just TLS) → generates a <code>Gateway</code> resource</li>
+    <li>Detects minion Ingresses (path rules) → generates <code>HTTPRoute</code> resources referencing the Gateway</li>
+    <li>Adds the <code>GatewayClass</code> for Traefik (<code>traefik</code>) if not present</li>
+    <li>Removes the old Ingress objects from the Kustomize base</li>
+    <li>Updates <code>common.traefik/kustomization.yaml</code> to include the Gateway resource</li>
+  </ul>
+</div>
+
+<div class="section">
+  <h2>Before — master + minion Ingress</h2>
+  <pre><span class="hl-comment"># Master Ingress (no rules — just TLS termination)</span>
+<span class="hl-del">apiVersion: networking.k8s.io/v1</span>
+<span class="hl-del">kind: Ingress</span>
+<span class="hl-del">metadata:</span>
+<span class="hl-del">  name: gateway-master</span>
+<span class="hl-del">  annotations:</span>
+<span class="hl-del">    nginx.ingress.kubernetes.io/use-regex: "true"</span>
+<span class="hl-del">spec:</span>
+<span class="hl-del">  ingressClassName: nginx</span>
+<span class="hl-del">  tls: [{hosts: ["*.example.com"], secretName: tls-cert}]</span></pre>
+</div>
+
+<div class="section">
+  <h2>After — Gateway + HTTPRoute</h2>
+  <pre><span class="hl-comment"># Gateway (replaces master Ingress)</span>
+<span class="hl-add">apiVersion: gateway.networking.k8s.io/v1</span>
+<span class="hl-add">kind: Gateway</span>
+<span class="hl-add">metadata:</span>
+<span class="hl-add">  name: traefik-gateway</span>
+<span class="hl-add">  namespace: traefik</span>
+<span class="hl-add">spec:</span>
+<span class="hl-add">  gatewayClassName: traefik</span>
+<span class="hl-add">  listeners:</span>
+<span class="hl-add">    - name: https</span>
+<span class="hl-add">      port: 443</span>
+<span class="hl-add">      protocol: HTTPS</span>
+<span class="hl-add">      tls:</span>
+<span class="hl-add">        certificateRefs: [{name: tls-cert}]</span>
+<span class="hl-add">      allowedRoutes: {namespaces: {from: All}}</span>
+
+<span class="hl-comment"># HTTPRoute (replaces minion Ingress)</span>
+<span class="hl-add">apiVersion: gateway.networking.k8s.io/v1</span>
+<span class="hl-add">kind: HTTPRoute</span>
+<span class="hl-add">metadata:</span>
+<span class="hl-add">  name: my-service</span>
+<span class="hl-add">spec:</span>
+<span class="hl-add">  parentRefs: [{name: traefik-gateway, namespace: traefik}]</span>
+<span class="hl-add">  hostnames: ["my-service.example.com"]</span>
+<span class="hl-add">  rules:</span>
+<span class="hl-add">    - matches: [{path: {type: PathPrefix, value: /}}]</span>
+<span class="hl-add">      backendRefs: [{name: my-service, port: 80}]</span></pre>
+</div>
+
+<div class="section">
+  <h2>Verification</h2>
+  <pre>kubectl get gateway -n traefik          <span class="hl-comment"># Ready=True</span>
+kubectl get httproute -A                 <span class="hl-comment"># Accepted=True, ResolvedRefs=True</span>
+curl -sk https://my-service.example.com  <span class="hl-comment"># HTTP 200</span></pre>
+</div>
+
+<div class="section">
+  <h2>See also</h2>
+  <ul>
+    <li><span class="tag">*ingress-to-gateway</span> — auto-detects whether source is nginx or traefik Ingress; same output</li>
+    <li><span class="tag green">*nginx-to-gateway</span> — combines class swap + gateway migration in one pass</li>
+    <li><span class="tag">*ingress-migration-advisor</span> — run first to see the whole-repo migration plan before applying</li>
+  </ul>
+</div>
+</body>
+</html>

@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Migration Journey — ingress-nginx → Traefik → Gateway API</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", Inter, sans-serif;
+    background: #F3F4F6;
+    color: #1E293B;
+    min-height: 100vh;
+    padding: 2rem 1rem 4rem;
+  }
+  .page-header { text-align: center; margin-bottom: 2.5rem; }
+  .page-header h1 { font-size: 1.75rem; font-weight: 700; color: #0052CC; margin-bottom: 0.5rem; }
+  .page-header p { font-size: 0.95rem; color: #64748B; max-width: 680px; margin: 0 auto; }
+  .pipeline-label { display: inline-block; background: #0052CC; color: #fff; font-size: 0.7rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; padding: 0.2rem 0.6rem; border-radius: 4px; margin-top: 0.75rem; }
+  .section-title { text-align: center; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #94A3B8; margin: 0 auto 1.5rem; max-width: 1100px; }
+
+  /* State machine flow */
+  .states-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0;
+    max-width: 1100px;
+    margin: 0 auto 2.5rem;
+  }
+  .state-card {
+    background: #fff;
+    border: 2px solid #E2E8F0;
+    border-radius: 12px;
+    padding: 1rem 0.9rem;
+    width: 185px;
+    box-shadow: 0 2px 8px rgba(0,82,204,0.07);
+    text-align: center;
+  }
+  .state-card.s0 { border-color: #94A3B8; }
+  .state-card.s1 { border-color: #F59E0B; }
+  .state-card.s2 { border-color: #2563EB; }
+  .state-card.s3 { border-color: #16A34A; }
+  .state-label { font-size: 1.3rem; font-weight: 800; margin-bottom: 0.2rem; }
+  .state-label.s0 { color: #94A3B8; }
+  .state-label.s1 { color: #F59E0B; }
+  .state-label.s2 { color: #2563EB; }
+  .state-label.s3 { color: #16A34A; }
+  .state-name { font-size: 0.75rem; font-weight: 700; color: #0F172A; margin-bottom: 0.3rem; }
+  .state-desc { font-size: 0.7rem; color: #64748B; line-height: 1.4; }
+
+  /* Transition arrows with command labels */
+  .transition {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0 0.1rem;
+    flex-shrink: 0;
+  }
+  .cmd-pill {
+    background: #0052CC;
+    color: #fff;
+    font-size: 0.62rem;
+    font-weight: 700;
+    padding: 0.15rem 0.45rem;
+    border-radius: 20px;
+    margin-bottom: 0.2rem;
+    white-space: nowrap;
+    font-family: "SFMono-Regular", Consolas, monospace;
+  }
+  .t-arrow svg { display: block; }
+
+  /* Command cards grid */
+  .commands-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1rem;
+    max-width: 1000px;
+    margin: 0 auto 2rem;
+  }
+  a.cmd-card { display: block; text-decoration: none; color: inherit; }
+  .cmd-card {
+    background: #fff;
+    border: 1.5px solid #E2E8F0;
+    border-radius: 12px;
+    padding: 1.1rem 1rem;
+    box-shadow: 0 2px 8px rgba(0,82,204,0.07);
+    transition: box-shadow 0.18s, border-color 0.18s, transform 0.18s;
+    cursor: pointer;
+  }
+  a.cmd-card:hover .cmd-card, .cmd-card:hover {
+    box-shadow: 0 6px 24px rgba(0,82,204,0.18);
+    border-color: #0052CC;
+    transform: translateY(-2px);
+  }
+  .cmd-card-label { font-size: 0.65rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #0052CC; margin-bottom: 0.3rem; }
+  .cmd-card h3 { font-size: 0.88rem; font-weight: 700; color: #0F172A; margin-bottom: 0.4rem; font-family: "SFMono-Regular", Consolas, monospace; }
+  .cmd-card p { font-size: 0.76rem; color: #475569; line-height: 1.5; }
+  .cmd-card-hint { font-size: 0.7rem; color: #0052CC; font-weight: 600; text-align: right; display: block; margin-top: 0.5rem; }
+  .transition-badge {
+    display: inline-block;
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 0.1rem 0.4rem;
+    border-radius: 4px;
+    margin-bottom: 0.4rem;
+    background: #EFF6FF;
+    color: #1E40AF;
+    border: 1px solid #BFDBFE;
+  }
+
+  /* Checklist */
+  .checklist { background: #fff; border: 1.5px solid #E2E8F0; border-radius: 12px; padding: 1.25rem 1.5rem; max-width: 680px; margin: 0 auto 2rem; box-shadow: 0 2px 8px rgba(0,82,204,0.06); }
+  .checklist h2 { font-size: 0.8rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #0052CC; margin-bottom: 0.75rem; }
+  .checklist ul { list-style: none; display: flex; flex-wrap: wrap; gap: 0.5rem 1.5rem; }
+  .checklist li { font-size: 0.82rem; color: #334155; display: flex; align-items: center; gap: 0.4rem; }
+  .checklist li::before { content: "✓"; color: #16A34A; font-weight: 700; font-size: 0.9rem; }
+  .cmd-legend { background: #EFF6FF; border: 1px solid #BFDBFE; border-radius: 8px; padding: 0.75rem 1rem; max-width: 680px; margin: 0 auto; font-size: 0.78rem; color: #1E40AF; text-align: center; }
+  .cmd-legend code { background: #0052CC; color: #fff; padding: 0.1rem 0.4rem; border-radius: 4px; font-size: 0.72rem; font-family: "SFMono-Regular", Consolas, monospace; margin: 0 0.1rem; }
+</style>
+</head>
+<body>
+<div class="page-header">
+  <h1>Migration Journey</h1>
+  <p>ingress-nginx → Traefik → Gateway API. Four cluster states, seven Zeus commands.
+     The journey is <strong>gradual and DNS-reversible</strong> — each step can be
+     validated before proceeding.</p>
+  <span class="pipeline-label">devops:zeus · *diagram · detailed</span>
+</div>
+
+<div class="section-title">State machine — click a command card to drill in</div>
+
+<!-- State flow -->
+<div class="states-row">
+  <div class="state-card s0">
+    <div class="state-label s0">S0</div>
+    <div class="state-name">Only ingress-nginx</div>
+    <div class="state-desc">Starting point. All Ingresses use nginx class. Traefik not installed.</div>
+  </div>
+
+  <div class="transition">
+    <span class="cmd-pill">*install-traefik</span>
+    <div class="t-arrow">
+      <svg width="36" height="20" viewBox="0 0 36 20">
+        <line x1="0" y1="10" x2="28" y2="10" stroke="#F59E0B" stroke-width="2"/>
+        <polygon points="26,5 36,10 26,15" fill="#F59E0B"/>
+      </svg>
+    </div>
+  </div>
+
+  <div class="state-card s1">
+    <div class="state-label s1">S1</div>
+    <div class="state-name">Both controllers</div>
+    <div class="state-desc">Traefik installed. Both controllers live. Run advisor to plan the migration.</div>
+  </div>
+
+  <div class="transition">
+    <span class="cmd-pill">*nginx-to-traefik</span>
+    <div class="t-arrow">
+      <svg width="36" height="20" viewBox="0 0 36 20">
+        <line x1="0" y1="10" x2="28" y2="10" stroke="#2563EB" stroke-width="2"/>
+        <polygon points="26,5 36,10 26,15" fill="#2563EB"/>
+      </svg>
+    </div>
+  </div>
+
+  <div class="state-card s2">
+    <div class="state-label s2">S2</div>
+    <div class="state-name">Mixed classes</div>
+    <div class="state-desc">Some services on Traefik Ingress or HTTPRoute; some still on nginx. DNS intact.</div>
+  </div>
+
+  <div class="transition">
+    <span class="cmd-pill">DNS cutover</span>
+    <div class="t-arrow">
+      <svg width="36" height="20" viewBox="0 0 36 20">
+        <line x1="0" y1="10" x2="28" y2="10" stroke="#16A34A" stroke-width="2"/>
+        <polygon points="26,5 36,10 26,15" fill="#16A34A"/>
+      </svg>
+    </div>
+  </div>
+
+  <div class="state-card s3">
+    <div class="state-label s3">S3</div>
+    <div class="state-name">Only Traefik</div>
+    <div class="state-desc">All traffic via Traefik. nginx still installed but idle. Ready to decommission.</div>
+  </div>
+</div>
+
+<!-- Command cards -->
+<div class="section-title">Key commands — drill down for details</div>
+<div class="commands-grid">
+  <a class="cmd-card" href="diagrams/install-traefik.html">
+    <div class="cmd-card">
+      <div class="transition-badge">S0 → S1</div>
+      <div class="cmd-card-label">Step 1</div>
+      <h3>*install-traefik</h3>
+      <p>Scaffolds common.traefik/ and deploys the Traefik controller alongside nginx. Both controllers live in S1.</p>
+      <span class="cmd-card-hint">View details →</span>
+    </div>
+  </a>
+
+  <a class="cmd-card" href="diagrams/nginx-to-traefik.html">
+    <div class="cmd-card">
+      <div class="transition-badge">S1 → S2</div>
+      <div class="cmd-card-label">Step 2a</div>
+      <h3>*nginx-to-traefik</h3>
+      <p>Swaps ingressClassName from nginx → traefik across one env. Parallel run, DNS-reversible.</p>
+      <span class="cmd-card-hint">View details →</span>
+    </div>
+  </a>
+
+  <a class="cmd-card" href="diagrams/gateway-migrate.html">
+    <div class="cmd-card">
+      <div class="transition-badge">S1/S2 → S2/S3</div>
+      <div class="cmd-card-label">Step 2b</div>
+      <h3>*gateway-migrate</h3>
+      <p>Replaces Ingress with Gateway + HTTPRoute for the full chain. Master Ingress → Gateway; minion → HTTPRoute.</p>
+      <span class="cmd-card-hint">View details →</span>
+    </div>
+  </a>
+
+  <a class="cmd-card" href="diagrams/decommission-nginx.html">
+    <div class="cmd-card">
+      <div class="transition-badge">S3 → done</div>
+      <div class="cmd-card-label">Step 3</div>
+      <h3>*decommission-nginx</h3>
+      <p>Archives the nginx module and prunes via ArgoCD. Safety preconditions enforced — never helm uninstall directly.</p>
+      <span class="cmd-card-hint">View details →</span>
+    </div>
+  </a>
+</div>
+
+<div class="checklist">
+  <h2>Migration completion checklist</h2>
+  <ul>
+    <li>Traefik controller installed (S1)</li>
+    <li>Ingress classes swapped (S2)</li>
+    <li>HTTPRoutes Accepted=True</li>
+    <li>nginx decommissioned (S3)</li>
+  </ul>
+</div>
+
+<div class="cmd-legend">
+  Also: <code>*ingress-migration-advisor</code> (whole-repo migration plan) ·
+  <code>*nginx-to-gateway</code> (full chain swap) ·
+  <code>*ingress-to-gateway</code> (auto-detect source) ·
+  <code>*migration-quickstart</code> (orientation guide)
+</div>
+</body>
+</html>

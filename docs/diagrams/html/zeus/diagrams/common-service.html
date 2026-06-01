@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>common.service — Zeus GitOps</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, -apple-system, "Segoe UI", Inter, sans-serif; background: #F3F4F6; color: #1E293B; min-height: 100vh; padding: 2rem 1rem 4rem; }
+  .back-link { display: inline-flex; align-items: center; gap: 0.4rem; color: #0052CC; font-size: 0.82rem; font-weight: 600; text-decoration: none; margin-bottom: 2rem; padding: 0.4rem 0.75rem; border-radius: 6px; border: 1.5px solid #BFDBFE; background: #EFF6FF; transition: background 0.15s; }
+  .back-link:hover { background: #DBEAFE; }
+  .breadcrumb { font-size: 0.72rem; color: #94A3B8; margin-bottom: 0.5rem; }
+  .breadcrumb a { color: #0052CC; text-decoration: none; }
+  .page-header { margin-bottom: 2rem; }
+  .page-header h1 { font-size: 1.5rem; font-weight: 700; color: #0052CC; margin-bottom: 0.4rem; }
+  .page-header p { font-size: 0.9rem; color: #475569; max-width: 640px; line-height: 1.6; }
+  .section { background: #fff; border: 1.5px solid #E2E8F0; border-radius: 12px; padding: 1.25rem 1.5rem; margin-bottom: 1.25rem; max-width: 760px; box-shadow: 0 2px 8px rgba(0,82,204,0.07); }
+  .section h2 { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #0052CC; margin-bottom: 0.75rem; }
+  .section p { font-size: 0.85rem; color: #334155; line-height: 1.6; margin-bottom: 0.6rem; }
+  .section ul { padding-left: 1.2rem; }
+  .section li { font-size: 0.85rem; color: #334155; line-height: 1.8; }
+  pre { background: #1E293B; color: #E2E8F0; border-radius: 8px; padding: 1rem 1.25rem; font-size: 0.78rem; font-family: "SFMono-Regular", Consolas, monospace; overflow-x: auto; line-height: 1.6; margin-top: 0.75rem; }
+  .hl-key { color: #7DD3FC; }
+  .hl-val { color: #86EFAC; }
+  .hl-comment { color: #64748B; }
+  .hl-str { color: #FCA5A5; }
+  .tag { display: inline-block; background: #0052CC; color: #fff; font-size: 0.68rem; font-weight: 600; padding: 0.15rem 0.5rem; border-radius: 4px; margin-right: 0.3rem; }
+  .tag.green { background: #16A34A; }
+  .dep-list { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem; }
+</style>
+</head>
+<body>
+<a class="back-link" href="../diagram.html">← Back to overview</a>
+<div class="breadcrumb"><a href="../diagram.html">Overview</a> / common.service</div>
+
+<div class="page-header">
+  <h1>common.service — Data Plane</h1>
+  <p>The per-service Kustomize module that manages <strong>Deployments, Services, and Ingress/HTTPRoute</strong>
+     objects. This is the data plane — it consumes the controller (<code>common.traefik</code>) but
+     updates independently. Each service team owns a subdirectory under <code>common.service/</code>.</p>
+</div>
+
+<div class="section">
+  <h2>Purpose</h2>
+  <ul>
+    <li>One Kustomize base per service + three env overlays (dev, stg, prd)</li>
+    <li>Ingress objects point at <code>ingressClassName: traefik</code> (post S1) or <code>nginx</code> (S0)</li>
+    <li>Post-migration: Ingress replaced by HTTPRoute pointing at the Traefik GatewayClass</li>
+    <li>Independent ArgoCD Application — controller upgrades don't trigger service re-deploys</li>
+  </ul>
+</div>
+
+<div class="section">
+  <h2>Key config — Ingress (during S1/S2)</h2>
+  <pre><span class="hl-comment"># common.service/base/ingress.yaml</span>
+<span class="hl-key">apiVersion</span>: <span class="hl-val">networking.k8s.io/v1</span>
+<span class="hl-key">kind</span>: <span class="hl-val">Ingress</span>
+<span class="hl-key">metadata</span>:
+  <span class="hl-key">name</span>: <span class="hl-val">my-service</span>
+  <span class="hl-key">annotations</span>:
+    <span class="hl-key">kubernetes.io/ingress.class</span>: <span class="hl-str">""</span>  <span class="hl-comment"># patched per env</span>
+<span class="hl-key">spec</span>:
+  <span class="hl-key">ingressClassName</span>: <span class="hl-val">traefik</span>       <span class="hl-comment"># after *nginx-to-traefik</span>
+  <span class="hl-key">rules</span>:
+    - <span class="hl-key">host</span>: <span class="hl-val">my-service.example.com</span>
+      <span class="hl-key">http</span>:
+        <span class="hl-key">paths</span>:
+          - <span class="hl-key">path</span>: <span class="hl-val">/</span>
+            <span class="hl-key">pathType</span>: <span class="hl-val">Prefix</span>
+            <span class="hl-key">backend</span>:
+              <span class="hl-key">service</span>:
+                <span class="hl-key">name</span>: <span class="hl-val">my-service</span>
+                <span class="hl-key">port</span>: { <span class="hl-key">number</span>: <span class="hl-val">80</span> }</pre>
+</div>
+
+<div class="section">
+  <h2>Key config — HTTPRoute (post-migration S3)</h2>
+  <pre><span class="hl-comment"># common.service/base/httproute.yaml</span>
+<span class="hl-key">apiVersion</span>: <span class="hl-val">gateway.networking.k8s.io/v1</span>
+<span class="hl-key">kind</span>: <span class="hl-val">HTTPRoute</span>
+<span class="hl-key">metadata</span>:
+  <span class="hl-key">name</span>: <span class="hl-val">my-service</span>
+<span class="hl-key">spec</span>:
+  <span class="hl-key">parentRefs</span>:
+    - <span class="hl-key">name</span>: <span class="hl-val">traefik-gateway</span>
+      <span class="hl-key">namespace</span>: <span class="hl-val">traefik</span>
+  <span class="hl-key">hostnames</span>: [<span class="hl-val">"my-service.example.com"</span>]
+  <span class="hl-key">rules</span>:
+    - <span class="hl-key">matches</span>: [{ <span class="hl-key">path</span>: { <span class="hl-key">type</span>: <span class="hl-val">PathPrefix</span>, <span class="hl-key">value</span>: <span class="hl-val">/</span> } }]
+      <span class="hl-key">backendRefs</span>: [{ <span class="hl-key">name</span>: <span class="hl-val">my-service</span>, <span class="hl-key">port</span>: <span class="hl-val">80</span> }]</pre>
+</div>
+
+<div class="section">
+  <h2>Dependencies</h2>
+  <div class="dep-list">
+    <span class="tag">common.traefik (controller)</span>
+    <span class="tag">ArgoCD Application</span>
+    <span class="tag">GatewayClass (post S2)</span>
+  </div>
+</div>
+
+<div class="section">
+  <h2>Zeus pipeline touchpoints</h2>
+  <ul>
+    <li><span class="tag green">*scaffold</span> — generates a new service directory under common.service/ with base + overlays</li>
+    <li><span class="tag">*nginx-to-traefik</span> — swaps ingressClassName from nginx → traefik in all service bases</li>
+    <li><span class="tag">*nginx-to-gateway</span> — replaces Ingress objects with HTTPRoute in the full chain</li>
+    <li><span class="tag">*ingress-to-gateway</span> — auto-detects source class and migrates individual modules</li>
+    <li><span class="tag">*full</span> — validates all service Kustomize builds + ingress/HTTPRoute health</li>
+  </ul>
+</div>
+</body>
+</html>

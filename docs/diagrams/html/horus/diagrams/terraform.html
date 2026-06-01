@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Terraform — Horus IaC</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, -apple-system, "Segoe UI", Inter, sans-serif; background: #F3F4F6; color: #1E293B; min-height: 100vh; padding: 2rem 1rem 4rem; }
+  .back-link { display: inline-flex; align-items: center; gap: 0.4rem; color: #0052CC; font-size: 0.82rem; font-weight: 600; text-decoration: none; margin-bottom: 2rem; padding: 0.4rem 0.75rem; border-radius: 6px; border: 1.5px solid #BFDBFE; background: #EFF6FF; transition: background 0.15s; }
+  .back-link:hover { background: #DBEAFE; }
+  .breadcrumb { font-size: 0.72rem; color: #94A3B8; margin-bottom: 0.5rem; }
+  .breadcrumb a { color: #0052CC; text-decoration: none; }
+  .page-header { margin-bottom: 2rem; }
+  .page-header h1 { font-size: 1.5rem; font-weight: 700; color: #0052CC; margin-bottom: 0.4rem; }
+  .page-header p { font-size: 0.9rem; color: #475569; max-width: 640px; line-height: 1.6; }
+  .section { background: #fff; border: 1.5px solid #E2E8F0; border-radius: 12px; padding: 1.25rem 1.5rem; margin-bottom: 1.25rem; max-width: 760px; box-shadow: 0 2px 8px rgba(0,82,204,0.07); }
+  .section h2 { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #0052CC; margin-bottom: 0.75rem; }
+  .section p { font-size: 0.85rem; color: #334155; line-height: 1.6; margin-bottom: 0.6rem; }
+  .section ul { padding-left: 1.2rem; }
+  .section li { font-size: 0.85rem; color: #334155; line-height: 1.8; }
+  pre { background: #1E293B; color: #E2E8F0; border-radius: 8px; padding: 1rem 1.25rem; font-size: 0.78rem; font-family: "SFMono-Regular", Consolas, monospace; overflow-x: auto; line-height: 1.6; margin-top: 0.75rem; }
+  .hl-key { color: #7DD3FC; }
+  .hl-val { color: #86EFAC; }
+  .hl-comment { color: #64748B; }
+  .hl-str { color: #FCA5A5; }
+  .tag { display: inline-block; background: #0052CC; color: #fff; font-size: 0.68rem; font-weight: 600; padding: 0.15rem 0.5rem; border-radius: 4px; margin-right: 0.3rem; }
+  .tag.red { background: #DC2626; }
+  .tag.green { background: #16A34A; }
+  .dep-list { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem; }
+</style>
+</head>
+<body>
+<a class="back-link" href="../diagram.html">← Back to overview</a>
+<div class="breadcrumb"><a href="../diagram.html">Overview</a> / Terraform</div>
+
+<div class="page-header">
+  <h1>Terraform — Infrastructure Modules</h1>
+  <p>HCL modules provision GKE clusters, node pools, VPCs, IAM bindings, and supporting cloud
+     resources. Horus gates every apply with <code>*validate</code> (syntax + semantics) and
+     <code>*security</code> (tfsec/checkov) before any infra changes land.</p>
+</div>
+
+<div class="section">
+  <h2>Purpose</h2>
+  <ul>
+    <li>GKE cluster + node pools (standard + spot) provisioned declaratively</li>
+    <li>VPC, subnets, firewall rules, Cloud NAT managed in code</li>
+    <li>IAM service accounts + Workload Identity bindings per workload</li>
+    <li>Outputs feed into Helm <code>values.yaml</code> (e.g. cluster endpoint, project ID)</li>
+  </ul>
+</div>
+
+<div class="section">
+  <h2>Key config — GKE module block</h2>
+  <pre><span class="hl-comment"># modules/gke/main.tf</span>
+<span class="hl-key">module</span> <span class="hl-str">"gke"</span> {
+  <span class="hl-key">source</span>  = <span class="hl-val">"terraform-google-modules/kubernetes-engine/google"</span>
+  <span class="hl-key">version</span> = <span class="hl-val">"~> 31.0"</span>
+
+  <span class="hl-key">project_id</span>         = <span class="hl-val">var.project_id</span>
+  <span class="hl-key">name</span>               = <span class="hl-val">var.cluster_name</span>
+  <span class="hl-key">region</span>             = <span class="hl-val">var.region</span>
+  <span class="hl-key">network</span>            = <span class="hl-val">module.vpc.network_name</span>
+  <span class="hl-key">subnetwork</span>         = <span class="hl-val">module.vpc.subnets_names[0]</span>
+  <span class="hl-key">kubernetes_version</span> = <span class="hl-val">"1.31"</span>
+}</pre>
+</div>
+
+<div class="section">
+  <h2>Dependencies</h2>
+  <div class="dep-list">
+    <span class="tag">Terraform ≥ 1.6</span>
+    <span class="tag">Google provider ≥ 5.0</span>
+    <span class="tag green">tfsec / checkov (CI)</span>
+    <span class="tag red">tflint (linting)</span>
+  </div>
+</div>
+
+<div class="section">
+  <h2>Horus pipeline touchpoints</h2>
+  <ul>
+    <li><span class="tag">*validate</span> — runs <code>terraform fmt -check</code> + <code>terraform validate</code></li>
+    <li><span class="tag red">*security</span> — runs tfsec + checkov; blocks on HIGH/CRITICAL findings</li>
+    <li><span class="tag">*full</span> — runs validate + security + tflint in sequence, produces report</li>
+    <li><span class="tag green">*cicd</span> — suggests pipeline improvements for Terraform apply workflows</li>
+  </ul>
+</div>
+</body>
+</html>

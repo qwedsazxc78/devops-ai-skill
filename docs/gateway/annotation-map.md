@@ -258,7 +258,7 @@ create` manually and attach via `GCPBackendPolicy.spec.securityPolicy.name`.
 4. **Path denylists**: under Traefik, auto-converted. Under GKE, always a
    manual-review stub requiring Cloud Armor setup.
 
-## Traefik source annotations (added v1.11.0)
+## Traefik source annotations (expanded v1.16.0)
 
 When the source is `ingressClassName: traefik` (skill A output, or
 operator-curated Traefik Ingresses), the converter recognises an
@@ -266,13 +266,67 @@ additional annotation family. Middleware references are **reused** —
 the converter never regenerates an existing `Middleware` CRD in the
 `traefik` namespace.
 
-| Traefik annotation | Gateway API equivalent | Notes |
-|---|---|---|
-| `router.middlewares: cors@kubernetescrd` | `HTTPRoute.filters[].extensionRef` → Middleware | Same Middleware reused, no regeneration |
-| `router.middlewares: security-headers@kubernetescrd` | `HTTPRoute.filters[].extensionRef` → Middleware | Same |
-| `router.tls.options: default@kubernetescrd` | listener-level TLSOption reference | Promoted to Gateway listener |
-| `router.entrypoints: websecure` | implicit (HTTPS listener on 443) | Dropped, redundant in Gateway API |
+| # | Traefik annotation | Category | Action | Notes |
+|---|---|---|---|---|
+| T1 | `traefik.ingress.kubernetes.io/router.middlewares` | translated-by-coexistence | Middleware stays attached to **Ingress** during parallel-run | See "Middleware coexistence" below. To reattach under HTTPRoute, emit per-namespace Middleware copies + extensionRef filters. |
+| T2 | `traefik.ingress.kubernetes.io/router.tls.options` | portable | Promoted to Gateway listener `tls.options` reference | Maps to `TLSOption` CRD ref |
+| T3 | `traefik.ingress.kubernetes.io/router.entrypoints` | drop-info | Implicit in Gateway listener | `websecure`=HTTPS:8443, `web`=HTTP:8000 |
+| T4 | `traefik.ingress.kubernetes.io/service.serversscheme` | convertible | `ServersTransport.spec.serverName` or `BackendTLSPolicy` | Per-backend TLS |
+| T5 | `traefik.ingress.kubernetes.io/service.passhostheader` | drop-info | Gateway API defaults to pass-through | Only `false` would need `RequestHeaderModifier` |
+| T6 | `traefik.ingress.kubernetes.io/*` (any other) | drop-info | Dropped with INFO record | Manual review if operationally critical |
 
-When source is Traefik, **reuse existing Middlewares in the `traefik`
-namespace** instead of regenerating. The converter stores reused
-Middleware refs in `state.yaml.inputs.sourceMiddlewareReuse[]`.
+### Middleware coexistence (T1 — the common case)
+
+**Why "translated-by-coexistence" instead of "translated"?**
+
+The Traefik Helm chart deploys Middleware CRDs (CORS, security-headers, etc.)
+in the `traefik` namespace. The Ingress router resolves middleware references
+via the `@kubernetescrd` suffix and `allowCrossNamespace: true`. The HTTPRoute
+path does **NOT** auto-inherit these — Traefik resolves `extensionRef` against
+the HTTPRoute's own namespace.
+
+During **parallel-run** the original Ingress is untouched, so its middleware
+attachment continues to work for requests still hitting the Ingress path.
+The HTTPRoute serves the same hostname **without** middleware effect.
+
+**Three possible resolutions** (operator picks one per migration):
+
+1. **Keep-as-is (default for dev test phase)** — Accept the gap. HTTPRoute
+   serves bare; middleware only protects requests reaching the original
+   Ingress. Suitable for low-risk dev validation. Surfaces as **S2 risk**
+   in the report.
+2. **Per-namespace Middleware copies** — Copy each referenced Middleware
+   into every target namespace (`monitoring`, `argocd`, `airflow`, etc.)
+   then add `filters[].extensionRef` to each HTTPRoute. Requires N×M new
+   Middleware resources. More boilerplate but route-namespace-local.
+3. **Cross-namespace ReferenceGrant** — Keep the single Middleware in
+   `traefik` namespace and add a `ReferenceGrant` allowing each target
+   namespace to reference it via `extensionRef`. Cleaner but requires
+   Traefik v3.2+ for ReferenceGrant support on Middleware refs.
+
+The skill emits resolution #1 by default and writes resolution #2 + #3
+as commented-out alternatives in the report's Manual Review section.
+
+The converter stores reused Middleware refs in
+`state.yaml.inputs.sourceMiddlewareReuse[]` so resolution #2 / #3 can be
+applied later without re-running discovery.
+
+### Bucket: `translatedByCoexistence` (new in v1.16.0)
+
+The inventory script (`scripts/inventory_annotations.py`) emits a sixth
+bucket alongside `translated`, `translatedLossy`, `stubbed`, `unknown`,
+`dropInfo`:
+
+```json
+"translatedByCoexistence": [
+  {"row": "T1", "annotation": "traefik.ingress.kubernetes.io/router.middlewares",
+   "value": "traefik-security-headers@kubernetescrd,traefik-cors@kubernetescrd",
+   "category": "translated-by-coexistence",
+   "target": "Middleware stays attached to Ingress during parallel-run; ...",
+   "file": "...", "line": ..., "resource": "...", "namespace": "..."}
+]
+```
+
+Counts in this bucket are promoted to the report's "Risk register" as **S2**
+entries (not S1), because the migration outcome is operationally safe during
+parallel-run; only full-cutover triggers the gap.

@@ -34,8 +34,7 @@ __pycache__/
 docs/reports/*
 !docs/reports/.gitkeep
 
-# Diagrams (generated) — keep directory via .gitkeep, ignore contents
-docs/diagrams/*
+# Diagrams — static samples are committed; keep .gitkeep for empty-dir tracking
 !docs/diagrams/.gitkeep
 
 # Symlink targets (platform-specific, created by setup scripts)
