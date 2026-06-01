@@ -276,6 +276,30 @@ npx skills update
 | `*nginx-to-traefik` | NGINX Ingress 類別替換為 Traefik Ingress，支援並行運行與 DNS A-record 切換 |
 | `*nginx-to-gateway` | 鏈式 NGINX → Traefik → Gateway API 遷移，產生單一合併報告 |
 
+## 架構圖
+
+由 Zeus `*diagram` pipeline 產生（引擎：[`devops:painter`](../skills/painter/SKILL.md)）。
+每張圖提供 **Mermaid**（下方/GitHub 直接渲染）與 **detailed Painter-HTML** 下鑽版本，
+詳見[圖庫](diagrams/README.md)與[使用指南](diagrams-guide.md)。
+
+### 遷移旅程 — ingress-nginx → Traefik → Gateway API
+
+```mermaid
+stateDiagram-v2
+  [*] --> S0
+  S0: S0 · 僅 ingress-nginx
+  S1: S1 · 雙控制器
+  S2: S2 · 混合 class
+  S3: S3 · 僅 Traefik
+  S0 --> S1: *install-traefik
+  S1 --> S2: *nginx-to-traefik / *nginx-to-gateway
+  S2 --> S2: *ingress-to-gateway（自動）
+  S2 --> S3: DNS 切換完成
+  S3 --> [*]: *decommission-nginx
+```
+
+在 Zeus 中輸入 `*migration-quickstart` 取得含範例的完整版。Zeus 與 Horus 拓樸圖見[圖庫](diagrams/README.md)。
+
 ## 技能模組
 
 所有技能遵循 [Open Agent Skills](https://agentskills.io/specification) 標準（SKILL.md + YAML frontmatter）。以 `devops:<技能>` 命名空間呼叫，或直接用自然語言描述需求，Agent 會自動路由到對應技能。
