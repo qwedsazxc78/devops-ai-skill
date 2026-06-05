@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.17.0] - 2026-06-05
+
+### Added
+
+- **`nginx-ingress-retire` skill v1.17.0** — new post-migration cleanup skill for retiring the nginx ingress controller and all nginx Ingress resources from a Kustomize + ArgoCD repo after Gateway API / Traefik migration is complete.
+  - Supports single-env (`dev`/`stg`/`prd`) or all-envs retirement in one command (`retire-nginx all`)
+  - **Safety gates**: hard-abort if no HTTPRoute/Traefik Ingresses found (migration not done); warns on active nginx patches still in `patches:` section
+  - **Correct validation**: checks `ingress.class: nginx` count = 0, not total `kind: Ingress` count — envs with Traefik ingresses legitimately retain `kind: Ingress` resources after retirement
+  - **Dynamic discovery via `kustomize build`**: uses `kustomize build common.service/base` + awk to extract exact `metadata.name` / `metadata.namespace` — file names don't always match resource names
+  - **Per-env ingress breakdown**: pre-flight shows nginx vs Traefik vs HTTPRoute counts before any action
+  - **$patch: delete pattern**: excludes base nginx Ingress resources per-env in the overlay kustomization — base files stay intact for other envs still using them
+  - **All-env cleanup check**: after `retire-nginx all`, detects when `common.ingress/` module is fully orphaned and offers to archive or delete the entire module
+  - **Class-override patch detection (Step 2c / Step 5c)**: base nginx Ingress resources patched by an env overlay to a different ingress class (e.g., `ingress.class: gce` for GCE external LB) are detected via rendered manifest cross-check and excluded from `$patch: delete`. Only the file is renamed for semantic clarity; `metadata.name` stays unchanged to avoid cloud LB reprovisioning. Documents Kustomize constraint: cannot combine `$patch: delete` with a same-name standalone resource — duplicate ID error occurs at accumulation phase, before patches run.
+  - Sourced from live retirement of `eye-of-horus-gitops` dev + stg + prd environments (CTS-9828, 2026-06-05)
+
 ## [1.16.0] - 2026-06-01
 
 ### Added
