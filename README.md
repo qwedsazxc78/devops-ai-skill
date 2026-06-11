@@ -790,7 +790,7 @@ devops-ai-skill/
 │   ├── skills/
 │   │   ├── horus/SKILL.md
 │   │   ├── zeus/SKILL.md
-│   │   └── (15 skill symlinks)
+│   │   └── (17 skill symlinks)
 │   └── workflows/               # symlinks → prompts/
 │
 ├── skills/                      # Shared skills (Open Agent Skills standard)
