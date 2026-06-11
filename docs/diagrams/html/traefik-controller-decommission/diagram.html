@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>traefik-controller-decommission — GitOps-Safe ingress-nginx Uninstall Planner</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", Inter, sans-serif;
+    background: #F3F4F6;
+    color: #1E293B;
+    min-height: 100vh;
+    padding: 2rem 1rem 4rem;
+  }
+  .page-header { text-align: center; margin-bottom: 2.5rem; }
+  .page-header h1 { font-size: 1.75rem; font-weight: 700; color: #0052CC; margin-bottom: 0.5rem; }
+  .page-header p { font-size: 0.95rem; color: #64748B; max-width: 720px; margin: 0 auto; }
+  .pipeline-label { display: inline-block; background: #0052CC; color: #fff; font-size: 0.7rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; padding: 0.2rem 0.6rem; border-radius: 4px; margin-top: 0.75rem; }
+  .section-title { text-align: center; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #94A3B8; margin: 0 auto 1.5rem; max-width: 1100px; }
+
+  /* Step flow */
+  .steps-row {
+    display: flex;
+    align-items: stretch;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0;
+    max-width: 1180px;
+    margin: 0 auto 2.5rem;
+  }
+  .step-card {
+    background: #fff;
+    border: 2px solid #E2E8F0;
+    border-radius: 12px;
+    padding: 1rem 0.9rem;
+    width: 205px;
+    box-shadow: 0 2px 8px rgba(0,82,204,0.07);
+    text-align: center;
+  }
+  .step-card.gate { border-color: #DC2626; }
+  .step-card.exec { border-color: #2563EB; }
+  .step-card.done { border-color: #16A34A; }
+  .step-num { font-size: 0.65rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #0052CC; margin-bottom: 0.25rem; }
+  .step-num.gate { color: #DC2626; }
+  .step-num.done { color: #16A34A; }
+  .step-name { font-size: 0.85rem; font-weight: 700; color: #0F172A; margin-bottom: 0.35rem; }
+  .step-desc { font-size: 0.71rem; color: #64748B; line-height: 1.45; }
+  .transition { display: flex; align-items: center; padding: 0 0.1rem; flex-shrink: 0; }
+  .t-arrow svg { display: block; }
+
+  /* Drill-down cards */
+  .commands-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 1rem;
+    max-width: 1020px;
+    margin: 0 auto 2rem;
+  }
+  a.cmd-card {
+    display: block; text-decoration: none; color: inherit;
+    background: #fff;
+    border: 1.5px solid #E2E8F0;
+    border-radius: 12px;
+    padding: 1.1rem 1rem;
+    box-shadow: 0 2px 8px rgba(0,82,204,0.07);
+    transition: box-shadow 0.18s, border-color 0.18s, transform 0.18s;
+    cursor: pointer;
+  }
+  a.cmd-card:hover {
+    box-shadow: 0 6px 24px rgba(0,82,204,0.18);
+    border-color: #0052CC;
+    transform: translateY(-2px);
+  }
+  .cmd-card-label { font-size: 0.65rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #0052CC; margin-bottom: 0.3rem; }
+  a.cmd-card h3 { font-size: 0.88rem; font-weight: 700; color: #0F172A; margin-bottom: 0.4rem; font-family: "SFMono-Regular", Consolas, monospace; }
+  a.cmd-card p { font-size: 0.76rem; color: #475569; line-height: 1.5; }
+  .cmd-card-hint { font-size: 0.7rem; color: #0052CC; font-weight: 600; text-align: right; display: block; margin-top: 0.5rem; }
+  .gate-badge {
+    display: inline-block; font-size: 0.65rem; font-weight: 700;
+    padding: 0.1rem 0.4rem; border-radius: 4px; margin-bottom: 0.4rem;
+    background: #FEF2F2; color: #991B1B; border: 1px solid #FECACA;
+  }
+  .gate-badge.blue { background: #EFF6FF; color: #1E40AF; border-color: #BFDBFE; }
+  .gate-badge.green { background: #DCFCE7; color: #14532D; border-color: #86EFAC; }
+
+  /* Usage strip */
+  .usage { background: #1E293B; color: #E2E8F0; border-radius: 12px; padding: 1rem 1.5rem; max-width: 680px; margin: 0 auto 2.5rem; font-family: "SFMono-Regular", Consolas, monospace; font-size: 0.8rem; line-height: 1.9; box-shadow: 0 2px 8px rgba(0,82,204,0.15); }
+  .usage .cmd { color: #7DD3FC; }
+  .usage .comment { color: #64748B; }
+
+  /* Checklist */
+  .checklist { background: #fff; border: 1.5px solid #E2E8F0; border-radius: 12px; padding: 1.25rem 1.5rem; max-width: 740px; margin: 0 auto 2rem; box-shadow: 0 2px 8px rgba(0,82,204,0.06); }
+  .checklist h2 { font-size: 0.8rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #0052CC; margin-bottom: 0.75rem; }
+  .checklist ul { list-style: none; display: flex; flex-wrap: wrap; gap: 0.5rem 1.5rem; }
+  .checklist li { font-size: 0.82rem; color: #334155; display: flex; align-items: center; gap: 0.4rem; }
+  .checklist li::before { content: "✓"; color: #16A34A; font-weight: 700; font-size: 0.9rem; }
+  .cmd-legend { background: #EFF6FF; border: 1px solid #BFDBFE; border-radius: 8px; padding: 0.75rem 1rem; max-width: 740px; margin: 0 auto; font-size: 0.78rem; color: #1E40AF; text-align: center; }
+  .cmd-legend code { background: #0052CC; color: #fff; padding: 0.1rem 0.4rem; border-radius: 4px; font-size: 0.72rem; font-family: "SFMono-Regular", Consolas, monospace; margin: 0 0.1rem; }
+</style>
+</head>
+<body>
+<div class="page-header">
+  <h1>traefik-controller-decommission</h1>
+  <p>GitOps-safe uninstall <strong>planner</strong> for the <code>ingress-nginx</code> controller in a
+     Kustomize + ArgoCD repo. Verifies cluster + repo are free of nginx-class Ingresses
+     (precedence-aware), gates on a 72h DNS bake, then <strong>emits a plan</strong>: archive the
+     module, disable the ArgoCD Application, let ArgoCD prune, optional LB/IAM cleanup.
+     It writes <code>commands.sh</code> — it <strong>never executes it</strong>, and never runs
+     <code>helm uninstall</code>.</p>
+  <span class="pipeline-label">devops:zeus · *decommission-nginx · detailed</span>
+</div>
+
+<div class="section-title">Seven-step pipeline (Steps 0–6) — red borders are halt gates</div>
+
+<div class="steps-row">
+  <div class="step-card">
+    <div class="step-num">Step 0</div>
+    <div class="step-name">Tool check</div>
+    <div class="step-desc">kustomize · yq · git · jq required. kubectl + gcloud optional — WARN only, skill works offline.</div>
+  </div>
+  <div class="transition"><div class="t-arrow"><svg width="30" height="20" viewBox="0 0 30 20"><line x1="0" y1="10" x2="22" y2="10" stroke="#94A3B8" stroke-width="2"/><polygon points="20,5 30,10 20,15" fill="#94A3B8"/></svg></div></div>
+  <div class="step-card gate">
+    <div class="step-num gate">Step 1 · Gate</div>
+    <div class="step-name">Module discovery</div>
+    <div class="step-desc">Find the kustomization with an ingress-nginx helmCharts block + its ArgoCD app manifests. HALT if 0 or &gt;1 matches (use --module).</div>
+  </div>
+  <div class="transition"><div class="t-arrow"><svg width="30" height="20" viewBox="0 0 30 20"><line x1="0" y1="10" x2="22" y2="10" stroke="#DC2626" stroke-width="2"/><polygon points="20,5 30,10 20,15" fill="#DC2626"/></svg></div></div>
+  <div class="step-card">
+    <div class="step-num">Step 2</div>
+    <div class="step-name">Operator inputs</div>
+    <div class="step-desc">ISO date · operator handle · migration cycle slug · optional GCP project for LB cleanup.</div>
+  </div>
+  <div class="transition"><div class="t-arrow"><svg width="30" height="20" viewBox="0 0 30 20"><line x1="0" y1="10" x2="22" y2="10" stroke="#94A3B8" stroke-width="2"/><polygon points="20,5 30,10 20,15" fill="#94A3B8"/></svg></div></div>
+  <div class="step-card gate">
+    <div class="step-num gate">Step 3 · Gate</div>
+    <div class="step-name">Zero-nginx verify</div>
+    <div class="step-desc">Dual cluster + repo scan. Exit 1 = BLOCKED → HALT, commands.sh NOT written. Exit 2 = DEGRADED.</div>
+  </div>
+</div>
+
+<div class="steps-row">
+  <div class="step-card gate">
+    <div class="step-num gate">Step 4 · Gate</div>
+    <div class="step-name">DNS bake confirm</div>
+    <div class="step-desc">Cutover ≥72h ago, every hostname HTTP 200 via Traefik LB, zero nginx-LB traffic? Anything but yes → BLOCKED.</div>
+  </div>
+  <div class="transition"><div class="t-arrow"><svg width="30" height="20" viewBox="0 0 30 20"><line x1="0" y1="10" x2="22" y2="10" stroke="#DC2626" stroke-width="2"/><polygon points="20,5 30,10 20,15" fill="#DC2626"/></svg></div></div>
+  <div class="step-card exec">
+    <div class="step-num">Step 5</div>
+    <div class="step-name">Generate plan</div>
+    <div class="step-desc">Render plan.md + commands.sh: 5a archive module · 5b ArgoCD disable + prune · 5c optional LB/IAM cleanup.</div>
+  </div>
+  <div class="transition"><div class="t-arrow"><svg width="30" height="20" viewBox="0 0 30 20"><line x1="0" y1="10" x2="22" y2="10" stroke="#2563EB" stroke-width="2"/><polygon points="20,5 30,10 20,15" fill="#2563EB"/></svg></div></div>
+  <div class="step-card done">
+    <div class="step-num done">Step 6</div>
+    <div class="step-name">State + verdict</div>
+    <div class="step-desc">Write state.yaml + verify.json. Print READY / BLOCKED / NEEDS_REVIEW / DEGRADED + next-step instructions.</div>
+  </div>
+</div>
+
+<div class="section-title">Usage</div>
+<div class="usage">
+  <span class="cmd">*decommission-nginx</span>                       <span class="comment"># interactive</span><br>
+  <span class="cmd">*decommission-nginx --cycle prod-batch-3</span>  <span class="comment"># named migration cycle</span><br>
+  <span class="cmd">*decommission-nginx --module &lt;path&gt;</span>       <span class="comment"># disambiguate when &gt;1 module found</span><br>
+  <span class="cmd">*decommission-nginx --skip-dns-bake</span>       <span class="comment"># NEEDS_REVIEW verdict; not recommended</span><br>
+  <span class="cmd">*decommission-nginx --no-lb-cleanup</span>       <span class="comment"># skip the LB IP release plan section</span><br>
+  <span class="cmd">*decommission-nginx --resume &lt;state-path&gt;</span> <span class="comment"># continue from state.yaml</span>
+</div>
+
+<div class="section-title">Core mechanics — drill down for details</div>
+<div class="commands-grid">
+  <a class="cmd-card" href="diagrams/precedence-detection.html">
+    <div class="gate-badge blue">Spec wins</div>
+    <div class="cmd-card-label">Step 3 logic</div>
+    <h3>Precedence-aware detection</h3>
+    <p>spec.ingressClassName == "nginx" counts; null spec falls back to the legacy kubernetes.io/ingress.class annotation. A set spec always overrides the annotation.</p>
+    <span class="cmd-card-hint">View details →</span>
+  </a>
+  <a class="cmd-card" href="diagrams/dual-scan.html">
+    <div class="gate-badge">BLOCKED → halt</div>
+    <div class="cmd-card-label">Step 3</div>
+    <h3>Dual cluster + repo scan</h3>
+    <p>kubectl get ingress -A live scan plus kustomize build of every common.*/overlays/&lt;env&gt;/. Exit 0 PASS · 1 BLOCKED · 2 DEGRADED.</p>
+    <span class="cmd-card-hint">View details →</span>
+  </a>
+  <a class="cmd-card" href="diagrams/plan-sections.html">
+    <div class="gate-badge blue">Plan-only</div>
+    <div class="cmd-card-label">Step 5</div>
+    <h3>Three-section plan</h3>
+    <p>5a git mv the module to archive/ · 5b disable auto-sync, prune-sync, delete the ArgoCD app · 5c optional gcloud LB IP release + IAM cleanup.</p>
+    <span class="cmd-card-hint">View details →</span>
+  </a>
+  <a class="cmd-card" href="diagrams/verdicts.html">
+    <div class="gate-badge green">4 verdicts</div>
+    <div class="cmd-card-label">Step 6</div>
+    <h3>Verdict model + artifacts</h3>
+    <p>READY / BLOCKED / NEEDS_REVIEW / DEGRADED, plus the report directory: state.yaml, verify.json, plan.md, commands.sh (never auto-executed).</p>
+    <span class="cmd-card-hint">View details →</span>
+  </a>
+</div>
+
+<div class="checklist">
+  <h2>Run this skill only after</h2>
+  <ul>
+    <li>Every service migrated off ingressClassName: nginx</li>
+    <li>DNS cutover happened at least 72h ago</li>
+    <li>All hostnames serving HTTP 200 via the Traefik LB</li>
+    <li>Zero traffic observed on the nginx LB</li>
+  </ul>
+</div>
+
+<div class="cmd-legend">
+  Related: <code>*install-traefik</code> (sibling skill — same GitOps invariants) ·
+  <code>*nginx-to-traefik</code> (the migration that must come first) ·
+  <code>*retire-nginx</code> (per-env nginx resource retirement)
+</div>
+</body>
+</html>

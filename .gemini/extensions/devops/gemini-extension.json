@@ -1,6 +1,6 @@
 {
   "name": "devops-ai-skill",
-  "version": "1.16.0",
+  "version": "1.17.1",
   "description": "DevOps AI Skill Pack — Horus (IaC) + Zeus (GitOps) agents",
   "agents": [
     {
@@ -39,6 +39,11 @@
       "name": "kustomize-resource-validation",
       "description": "Kustomize resource validation and build checks",
       "path": "../../../skills/kustomize-resource-validation/SKILL.md"
+    },
+    {
+      "name": "nginx-ingress-retire",
+      "description": "Post-migration nginx retirement — delete controller ArgoCD app per env + $patch: delete base nginx Ingresses in the overlay kustomization; safety-gated, single-env or all",
+      "path": "../../../skills/nginx-ingress-retire/SKILL.md"
     },
     {
       "name": "nginx-to-gateway",

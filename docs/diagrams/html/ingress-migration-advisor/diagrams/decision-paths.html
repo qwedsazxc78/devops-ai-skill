@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>4 paths + veto + shortcut — ingress-migration-advisor</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, -apple-system, "Segoe UI", Inter, sans-serif; background: #F3F4F6; color: #1E293B; min-height: 100vh; padding: 2rem 1rem 4rem; }
+  .back-link { display: inline-flex; align-items: center; gap: 0.4rem; color: #0052CC; font-size: 0.82rem; font-weight: 600; text-decoration: none; margin-bottom: 2rem; padding: 0.4rem 0.75rem; border-radius: 6px; border: 1.5px solid #BFDBFE; background: #EFF6FF; transition: background 0.15s; }
+  .back-link:hover { background: #DBEAFE; }
+  .breadcrumb { font-size: 0.72rem; color: #94A3B8; margin-bottom: 0.5rem; }
+  .breadcrumb a { color: #0052CC; text-decoration: none; }
+  .page-header { margin-bottom: 2rem; }
+  .page-header h1 { font-size: 1.5rem; font-weight: 700; color: #0052CC; margin-bottom: 0.4rem; }
+  .page-header p { font-size: 0.9rem; color: #475569; max-width: 680px; line-height: 1.6; }
+  .gate-badge { display: inline-block; font-size: 0.72rem; font-weight: 700; padding: 0.15rem 0.6rem; border-radius: 20px; background: #FEF2F2; color: #991B1B; border: 1px solid #FECACA; margin-bottom: 0.75rem; }
+  .section { background: #fff; border: 1.5px solid #E2E8F0; border-radius: 12px; padding: 1.25rem 1.5rem; margin-bottom: 1.25rem; max-width: 760px; box-shadow: 0 2px 8px rgba(0,82,204,0.07); }
+  .section.veto { border-color: #DC2626; }
+  .section h2 { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #0052CC; margin-bottom: 0.75rem; }
+  .section.veto h2 { color: #DC2626; }
+  .section p { font-size: 0.85rem; color: #334155; line-height: 1.6; margin-bottom: 0.6rem; }
+  .section ul, .section ol { padding-left: 1.2rem; }
+  .section li { font-size: 0.85rem; color: #334155; line-height: 1.8; }
+  pre { background: #1E293B; color: #E2E8F0; border-radius: 8px; padding: 1rem 1.25rem; font-size: 0.78rem; font-family: "SFMono-Regular", Consolas, monospace; overflow-x: auto; line-height: 1.6; margin-top: 0.75rem; }
+  .hl-key { color: #7DD3FC; }
+  .hl-val { color: #86EFAC; }
+  .hl-comment { color: #64748B; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.8rem; margin-top: 0.5rem; }
+  th { text-align: left; color: #0052CC; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; padding: 0.4rem 0.6rem; border-bottom: 2px solid #E2E8F0; }
+  td { padding: 0.5rem 0.6rem; border-bottom: 1px solid #F1F5F9; color: #334155; line-height: 1.5; }
+  td code { background: #F1F5F9; padding: 0.05rem 0.3rem; border-radius: 4px; font-size: 0.75rem; font-family: "SFMono-Regular", Consolas, monospace; }
+  .path { font-weight: 700; white-space: nowrap; }
+  .path.low { color: #16A34A; }
+  .path.med { color: #2563EB; }
+  .path.high { color: #D97706; }
+  .path.defer { color: #DC2626; }
+  .warning { background: #FEF2F2; border: 1px solid #FECACA; border-radius: 8px; padding: 0.75rem 1rem; font-size: 0.82rem; color: #7F1D1D; margin-top: 0.75rem; }
+</style>
+</head>
+<body>
+<a class="back-link" href="../diagram.html">← Back to overview</a>
+<div class="breadcrumb"><a href="../diagram.html">Overview</a> / 4 paths + veto + shortcut</div>
+
+<div class="page-header">
+  <div class="gate-badge">Step 3 · score_services.py --decide · matrix in references/decision-matrix.md</div>
+  <h1>Decision order: veto → shortcut → score bands</h1>
+  <p>The decision matrix maps <code>(vetoed, sourceClass, totalScore)</code> to
+     <code>(path, suggestedCommand)</code>. Rules are evaluated <strong>in order — first match wins</strong>.
+     The matrix is plain markdown parsed at runtime; band thresholds change via PR, not code.</p>
+</div>
+
+<div class="section veto">
+  <h2>Rule 1 · Critical-tier veto — policy, not a flag</h2>
+  <p>Any service whose tier in <code>docs/ingress-tier-map.yaml</code> is <code>critical</code>
+     is forced to <code>defer</code> regardless of score. There is <strong>no
+     <code>--force-critical</code> bypass flag</strong> — to migrate a critical service, the
+     team PRs the tier map first.</p>
+  <pre><span class="hl-key">decisions:</span>
+  - <span class="hl-key">service:</span> <span class="hl-val">argocd-server</span>
+    <span class="hl-key">path:</span> <span class="hl-val">defer</span>
+    <span class="hl-key">advisoryPath:</span> <span class="hl-val">two-step</span>      <span class="hl-comment"># what the score would have said — kept for the report</span>
+    <span class="hl-key">vetoReason:</span> <span class="hl-val">critical-tier</span>
+    <span class="hl-key">suggestedCommand:</span> <span class="hl-val">null</span></pre>
+  <div class="warning">⛔ Even <code>--target-path</code> cannot override the veto — the override
+     only rebinds non-vetoed services.</div>
+</div>
+
+<div class="section">
+  <h2>Rule 2 · sourceClass shortcut (traefik)</h2>
+  <p>Services already on Traefik Ingress (<code>sourceClass == traefik</code>) auto-route to
+     <code>direct-gateway</code> <strong>regardless of score</strong> — the class swap is already
+     done, only the resource swap remains. Suggested command adds <code>--no-redirect</code>:</p>
+  <pre><span class="hl-comment"># traefik-source → resource swap only</span>
+<span class="hl-key">*gateway-migrate</span> &lt;module&gt; <span class="hl-val">--source-class traefik --gateway-class traefik --no-redirect</span></pre>
+</div>
+
+<div class="section">
+  <h2>Rule 3 · Foreign class → defer</h2>
+  <p><code>sourceClass == foreign</code> (e.g. a <code>gce</code> Ingress) returns
+     <code>path: defer</code> with <code>vetoReason: foreign-class</code> — out of scope for the
+     nginx → traefik → gateway migration path.</p>
+</div>
+
+<div class="section">
+  <h2>Rule 4 · Score bands (nginx-source services only)</h2>
+  <table>
+    <tr><th>Total score</th><th>Path</th><th>Risk bucket</th><th>Suggested Zeus command</th></tr>
+    <tr><td>4–7</td><td class="path low">direct-gateway</td><td>low</td><td><code>*gateway-migrate &lt;module&gt; --source-class nginx --gateway-class traefik</code></td></tr>
+    <tr><td>8–10</td><td class="path med">two-step</td><td>medium</td><td><code>*nginx-to-gateway &lt;env&gt; --gateway-class traefik</code></td></tr>
+    <tr><td>11–13</td><td class="path high">swap-only</td><td>high</td><td><code>*nginx-to-traefik &lt;env&gt; &lt;service&gt;</code></td></tr>
+    <tr><td>14</td><td class="path defer">defer</td><td>very high</td><td><em>none — recorded in the deferred section with rationale</em></td></tr>
+  </table>
+  <p style="margin-top:0.75rem;">Placeholders are substituted at plan-render time from
+     <code>state.yaml.inventory[]</code>: <code>&lt;module&gt;</code> →
+     <code>common.service/overlays/&lt;env&gt;</code>, <code>&lt;env&gt;</code> → lowest-risk env
+     first (dev → stg → prd). Multi-env services get one command per env in the same batch.</p>
+</div>
+
+<div class="section">
+  <h2>The --target-path override</h2>
+  <ul>
+    <li>Valid values: <code>direct-gateway</code>, <code>two-step</code>, <code>swap-only</code></li>
+    <li>The critical-tier veto still applies (critical services still defer)</li>
+    <li>The traefik sourceClass shortcut still applies</li>
+    <li>All other services are bound to the override path; scoring still runs and
+        <code>advisoryPath</code> records what the score would have said, so the report shows both</li>
+    <li>Recorded as <code>decision.overrideReason: "--target-path &lt;value&gt;"</code></li>
+  </ul>
+</div>
+</body>
+</html>

@@ -5,8 +5,8 @@
 [![DEVOPS](https://img.shields.io/badge/DEVOPS-SKILL-blue?style=flat-square)](https://github.com/qwedsazxc78/devops-ai-skill)
 [![LICENSE](https://img.shields.io/badge/LICENSE-MIT-green?style=flat-square)](https://github.com/qwedsazxc78/devops-ai-skill/blob/main/LICENSE)
 [![FILES](https://img.shields.io/badge/FILES-65+-orange?style=flat-square)](#项目结构)
-[![SKILLS](https://img.shields.io/badge/SKILLS-16-blueviolet?style=flat-square)](#技能模块)
-[![PIPELINES](https://img.shields.io/badge/PIPELINES-22-ff6f61?style=flat-square)](#horus-流水线iac)
+[![SKILLS](https://img.shields.io/badge/SKILLS-17-blueviolet?style=flat-square)](#技能模块)
+[![PIPELINES](https://img.shields.io/badge/PIPELINES-23-ff6f61?style=flat-square)](#horus-流水线iac)
 [![AGENTS](https://img.shields.io/badge/AGENTS-2-critical?style=flat-square)](#agent-代理)
 [![PLATFORMS](https://img.shields.io/badge/PLATFORMS-4-teal?style=flat-square)](#平台支持)
 
@@ -275,6 +275,7 @@ npx skills update
 | `*gateway-migrate` | NGINX Ingress → Gateway API 迁移（默认 Traefik，可选 GKE via `--gateway-class gke-l7-*`） |
 | `*nginx-to-traefik` | NGINX Ingress 类别替换为 Traefik Ingress，支持并行运行与 DNS A-record 切换 |
 | `*nginx-to-gateway` | 链式 NGINX → Traefik → Gateway API 迁移，生成单一合并报告 |
+| `*retire-nginx` | 迁移后 nginx 退役 — 删除控制器 ArgoCD app + `$patch: delete` 排除 base nginx Ingress，安全门控，单环境或 `all` |
 
 ## 架构图
 
@@ -295,7 +296,7 @@ stateDiagram-v2
   S1 --> S2: *nginx-to-traefik / *nginx-to-gateway
   S2 --> S2: *ingress-to-gateway（自动）
   S2 --> S3: DNS 切换完成
-  S3 --> [*]: *decommission-nginx
+  S3 --> [*]: *decommission-nginx / *retire-nginx
 ```
 
 在 Zeus 中输入 `*migration-quickstart` 获取含示例的完整版。Zeus 与 Horus 拓扑图见[图库](diagrams/README.md)。
@@ -317,6 +318,7 @@ stateDiagram-v2
 | devops:ingress-migration-advisor | Zeus | 只读 ingress-nginx EOL 规划工具（v1.12.0+）。5 维度评分、关键层级否决、sourceClass 快捷方式。 |
 | devops:ingress-controller-install | Zeus | GitOps Traefik 安装/升级（v1.13.1+）。三种模式自动检测：bootstrap / new-env / upgrade。仅规划。 |
 | devops:traefik-controller-decommission | Zeus | GitOps ingress-nginx 退役：模块存档 + ArgoCD 清除（v1.13.1+）。仅规划。 |
+| devops:nginx-ingress-retire | Zeus | 迁移后 nginx 退役（v1.17.0+）：逐环境删除控制器 ArgoCD app + `$patch: delete` 排除 base nginx Ingress。安全门控。 |
 | devops:release-validate | 共用 | 发布就绪验证 — Phase 4~7 全自动检查（fixture 测试、Shell 可移植性、跨库样式覆盖率、AI 工具同步）。(v1.15.0+) |
 
 ### Horus 内部指南

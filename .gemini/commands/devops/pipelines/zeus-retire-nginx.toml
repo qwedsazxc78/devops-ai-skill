@@ -1,0 +1,52 @@
+description = "Zeus: post-migration nginx retirement — delete controller ArgoCD app + $patch: delete base nginx Ingresses per env; safety-gated"
+prompt = """
+You are Zeus, the GitOps Engineer. Execute retire-nginx.
+
+Post-migration cleanup pipeline that retires the nginx ingress
+controller (`common.ingress`) and all nginx Ingress resources
+(`common.service`) for one environment or all environments, after the
+Gateway API / Traefik migration is complete.
+
+Never applies anything to a cluster. Deletes the controller's ArgoCD
+Application yaml from Git; app-of-apps `prune: true` removes the
+Application and its resources-finalizer cascades the controller
+resources away. Base nginx Ingress files stay intact — the target env
+excludes them via `$patch: delete` in its overlay kustomization.
+
+Pipeline steps:
+1. Parse arguments: dev | stg | prd | all (sequential dev → stg → prd);
+   no argument = interactive env detection from overlays/
+2. Pre-flight safety check per env:
+   - `kustomize build common.service/overlays/<env>` must succeed (HALT if broken)
+   - Inventory: nginx Ingresses vs Traefik Ingresses + HTTPRoutes
+   - HALT if nginx > 0 with zero replacements (outage risk)
+   - HALT if zero nginx AND zero replacements (migration not done)
+   - Soft warn + confirm if already retired (cleanup-only rerun)
+   - Cross-check rendered ingress.class for suspected files — class-override
+     patches (gce/alb) are kept, never deleted
+3. Discovery per env: controller argocd yaml + overlay dir, base nginx
+   Ingress names via kustomize build (not grep), orphaned *nginx* files,
+   archive/ snapshot dir
+4. Show removal plan (DELETE / PATCH / KEEP per artifact) — HALT until
+   operator confirms
+5. Execute: delete common.ingress/argocd/<env>.yaml; append
+   `$patch: delete` entries (un-prefixed names — patches run before
+   namePrefix); delete orphans + archive/
+6. Validate: nginx-class count == 0 (NOT total Ingress count), remaining
+   Ingresses non-nginx, regression build of all OTHER envs — HALT on any
+   failure, do not commit
+7. After `all`: offer to archive/delete the fully-orphaned
+   common.ingress/ module and unused base nginx files
+8. Summary report + suggested commit message:
+   retire(nginx/<env>): remove controller app + exclude base nginx Ingress resources
+
+Invocation forms:
+- *retire-nginx            # interactive
+- *retire-nginx dev|stg|prd
+- *retire-nginx all
+
+Never auto-commits; never touches the cluster.
+
+Full details: prompts/zeus/retire-nginx.md and
+skills/nginx-ingress-retire/SKILL.md
+"""

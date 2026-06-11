@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Validation — nginx-ingress-retire</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, -apple-system, "Segoe UI", Inter, sans-serif; background: #F3F4F6; color: #1E293B; min-height: 100vh; padding: 2rem 1rem 4rem; }
+  .back-link { display: inline-flex; align-items: center; gap: 0.4rem; color: #0052CC; font-size: 0.82rem; font-weight: 600; text-decoration: none; margin-bottom: 2rem; padding: 0.4rem 0.75rem; border-radius: 6px; border: 1.5px solid #BFDBFE; background: #EFF6FF; transition: background 0.15s; }
+  .back-link:hover { background: #DBEAFE; }
+  .breadcrumb { font-size: 0.72rem; color: #94A3B8; margin-bottom: 0.5rem; }
+  .breadcrumb a { color: #0052CC; text-decoration: none; }
+  .page-header { margin-bottom: 2rem; }
+  .page-header h1 { font-size: 1.5rem; font-weight: 700; color: #0052CC; margin-bottom: 0.4rem; }
+  .page-header p { font-size: 0.9rem; color: #475569; max-width: 680px; line-height: 1.6; }
+  .gate-badge { display: inline-block; font-size: 0.72rem; font-weight: 700; padding: 0.15rem 0.6rem; border-radius: 20px; background: #DCFCE7; color: #14532D; border: 1px solid #86EFAC; margin-bottom: 0.75rem; }
+  .section { background: #fff; border: 1.5px solid #E2E8F0; border-radius: 12px; padding: 1.25rem 1.5rem; margin-bottom: 1.25rem; max-width: 760px; box-shadow: 0 2px 8px rgba(0,82,204,0.07); }
+  .section h2 { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #0052CC; margin-bottom: 0.75rem; }
+  .section p { font-size: 0.85rem; color: #334155; line-height: 1.6; margin-bottom: 0.6rem; }
+  .section ul { padding-left: 1.2rem; }
+  .section li { font-size: 0.85rem; color: #334155; line-height: 1.8; }
+  pre { background: #1E293B; color: #E2E8F0; border-radius: 8px; padding: 1rem 1.25rem; font-size: 0.78rem; font-family: "SFMono-Regular", Consolas, monospace; overflow-x: auto; line-height: 1.6; margin-top: 0.75rem; }
+  .hl-key { color: #7DD3FC; }
+  .hl-val { color: #86EFAC; }
+  .hl-comment { color: #64748B; }
+  .warning { background: #FEF2F2; border: 1px solid #FECACA; border-radius: 8px; padding: 0.75rem 1rem; font-size: 0.82rem; color: #7F1D1D; margin-top: 0.75rem; }
+  .ok-note { background: #F0FDF4; border: 1px solid #86EFAC; border-radius: 8px; padding: 0.75rem 1rem; font-size: 0.82rem; color: #14532D; margin-top: 0.75rem; }
+</style>
+</head>
+<body>
+<a class="back-link" href="../diagram.html">← Back to overview</a>
+<div class="breadcrumb"><a href="../diagram.html">Overview</a> / Validation</div>
+
+<div class="page-header">
+  <div class="gate-badge">Step 6 · halt means no commit</div>
+  <h1>Validation — the right zero</h1>
+  <p>The retirement target is <strong>nginx-class resources</strong>, not all
+     <code>kind: Ingress</code>. Envs with Traefik Ingresses legitimately keep
+     Ingress resources after retirement.</p>
+</div>
+
+<div class="section">
+  <h2>6a · nginx-class count must be zero</h2>
+  <pre><span class="hl-key">kustomize build</span> common.service/overlays/&lt;env&gt; \
+  | grep -c <span class="hl-val">"ingress.class: nginx\|ingressClassName: nginx"</span>
+<span class="hl-comment"># Expected: 0   — do NOT check total `kind: Ingress` count</span></pre>
+  <div class="warning">🛑 Non-zero? Identify the survivor, report, and halt — never commit a
+     partially-retired overlay.</div>
+</div>
+
+<div class="section">
+  <h2>6b · Remaining Ingresses are non-nginx</h2>
+  <pre><span class="hl-key">kustomize build</span> common.service/overlays/&lt;env&gt; \
+  | awk '/^kind: Ingress/{f=1} f &amp;&amp; /^  name:/{print $2} /^---/{f=0}'
+<span class="hl-comment"># all names should be *-traefik-* or other non-nginx resources</span></pre>
+</div>
+
+<div class="section">
+  <h2>6c · Regression — every other env still builds</h2>
+  <pre><span class="hl-key">for</span> other_env <span class="hl-key">in</span> dev stg prd; <span class="hl-key">do</span>
+  [ "$other_env" = "&lt;env&gt;" ] &amp;&amp; <span class="hl-key">continue</span>
+  <span class="hl-key">kustomize build</span> common.service/overlays/$other_env &gt; /dev/null \
+    &amp;&amp; echo <span class="hl-val">"$other_env: PASS"</span> || echo <span class="hl-val">"$other_env: FAIL"</span>
+<span class="hl-key">done</span></pre>
+  <p>Base files are shared — a <code>$patch: delete</code> mistake in one env's overlay can't
+     break others, but deleting an orphan file that wasn't truly orphaned can. The
+     regression build catches it before commit.</p>
+  <div class="ok-note">✓ All three checks pass → Step 8 prints the summary and the suggested
+     commit message: <code>retire(nginx/&lt;env&gt;): remove controller app + exclude base nginx Ingress resources</code></div>
+</div>
+</body>
+</html>

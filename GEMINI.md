@@ -50,4 +50,5 @@ Detect the repository type to choose the right agent:
 | *ingress-migration-advisor | Read-only EOL planner: scores services and recommends a migration path per service |
 | *install-traefik | GitOps-flavored Traefik bootstrap/new-env/upgrade — edits common.traefik/, plan-only |
 | *decommission-nginx | GitOps-flavored ingress-nginx decommission — archives module + ArgoCD prune, plan-only |
-| *migration-quickstart | 30-second orientation: decision tree + 5-command table + sample invocations (no scan, no prompts) |
+| *retire-nginx | Post-migration nginx retirement — controller app delete + `$patch: delete` base nginx Ingresses, per-env or all |
+| *migration-quickstart | 30-second orientation: decision tree + 8-command table + sample invocations (no scan, no prompts) |

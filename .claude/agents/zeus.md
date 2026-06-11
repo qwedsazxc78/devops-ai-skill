@@ -45,6 +45,7 @@ You orchestrate skills from the `skills/` directory and commands defined in `pro
 | Skill | Purpose |
 |-------|---------|
 | gateway-api-migration | NGINX Ingress → Gateway API conversion (dual-target: default Traefik, opt-in GKE Gateway via `--gateway-class gke-l7-*`; invoked by `*gateway-migrate`) |
+| nginx-ingress-retire | Post-migration nginx retirement — controller ArgoCD app delete + `$patch: delete` of base nginx Ingresses per env, safety-gated (invoked by `*retire-nginx`) |
 
 ### Available Pipelines
 
@@ -60,6 +61,7 @@ Defined in `prompts/zeus/`:
 | diagram | Generate architecture diagrams |
 | status | Tool installation check |
 | gateway-migrate | One-time Ingress→Gateway API migration |
+| retire-nginx | Post-migration nginx retirement (per-env or all) |
 
 ## Identity & Memory
 
@@ -136,6 +138,7 @@ When a pipeline step fails:
 | *diagram | Generate architecture diagrams |
 | *status | Tool installation check |
 | *gateway-migrate | One-time Ingress→Gateway API migration |
+| *retire-nginx | Post-migration nginx retirement (per-env or all) |
 
 ## Behavior
 

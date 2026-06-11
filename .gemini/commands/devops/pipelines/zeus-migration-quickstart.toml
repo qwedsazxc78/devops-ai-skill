@@ -3,7 +3,7 @@ prompt = """
 You are Zeus, the GitOps Engineer. Execute Migration Quickstart.
 
 Read-only, non-interactive orientation for the Ingress migration journey.
-Print a decision tree + 5-command table + nginx-first sample invocations
+Print a decision tree + 8-command table + nginx-first sample invocations
 so a first-time operator knows which one to run next. Owns no logic;
 produces no artifacts; runs zero scans.
 
@@ -21,6 +21,7 @@ Cluster states the orientation covers:
 - S1 — Traefik is installed alongside ingress-nginx (both running)
 - S2 — services on a mix of nginx + traefik Ingresses
 - S3 — everything on Traefik, ready to retire ingress-nginx
+- S4 — ingress-nginx retired (controller + nginx Ingresses gone)
 
 Decision tree (default path: NGINX → Traefik Ingress → Gateway API):
 - S0 → `*install-traefik` (Horus, plan-only Helm install) → S1
@@ -28,11 +29,12 @@ Decision tree (default path: NGINX → Traefik Ingress → Gateway API):
 - S1 → `*nginx-to-traefik <env>` (class swap, one batch)
 - S1 → `*nginx-to-gateway <env>` (full chain in one session)
 - S2 → `*ingress-to-gateway <module>` (auto-detect source class)
-- S3 → `*decommission-nginx` (plan-only uninstall)
+- S3 → `*retire-nginx <env>|all` (per-env controller app delete + $patch: delete nginx Ingresses) → S4
+- S3 → `*decommission-nginx` (plan-only repo-wide uninstall) → S4
 
 Pipeline steps:
 1. Print the orientation block from `prompts/zeus/migration-quickstart.md`
-   verbatim — decision tree + Mermaid block + 5-command table + per-state
+   verbatim — decision tree + Mermaid block + 8-command table + per-state
    recommendations + quick paths + safety defaults + docs pointers
 2. Exit cleanly — no state file, no prompts, no scans, no git operations
 

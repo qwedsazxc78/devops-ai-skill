@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Controller removal cascade — nginx-ingress-retire</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, -apple-system, "Segoe UI", Inter, sans-serif; background: #F3F4F6; color: #1E293B; min-height: 100vh; padding: 2rem 1rem 4rem; }
+  .back-link { display: inline-flex; align-items: center; gap: 0.4rem; color: #0052CC; font-size: 0.82rem; font-weight: 600; text-decoration: none; margin-bottom: 2rem; padding: 0.4rem 0.75rem; border-radius: 6px; border: 1.5px solid #BFDBFE; background: #EFF6FF; transition: background 0.15s; }
+  .back-link:hover { background: #DBEAFE; }
+  .breadcrumb { font-size: 0.72rem; color: #94A3B8; margin-bottom: 0.5rem; }
+  .breadcrumb a { color: #0052CC; text-decoration: none; }
+  .page-header { margin-bottom: 2rem; }
+  .page-header h1 { font-size: 1.5rem; font-weight: 700; color: #0052CC; margin-bottom: 0.4rem; }
+  .page-header p { font-size: 0.9rem; color: #475569; max-width: 680px; line-height: 1.6; }
+  .gate-badge { display: inline-block; font-size: 0.72rem; font-weight: 700; padding: 0.15rem 0.6rem; border-radius: 20px; background: #EFF6FF; color: #1E40AF; border: 1px solid #BFDBFE; margin-bottom: 0.75rem; }
+  .section { background: #fff; border: 1.5px solid #E2E8F0; border-radius: 12px; padding: 1.25rem 1.5rem; margin-bottom: 1.25rem; max-width: 760px; box-shadow: 0 2px 8px rgba(0,82,204,0.07); }
+  .section h2 { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #0052CC; margin-bottom: 0.75rem; }
+  .section p { font-size: 0.85rem; color: #334155; line-height: 1.6; margin-bottom: 0.6rem; }
+  .section ul { padding-left: 1.2rem; }
+  .section li { font-size: 0.85rem; color: #334155; line-height: 1.8; }
+  pre { background: #1E293B; color: #E2E8F0; border-radius: 8px; padding: 1rem 1.25rem; font-size: 0.78rem; font-family: "SFMono-Regular", Consolas, monospace; overflow-x: auto; line-height: 1.6; margin-top: 0.75rem; }
+  .hl-key { color: #7DD3FC; }
+  .hl-comment { color: #64748B; }
+
+  /* Cascade chain */
+  .chain { max-width: 760px; margin-bottom: 1.25rem; }
+  .chain-step { background: #fff; border: 1.5px solid #E2E8F0; border-left: 4px solid #0052CC; border-radius: 10px; padding: 0.85rem 1.1rem; box-shadow: 0 2px 8px rgba(0,82,204,0.07); }
+  .chain-step h3 { font-size: 0.82rem; font-weight: 700; color: #0F172A; margin-bottom: 0.25rem; }
+  .chain-step p { font-size: 0.78rem; color: #475569; line-height: 1.5; }
+  .chain-step code { background: #EFF6FF; color: #1E40AF; padding: 0.05rem 0.3rem; border-radius: 4px; font-size: 0.74rem; }
+  .chain-arrow { text-align: left; padding: 0.15rem 0 0.15rem 1.4rem; }
+  .keep-note { background: #F0FDF4; border: 1px solid #86EFAC; border-radius: 8px; padding: 0.75rem 1rem; font-size: 0.82rem; color: #14532D; margin-top: 0.75rem; }
+</style>
+</head>
+<body>
+<a class="back-link" href="../diagram.html">← Back to overview</a>
+<div class="breadcrumb"><a href="../diagram.html">Overview</a> / Controller removal cascade</div>
+
+<div class="page-header">
+  <div class="gate-badge">Step 5a · GitOps-native · zero kubectl</div>
+  <h1>Controller removal — the cascade chain</h1>
+  <p>Deleting <strong>one file in Git</strong> is sufficient to remove the entire nginx
+     controller from the cluster. ArgoCD does all the work.</p>
+</div>
+
+<div class="chain">
+  <div class="chain-step">
+    <h3>1 · Repo: delete the Application yaml</h3>
+    <p><code>rm common.ingress/argocd/&lt;env&gt;.yaml</code> — the only file the skill removes for the controller.</p>
+  </div>
+  <div class="chain-arrow"><svg width="20" height="26" viewBox="0 0 20 26"><line x1="10" y1="0" x2="10" y2="18" stroke="#0052CC" stroke-width="2"/><polygon points="5,16 10,26 15,16" fill="#0052CC"/></svg></div>
+  <div class="chain-step">
+    <h3>2 · app-of-apps syncs with prune: true</h3>
+    <p>The parent app sees the manifest gone and <strong>prunes the Application object</strong> from the cluster.</p>
+  </div>
+  <div class="chain-arrow"><svg width="20" height="26" viewBox="0 0 20 26"><line x1="10" y1="0" x2="10" y2="18" stroke="#0052CC" stroke-width="2"/><polygon points="5,16 10,26 15,16" fill="#0052CC"/></svg></div>
+  <div class="chain-step">
+    <h3>3 · Application finalizer fires</h3>
+    <p><code>resources-finalizer.argocd.argoproj.io</code> blocks deletion until the app's resources are cleaned up.</p>
+  </div>
+  <div class="chain-arrow"><svg width="20" height="26" viewBox="0 0 20 26"><line x1="10" y1="0" x2="10" y2="18" stroke="#0052CC" stroke-width="2"/><polygon points="5,16 10,26 15,16" fill="#0052CC"/></svg></div>
+  <div class="chain-step">
+    <h3>4 · Cluster: controller resources cascade away</h3>
+    <p>nginx controller Deployment, Service, ConfigMap, and RBAC are deleted by the finalizer — no manual <code>kubectl delete</code>, no <code>helm uninstall</code>.</p>
+  </div>
+</div>
+
+<div class="section">
+  <h2>Why the overlay directory is left alone</h2>
+  <p><code>common.ingress/overlays/&lt;env&gt;/</code> becomes <strong>dead code</strong> the moment
+     the Application yaml is gone — nothing references it. Leaving it is harmless;
+     deleting it is a follow-up-commit nicety, not a correctness requirement.</p>
+  <div class="keep-note">✓ KEEP <code>common.ingress/base/</code> and the other envs'
+     <code>argocd/*.yaml</code> — remaining environments still deploy from them.
+     Only after <code>retire-nginx all</code> does Step 7 offer to archive the whole module.</div>
+</div>
+
+<div class="section">
+  <h2>Post-merge verification</h2>
+  <pre><span class="hl-key">kubectl</span> get pods -n ingress-nginx   <span class="hl-comment"># expect: 0 pods after ArgoCD sync</span>
+<span class="hl-comment"># monitor: no 502s — all traffic through Traefik / HTTPRoutes</span></pre>
+</div>
+</body>
+</html>

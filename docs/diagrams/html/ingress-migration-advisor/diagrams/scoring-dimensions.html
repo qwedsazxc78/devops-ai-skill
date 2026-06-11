@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>5 scoring dimensions — ingress-migration-advisor</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, -apple-system, "Segoe UI", Inter, sans-serif; background: #F3F4F6; color: #1E293B; min-height: 100vh; padding: 2rem 1rem 4rem; }
+  .back-link { display: inline-flex; align-items: center; gap: 0.4rem; color: #0052CC; font-size: 0.82rem; font-weight: 600; text-decoration: none; margin-bottom: 2rem; padding: 0.4rem 0.75rem; border-radius: 6px; border: 1.5px solid #BFDBFE; background: #EFF6FF; transition: background 0.15s; }
+  .back-link:hover { background: #DBEAFE; }
+  .breadcrumb { font-size: 0.72rem; color: #94A3B8; margin-bottom: 0.5rem; }
+  .breadcrumb a { color: #0052CC; text-decoration: none; }
+  .page-header { margin-bottom: 2rem; }
+  .page-header h1 { font-size: 1.5rem; font-weight: 700; color: #0052CC; margin-bottom: 0.4rem; }
+  .page-header p { font-size: 0.9rem; color: #475569; max-width: 680px; line-height: 1.6; }
+  .gate-badge { display: inline-block; font-size: 0.72rem; font-weight: 700; padding: 0.15rem 0.6rem; border-radius: 20px; background: #EFF6FF; color: #1E40AF; border: 1px solid #BFDBFE; margin-bottom: 0.75rem; }
+  .section { background: #fff; border: 1.5px solid #E2E8F0; border-radius: 12px; padding: 1.25rem 1.5rem; margin-bottom: 1.25rem; max-width: 760px; box-shadow: 0 2px 8px rgba(0,82,204,0.07); }
+  .section h2 { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #0052CC; margin-bottom: 0.75rem; }
+  .section p { font-size: 0.85rem; color: #334155; line-height: 1.6; margin-bottom: 0.6rem; }
+  .section ul { padding-left: 1.2rem; }
+  .section li { font-size: 0.85rem; color: #334155; line-height: 1.8; }
+  pre { background: #1E293B; color: #E2E8F0; border-radius: 8px; padding: 1rem 1.25rem; font-size: 0.78rem; font-family: "SFMono-Regular", Consolas, monospace; overflow-x: auto; line-height: 1.6; margin-top: 0.75rem; }
+  .hl-key { color: #7DD3FC; }
+  .hl-val { color: #86EFAC; }
+  .hl-comment { color: #64748B; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.8rem; margin-top: 0.5rem; }
+  th { text-align: left; color: #0052CC; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; padding: 0.4rem 0.6rem; border-bottom: 2px solid #E2E8F0; }
+  td { padding: 0.5rem 0.6rem; border-bottom: 1px solid #F1F5F9; color: #334155; line-height: 1.5; }
+  .score { font-weight: 700; white-space: nowrap; }
+  .score.s1 { color: #16A34A; }
+  .score.s2 { color: #D97706; }
+  .score.s3 { color: #DC2626; }
+  .warning { background: #FEF2F2; border: 1px solid #FECACA; border-radius: 8px; padding: 0.75rem 1rem; font-size: 0.82rem; color: #7F1D1D; margin-top: 0.75rem; }
+</style>
+</head>
+<body>
+<a class="back-link" href="../diagram.html">← Back to overview</a>
+<div class="breadcrumb"><a href="../diagram.html">Overview</a> / 5 scoring dimensions</div>
+
+<div class="page-header">
+  <div class="gate-badge">Step 2 · score_services.py · rubric in references/scoring-model.md</div>
+  <h1>The five scoring dimensions</h1>
+  <p>Each non-vetoed service scores <strong>1 (low risk), 2 (medium), or 3 (high)</strong> per
+     dimension, with equal weights — the total is a simple sum. Range is <strong>4–14</strong>:
+     five dimensions × max 3 would give 15, but traffic tier caps at 2 because tier-3
+     (critical) never reaches the rubric — it is vetoed first. The rubric lives in a plain
+     markdown table parsed at runtime; reweighting is a PR, not a code change.</p>
+</div>
+
+<div class="section">
+  <h2>Dimension 1 · Annotation complexity</h2>
+  <p>Total annotation count plus estimated unknowns. An annotation is "unknown" if its key
+     matches no row of <code>gateway-api-migration/references/annotation-map.md</code>.</p>
+  <table>
+    <tr><th>Score</th><th>Criteria</th></tr>
+    <tr><td class="score s1">1</td><td>≤ 5 total annotations AND 0 unknown</td></tr>
+    <tr><td class="score s2">2</td><td>6–15 total OR 1–2 unknown</td></tr>
+    <tr><td class="score s3">3</td><td>&gt; 15 total OR &gt; 2 unknown</td></tr>
+  </table>
+</div>
+
+<div class="section">
+  <h2>Dimension 2 · TLS mode</h2>
+  <p>How the Ingress terminates TLS today.</p>
+  <table>
+    <tr><th>Score</th><th>Criteria</th></tr>
+    <tr><td class="score s1">1</td><td><code>spec.tls[].secretName</code> references a cert-manager Secret</td></tr>
+    <tr><td class="score s2">2</td><td><code>networking.gke.io/managed-certificates</code> annotation (GKE ManagedCertificate)</td></tr>
+    <tr><td class="score s3">3</td><td>Mixed (some hosts secret, some managed-cert) OR no TLS at all</td></tr>
+  </table>
+</div>
+
+<div class="section">
+  <h2>Dimension 3 · Hostname count per env</h2>
+  <p>Takes the <strong>maximum across envs</strong> — a service with 4 hosts in prd but 1 in dev scores 3.</p>
+  <table>
+    <tr><th>Score</th><th>Criteria</th></tr>
+    <tr><td class="score s1">1</td><td>1 host</td></tr>
+    <tr><td class="score s2">2</td><td>2–3 hosts</td></tr>
+    <tr><td class="score s3">3</td><td>≥ 4 hosts</td></tr>
+  </table>
+</div>
+
+<div class="section">
+  <h2>Dimension 4 · Traffic tier (caps at 2)</h2>
+  <p>From <code>docs/ingress-tier-map.yaml</code>. The only dimension that cannot score 3 —
+     score-3 is reserved for the veto path.</p>
+  <table>
+    <tr><th>Score</th><th>Criteria</th></tr>
+    <tr><td class="score s1">1</td><td><code>low</code></td></tr>
+    <tr><td class="score s2">2</td><td><code>standard</code> (also the default for unlisted services, with a WARN)</td></tr>
+    <tr><td class="score s3">—</td><td><code>critical</code> → veto rule: forced to <code>defer</code>, dimensions left empty</td></tr>
+  </table>
+</div>
+
+<div class="section">
+  <h2>Dimension 5 · Auth / CORS / security annotations</h2>
+  <p>Counts distinct security-relevant annotation <strong>categories</strong> present:</p>
+  <ul>
+    <li>CORS — any <code>cors-*</code> or <code>enable-cors</code></li>
+    <li>Auth — any <code>auth-*</code>, <code>basic-auth</code>, <code>whitelist-source-range</code></li>
+    <li>Security headers — any <code>*-snippet</code> with security header manipulation (annotation-map row 9a)</li>
+    <li>WAF / cert-only — <code>force-ssl-redirect</code>, <code>ssl-passthrough</code></li>
+  </ul>
+  <table>
+    <tr><th>Score</th><th>Criteria</th></tr>
+    <tr><td class="score s1">1</td><td>0 categories present</td></tr>
+    <tr><td class="score s2">2</td><td>exactly 1 category present</td></tr>
+    <tr><td class="score s3">3</td><td>2+ categories present</td></tr>
+  </table>
+</div>
+
+<div class="section">
+  <h2>Worked example — state.yaml.scores[]</h2>
+  <pre><span class="hl-key">scores:</span>
+  - <span class="hl-key">service:</span> <span class="hl-val">argocd-server</span>
+    <span class="hl-key">vetoed:</span> <span class="hl-val">true</span>
+    <span class="hl-key">vetoReason:</span> <span class="hl-val">critical-tier</span>
+    <span class="hl-key">dimensions:</span> {}     <span class="hl-comment"># empty when vetoed — never scored</span>
+  - <span class="hl-key">service:</span> <span class="hl-val">grafana</span>
+    <span class="hl-key">vetoed:</span> <span class="hl-val">false</span>
+    <span class="hl-key">dimensions:</span>
+      <span class="hl-key">annotationComplexity:</span> <span class="hl-val">1</span>
+      <span class="hl-key">tlsMode:</span> <span class="hl-val">1</span>
+      <span class="hl-key">hostnameCount:</span> <span class="hl-val">1</span>
+      <span class="hl-key">trafficTier:</span> <span class="hl-val">1</span>
+      <span class="hl-key">securityAnnotations:</span> <span class="hl-val">1</span>
+    <span class="hl-key">total:</span> <span class="hl-val">5</span>          <span class="hl-comment"># 4–7 band → direct-gateway</span></pre>
+  <div class="warning">⚠ The model never re-derives scores in natural language — <code>score_services.py</code>
+     parses the rubric tables from <code>references/scoring-model.md</code> at runtime and emits
+     structured YAML. A scoring-script crash is a HALT (treat as a bug, report and re-run).</div>
+</div>
+</body>
+</html>

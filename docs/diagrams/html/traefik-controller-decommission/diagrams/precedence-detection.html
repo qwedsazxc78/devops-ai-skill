@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Precedence-aware detection — traefik-controller-decommission</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, -apple-system, "Segoe UI", Inter, sans-serif; background: #F3F4F6; color: #1E293B; min-height: 100vh; padding: 2rem 1rem 4rem; }
+  .back-link { display: inline-flex; align-items: center; gap: 0.4rem; color: #0052CC; font-size: 0.82rem; font-weight: 600; text-decoration: none; margin-bottom: 2rem; padding: 0.4rem 0.75rem; border-radius: 6px; border: 1.5px solid #BFDBFE; background: #EFF6FF; transition: background 0.15s; }
+  .back-link:hover { background: #DBEAFE; }
+  .breadcrumb { font-size: 0.72rem; color: #94A3B8; margin-bottom: 0.5rem; }
+  .breadcrumb a { color: #0052CC; text-decoration: none; }
+  .page-header { margin-bottom: 2rem; }
+  .page-header h1 { font-size: 1.5rem; font-weight: 700; color: #0052CC; margin-bottom: 0.4rem; }
+  .page-header p { font-size: 0.9rem; color: #475569; max-width: 680px; line-height: 1.6; }
+  .gate-badge { display: inline-block; font-size: 0.72rem; font-weight: 700; padding: 0.15rem 0.6rem; border-radius: 20px; background: #EFF6FF; color: #1E40AF; border: 1px solid #BFDBFE; margin-bottom: 0.75rem; }
+  .section { background: #fff; border: 1.5px solid #E2E8F0; border-radius: 12px; padding: 1.25rem 1.5rem; margin-bottom: 1.25rem; max-width: 760px; box-shadow: 0 2px 8px rgba(0,82,204,0.07); }
+  .section h2 { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #0052CC; margin-bottom: 0.75rem; }
+  .section p { font-size: 0.85rem; color: #334155; line-height: 1.6; margin-bottom: 0.6rem; }
+  .section ul { padding-left: 1.2rem; }
+  .section li { font-size: 0.85rem; color: #334155; line-height: 1.8; }
+  pre { background: #1E293B; color: #E2E8F0; border-radius: 8px; padding: 1rem 1.25rem; font-size: 0.78rem; font-family: "SFMono-Regular", Consolas, monospace; overflow-x: auto; line-height: 1.6; margin-top: 0.75rem; }
+  .hl-key { color: #7DD3FC; }
+  .hl-val { color: #86EFAC; }
+  .hl-comment { color: #64748B; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.8rem; margin-top: 0.5rem; }
+  th { text-align: left; color: #0052CC; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; padding: 0.4rem 0.6rem; border-bottom: 2px solid #E2E8F0; }
+  td { padding: 0.5rem 0.6rem; border-bottom: 1px solid #F1F5F9; color: #334155; line-height: 1.5; }
+  .verdict { font-weight: 700; white-space: nowrap; }
+  .verdict.abort { color: #DC2626; }
+  .verdict.ok { color: #16A34A; }
+  .warning { background: #FEF2F2; border: 1px solid #FECACA; border-radius: 8px; padding: 0.75rem 1rem; font-size: 0.82rem; color: #7F1D1D; margin-top: 0.75rem; }
+</style>
+</head>
+<body>
+<a class="back-link" href="../diagram.html">← Back to overview</a>
+<div class="breadcrumb"><a href="../diagram.html">Overview</a> / Precedence-aware detection</div>
+
+<div class="page-header">
+  <div class="gate-badge">Step 3 logic · verify_no_nginx_class.sh</div>
+  <h1>Precedence-aware nginx-class detection</h1>
+  <p>Kubernetes has <strong>two</strong> ways to bind an Ingress to a controller: the modern
+     <code>spec.ingressClassName</code> field and the legacy
+     <code>kubernetes.io/ingress.class</code> annotation. The verifier mirrors controller
+     precedence: <strong>spec wins; the annotation only counts when the spec field is null</strong>.</p>
+</div>
+
+<div class="section">
+  <h2>The match rule</h2>
+  <p>An Ingress is counted as an active nginx Ingress when:</p>
+  <pre><span class="hl-key">spec.ingressClassName</span> == <span class="hl-val">"nginx"</span>
+<span class="hl-comment"># OR — legacy fallback, only when the spec field is absent</span>
+<span class="hl-key">spec.ingressClassName</span> == <span class="hl-val">null</span>  <span class="hl-key">AND</span>  <span class="hl-key">metadata.annotations["kubernetes.io/ingress.class"]</span> == <span class="hl-val">"nginx"</span></pre>
+</div>
+
+<div class="section">
+  <h2>Precedence matrix</h2>
+  <table>
+    <tr><th>spec.ingressClassName</th><th>kubernetes.io/ingress.class annotation</th><th>Counted as nginx?</th><th>Why</th></tr>
+    <tr><td><code>nginx</code></td><td>(anything)</td><td class="verdict abort">⛔ Yes</td><td>Spec explicitly binds to nginx</td></tr>
+    <tr><td><code>null</code></td><td><code>nginx</code></td><td class="verdict abort">⛔ Yes</td><td>Legacy annotation fallback fires</td></tr>
+    <tr><td><code>traefik</code></td><td><code>nginx</code> (stale leftover)</td><td class="verdict ok">✓ No</td><td>Spec wins — leftover annotation is ignored, exactly as the controllers do</td></tr>
+    <tr><td><code>null</code></td><td>absent / not <code>nginx</code></td><td class="verdict ok">✓ No</td><td>No binding to nginx by either mechanism</td></tr>
+  </table>
+</div>
+
+<div class="section">
+  <h2>Why this matters for decommissioning</h2>
+  <ul>
+    <li>A naive <code>grep nginx</code> would <strong>false-positive</strong> on migrated Ingresses
+        that kept a stale legacy annotation — blocking a decommission that is actually safe.</li>
+    <li>It would also <strong>false-negative</strong> on annotation-only Ingresses with no spec
+        field — letting an outage slip through.</li>
+    <li>This rule was already GitOps-correct in v1.12.0 and is carried unchanged into
+        this skill.</li>
+  </ul>
+  <div class="warning">⛔ Any Ingress matching the rule — in cluster <em>or</em> repo — means the
+     nginx controller is still load-bearing. Step 3 exits 1 (BLOCKED) and
+     <code>commands.sh</code> is never written.</div>
+</div>
+</body>
+</html>

@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pre-flight gates — nginx-ingress-retire</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, -apple-system, "Segoe UI", Inter, sans-serif; background: #F3F4F6; color: #1E293B; min-height: 100vh; padding: 2rem 1rem 4rem; }
+  .back-link { display: inline-flex; align-items: center; gap: 0.4rem; color: #0052CC; font-size: 0.82rem; font-weight: 600; text-decoration: none; margin-bottom: 2rem; padding: 0.4rem 0.75rem; border-radius: 6px; border: 1.5px solid #BFDBFE; background: #EFF6FF; transition: background 0.15s; }
+  .back-link:hover { background: #DBEAFE; }
+  .breadcrumb { font-size: 0.72rem; color: #94A3B8; margin-bottom: 0.5rem; }
+  .breadcrumb a { color: #0052CC; text-decoration: none; }
+  .page-header { margin-bottom: 2rem; }
+  .page-header h1 { font-size: 1.5rem; font-weight: 700; color: #0052CC; margin-bottom: 0.4rem; }
+  .page-header p { font-size: 0.9rem; color: #475569; max-width: 680px; line-height: 1.6; }
+  .gate-badge { display: inline-block; font-size: 0.72rem; font-weight: 700; padding: 0.15rem 0.6rem; border-radius: 20px; background: #FEF2F2; color: #991B1B; border: 1px solid #FECACA; margin-bottom: 0.75rem; }
+  .section { background: #fff; border: 1.5px solid #E2E8F0; border-radius: 12px; padding: 1.25rem 1.5rem; margin-bottom: 1.25rem; max-width: 760px; box-shadow: 0 2px 8px rgba(0,82,204,0.07); }
+  .section h2 { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #0052CC; margin-bottom: 0.75rem; }
+  .section p { font-size: 0.85rem; color: #334155; line-height: 1.6; margin-bottom: 0.6rem; }
+  .section ul { padding-left: 1.2rem; }
+  .section li { font-size: 0.85rem; color: #334155; line-height: 1.8; }
+  pre { background: #1E293B; color: #E2E8F0; border-radius: 8px; padding: 1rem 1.25rem; font-size: 0.78rem; font-family: "SFMono-Regular", Consolas, monospace; overflow-x: auto; line-height: 1.6; margin-top: 0.75rem; }
+  .hl-key { color: #7DD3FC; }
+  .hl-val { color: #86EFAC; }
+  .hl-comment { color: #64748B; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.8rem; margin-top: 0.5rem; }
+  th { text-align: left; color: #0052CC; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; padding: 0.4rem 0.6rem; border-bottom: 2px solid #E2E8F0; }
+  td { padding: 0.5rem 0.6rem; border-bottom: 1px solid #F1F5F9; color: #334155; line-height: 1.5; }
+  .verdict { font-weight: 700; white-space: nowrap; }
+  .verdict.abort { color: #DC2626; }
+  .verdict.warn { color: #D97706; }
+  .verdict.ok { color: #16A34A; }
+  .warning { background: #FEF2F2; border: 1px solid #FECACA; border-radius: 8px; padding: 0.75rem 1rem; font-size: 0.82rem; color: #7F1D1D; margin-top: 0.75rem; }
+</style>
+</head>
+<body>
+<a class="back-link" href="../diagram.html">← Back to overview</a>
+<div class="breadcrumb"><a href="../diagram.html">Overview</a> / Pre-flight gates</div>
+
+<div class="page-header">
+  <div class="gate-badge">Step 2 · 3 hard aborts · 1 soft warn</div>
+  <h1>Pre-flight safety gates</h1>
+  <p>All checks run <strong>before touching any file</strong>. The overlay is built once
+     to <code>/tmp/retire-nginx-&lt;env&gt;.yaml</code> and reused for every check.</p>
+</div>
+
+<div class="section">
+  <h2>2a · Build baseline</h2>
+  <pre><span class="hl-key">kustomize build</span> common.service/overlays/&lt;env&gt; &gt; /tmp/retire-nginx-&lt;env&gt;.yaml
+<span class="hl-comment"># exit code must be 0 — never retire a broken overlay</span></pre>
+</div>
+
+<div class="section">
+  <h2>2b · Inventory verdict matrix</h2>
+  <p>The breakdown of nginx vs replacement resources decides whether retirement is safe:</p>
+  <table>
+    <tr><th>nginx Ingresses</th><th>Traefik + HTTPRoutes</th><th>Verdict</th><th>Why</th></tr>
+    <tr><td>&gt; 0</td><td>0</td><td class="verdict abort">⛔ Hard abort</td><td>nginx is the only routing path — retiring causes an outage</td></tr>
+    <tr><td>0</td><td>0</td><td class="verdict abort">⛔ Hard abort</td><td>No replacements at all — migration is not done</td></tr>
+    <tr><td>0</td><td>&gt; 0</td><td class="verdict warn">⚠ Soft warn + confirm</td><td>Already retired — continue only for controller/archive cleanup</td></tr>
+    <tr><td>&gt; 0</td><td>&gt; 0</td><td class="verdict ok">✓ Proceed</td><td>Replacements live; nginx resources are dead weight</td></tr>
+  </table>
+  <pre><span class="hl-comment"># shown to the operator before anything happens</span>
+Pre-flight inventory for &lt;env&gt;:
+  nginx Ingresses (to retire):    <span class="hl-val">N</span>
+  Traefik Ingresses (to keep):    <span class="hl-val">M</span>
+  HTTPRoutes (to keep):           <span class="hl-val">K</span>
+  Total Ingresses after retire:   <span class="hl-val">M</span>  (Traefik only)</pre>
+</div>
+
+<div class="section">
+  <h2>2c · Active nginx entries — class-override cross-check</h2>
+  <p>A file named <code>*-nginx-*</code> in the overlay's <code>patches:</code> may actually
+     patch the nginx base resource to a <em>different</em> ingress class (e.g. GCE or ALB).
+     The rendered manifest is the source of truth, not the file name:</p>
+  <ul>
+    <li>Rendered <code>ingress.class</code> is <strong>gce / alb / traefik</strong> → class-override patch: keep it, never <code>$patch: delete</code> it</li>
+    <li>Rendered <code>ingress.class</code> is <strong>nginx</strong> → genuine dependency: warn, require explicit confirmation</li>
+  </ul>
+  <div class="warning">⚠ Services with active nginx-class patches still depend on nginx for routing.
+     Retiring the controller removes their routing path — migrate them first.</div>
+</div>
+</body>
+</html>

@@ -5,8 +5,8 @@
 [![DEVOPS](https://img.shields.io/badge/DEVOPS-SKILL-blue?style=flat-square)](https://github.com/qwedsazxc78/devops-ai-skill)
 [![LICENSE](https://img.shields.io/badge/LICENSE-MIT-green?style=flat-square)](https://github.com/qwedsazxc78/devops-ai-skill/blob/main/LICENSE)
 [![FILES](https://img.shields.io/badge/FILES-65+-orange?style=flat-square)](#project-structure)
-[![SKILLS](https://img.shields.io/badge/SKILLS-16-blueviolet?style=flat-square)](#skills)
-[![PIPELINES](https://img.shields.io/badge/PIPELINES-22-ff6f61?style=flat-square)](#horus-pipelines-iac)
+[![SKILLS](https://img.shields.io/badge/SKILLS-17-blueviolet?style=flat-square)](#skills)
+[![PIPELINES](https://img.shields.io/badge/PIPELINES-23-ff6f61?style=flat-square)](#horus-pipelines-iac)
 [![AGENTS](https://img.shields.io/badge/AGENTS-2-critical?style=flat-square)](#agents)
 [![PLATFORMS](https://img.shields.io/badge/PLATFORMS-4-teal?style=flat-square)](#platform-support)
 
@@ -285,7 +285,8 @@ Or double-click `scripts\setup\install.bat` and choose `[2] Tools`. Requires `wi
 | `*ingress-migration-advisor` | Read-only EOL planner: scores services on 5 dimensions, recommends a path per service. Requires `docs/ingress-tier-map.yaml`. |
 | `*install-traefik` | GitOps Traefik install/upgrade — edits `common.traefik/` Kustomize module (bootstrap/new-env/upgrade modes). Plan-only; ArgoCD applies. |
 | `*decommission-nginx` | GitOps ingress-nginx decommission — archive Kustomize module + ArgoCD prune. Plan-only; never runs `helm uninstall`. |
-| `*migration-quickstart` | 30-second orientation — prints a decision tree + 7-command table + sample invocations |
+| `*retire-nginx` | Post-migration nginx retirement — delete controller ArgoCD app per env + `$patch: delete` base nginx Ingresses. Safety-gated; single-env or `all`. |
+| `*migration-quickstart` | 30-second orientation — prints a decision tree + 8-command table + sample invocations |
 
 ## Architecture Diagrams
 
@@ -306,7 +307,7 @@ stateDiagram-v2
   S1 --> S2: *nginx-to-traefik / *nginx-to-gateway
   S2 --> S2: *ingress-to-gateway (auto)
   S2 --> S3: DNS cutover complete
-  S3 --> [*]: *decommission-nginx
+  S3 --> [*]: *decommission-nginx / *retire-nginx
 ```
 
 Type `*migration-quickstart` inside Zeus for the full version with sample invocations
@@ -330,6 +331,7 @@ All skills follow the [Open Agent Skills](https://agentskills.io/specification) 
 | devops:ingress-migration-advisor | Zeus | Read-only ingress-nginx EOL planner (v1.12.0+). 5-dimension scoring, critical-tier veto, sourceClass shortcut. |
 | devops:ingress-controller-install | Zeus | GitOps Traefik install/upgrade via Kustomize edits (v1.13.1+). Three modes auto-detected: bootstrap / new-env / upgrade. Plan-only. |
 | devops:traefik-controller-decommission | Zeus | GitOps ingress-nginx decommission via module archive + ArgoCD prune (v1.13.1+). |
+| devops:nginx-ingress-retire | Zeus | Post-migration nginx retirement (v1.17.0+) — controller ArgoCD app delete + `$patch: delete` base nginx Ingresses per env. Safety-gated. |
 | devops:release-validate | Shared | Release readiness validation — Phases 4–7: fixture suites, shell portability, repo-style coverage, AI-tool parity. (v1.15.0+) |
 | devops:painter | Shared | Draw architecture/flow diagrams from code as a polished HTML artifact — blue-white tech style, flat SVG icons, card-based layout. `--level basic\|detailed` (clickable drill-down sub-pages) + multi-agent parallel scanning for large architectures. (v1.1.0+) |
 
@@ -805,13 +807,14 @@ devops-ai-skill/
 │   ├── ingress-migration-advisor/      # v1.12.0+ Zeus EOL planner
 │   ├── ingress-controller-install/     # v1.13.1 GitOps Zeus
 │   ├── traefik-controller-decommission/# v1.13.1 GitOps Zeus
+│   ├── nginx-ingress-retire/           # v1.17.0 post-migration cleanup
 │   ├── release-validate/
 │   ├── painter/                        # diagram artifact generator
 │   └── repo-detect/
 │
 ├── prompts/                     # Platform-neutral pipeline definitions
 │   ├── horus/                   # 7 pipelines
-│   ├── zeus/                    # 15 pipelines
+│   ├── zeus/                    # 16 pipelines
 │   └── shared/                  # repo-detect, report-format, tool-check, help
 │
 ├── docs/

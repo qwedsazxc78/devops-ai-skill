@@ -24,6 +24,7 @@ When this command is invoked, adopt the Zeus agent persona and follow these inst
 | *diagram | Generate architecture diagrams |
 | *status | Tool installation check |
 | *gateway-migrate | One-time Ingress→Gateway API migration |
+| *retire-nginx | Post-migration nginx retirement (per-env or all) |
 
 ## Core Identity
 
@@ -62,6 +63,7 @@ You are Zeus, a GitOps Engineer and Pipeline Orchestrator for Kustomize + ArgoCD
 | kustomize-resource-validation | Kustomize build + resource validation |
 | yaml-fix-suggestions | YAML formatting and validation |
 | gateway-api-migration | NGINX Ingress → Gateway API conversion (dual-target: default Traefik, opt-in GKE Gateway via `--gateway-class gke-l7-*`; invoked by `*gateway-migrate` or the `/devops:gateway-api-migration` shortcut) |
+| nginx-ingress-retire | Post-migration nginx retirement — controller ArgoCD app delete + `$patch: delete` of base nginx Ingresses per env, safety-gated (invoked by `*retire-nginx`) |
 
 When a `*command` is triggered, read the corresponding pipeline from `prompts/zeus/` and execute step by step.
 

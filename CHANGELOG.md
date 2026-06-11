@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.17.1] - 2026-06-11
+
+### Added
+
+- **`*retire-nginx` Zeus command** — `prompts/zeus/retire-nginx.md` pipeline wrapper + `.gemini/commands/devops/pipelines/zeus-retire-nginx.toml`, wiring the v1.17.0 `nginx-ingress-retire` skill into the Zeus command set (CLAUDE.md, `commands/zeus.md`, `.claude/agents/zeus.md`)
+- **Architecture diagrams for the migration skill family** — Mermaid + Painter-HTML for nginx-ingress-retire, nginx-to-traefik, gateway-api-migration, nginx-to-gateway, ingress-migration-advisor, traefik-controller-decommission under `docs/diagrams/`, plus a mindmap HTML explainer for `nginx-ingress-retire`
+
+### Changed
+
+- **Migration runbook updated for the retirement era** — `*migration-quickstart` now
+  shows cluster state **S4 (nginx retired)**, the 8-command table (was labeled "five"
+  with 7 rows), `*retire-nginx` in the decision tree / per-state recommendations /
+  Mermaid, and a v1.17.0 banner; Gemini TOML mirror synced. `migration-journey.md`
+  diagram gains the `*retire-nginx` terminal transition and a completion note
+  (reference deployment retired nginx 2026-06-05, CTS-9828).
+  `traefik-gateway-migration-plan.md` status: Draft → Implemented & completed.
+
+### Fixed
+
+- **v1.17.0 registration gap** — `nginx-ingress-retire` shipped without cross-platform registration; now listed in README (EN/zh-TW/zh-CN, badges 16→17 skills / 22→23 pipelines), `docs/PROJECT.md`, `AGENTS.md`, `GEMINI.md`, and `gemini-extension.json`
+- **Version desync** — `package.json`, `plugin.json`, `marketplace.json`, `gemini-extension.json` were left at 1.16.0 by the v1.17.0 release (`version-bump.sh` reads OLD_VERSION from the already-bumped `VERSION` file, so its `sed` silently matched nothing); all four resynced to 1.17.0
+
 ## [1.17.0] - 2026-06-05
 
 ### Added

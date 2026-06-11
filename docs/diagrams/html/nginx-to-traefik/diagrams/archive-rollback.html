@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Archive &amp; rollback — nginx-to-traefik</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, -apple-system, "Segoe UI", Inter, sans-serif; background: #F3F4F6; color: #1E293B; min-height: 100vh; padding: 2rem 1rem 4rem; }
+  .back-link { display: inline-flex; align-items: center; gap: 0.4rem; color: #0052CC; font-size: 0.82rem; font-weight: 600; text-decoration: none; margin-bottom: 2rem; padding: 0.4rem 0.75rem; border-radius: 6px; border: 1.5px solid #BFDBFE; background: #EFF6FF; transition: background 0.15s; }
+  .back-link:hover { background: #DBEAFE; }
+  .breadcrumb { font-size: 0.72rem; color: #94A3B8; margin-bottom: 0.5rem; }
+  .breadcrumb a { color: #0052CC; text-decoration: none; }
+  .page-header { margin-bottom: 2rem; }
+  .page-header h1 { font-size: 1.5rem; font-weight: 700; color: #0052CC; margin-bottom: 0.4rem; }
+  .page-header p { font-size: 0.9rem; color: #475569; max-width: 680px; line-height: 1.6; }
+  .gate-badge { display: inline-block; font-size: 0.72rem; font-weight: 700; padding: 0.15rem 0.6rem; border-radius: 20px; background: #FEF2F2; color: #991B1B; border: 1px solid #FECACA; margin-bottom: 0.75rem; }
+  .section { background: #fff; border: 1.5px solid #E2E8F0; border-radius: 12px; padding: 1.25rem 1.5rem; margin-bottom: 1.25rem; max-width: 760px; box-shadow: 0 2px 8px rgba(0,82,204,0.07); }
+  .section h2 { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #0052CC; margin-bottom: 0.75rem; }
+  .section p { font-size: 0.85rem; color: #334155; line-height: 1.6; margin-bottom: 0.6rem; }
+  .section ul { padding-left: 1.2rem; }
+  .section li { font-size: 0.85rem; color: #334155; line-height: 1.8; }
+  pre { background: #1E293B; color: #E2E8F0; border-radius: 8px; padding: 1rem 1.25rem; font-size: 0.78rem; font-family: "SFMono-Regular", Consolas, monospace; overflow-x: auto; line-height: 1.6; margin-top: 0.75rem; }
+  .hl-key { color: #7DD3FC; }
+  .hl-val { color: #86EFAC; }
+  .hl-comment { color: #64748B; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.8rem; margin-top: 0.5rem; }
+  th { text-align: left; color: #0052CC; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; padding: 0.4rem 0.6rem; border-bottom: 2px solid #E2E8F0; }
+  td { padding: 0.5rem 0.6rem; border-bottom: 1px solid #F1F5F9; color: #334155; line-height: 1.5; }
+  .verdict { font-weight: 700; white-space: nowrap; }
+  .verdict.abort { color: #DC2626; }
+  .warning { background: #FEF2F2; border: 1px solid #FECACA; border-radius: 8px; padding: 0.75rem 1rem; font-size: 0.82rem; color: #7F1D1D; margin-top: 0.75rem; }
+</style>
+</head>
+<body>
+<a class="back-link" href="../diagram.html">← Back to overview</a>
+<div class="breadcrumb"><a href="../diagram.html">Overview</a> / Archive &amp; rollback</div>
+
+<div class="page-header">
+  <div class="gate-badge">Steps 4 · 7 · 7b — halt gates with auto-rollback</div>
+  <h1>Archive &amp; rollback pattern</h1>
+  <p>nginx files are <strong>moved, never deleted</strong> — and every move is recorded
+     so a failed build can restore the repo to its pre-run shape with plain
+     <code>git restore</code>.</p>
+</div>
+
+<div class="section">
+  <h2>Step 4 · git mv to archive/</h2>
+  <pre><span class="hl-key">git mv</span> <span class="hl-val">&lt;service&gt;-nginx-ingress.yaml</span> <span class="hl-val">archive/</span>
+<span class="hl-comment"># HALT if the file is already under archive/ (double-run guard)</span></pre>
+  <p>The pre-edit path is captured before the move:</p>
+  <pre><span class="hl-key">backups:</span>
+  - { <span class="hl-key">path:</span> <span class="hl-val">argocd-nginx-ingress.yaml</span>, <span class="hl-key">restorePath:</span> <span class="hl-val">archive/argocd-nginx-ingress.yaml</span> }</pre>
+  <ul>
+    <li>History stays intact — <code>git mv</code> preserves the file and its log.</li>
+    <li>Rollback or audit can always recover the exact nginx Ingress that was retired.</li>
+  </ul>
+</div>
+
+<div class="section">
+  <h2>Step 7 · kustomize build gate with rollback</h2>
+  <pre><span class="hl-key">kustomize build</span> common.service/overlays/&lt;env&gt; &gt; /tmp/svc-build.yaml
+<span class="hl-key">kustomize build</span> common.traefik/overlays/&lt;env&gt; &gt; /tmp/traefik-build.yaml
+<span class="hl-comment"># non-zero exit → HALT and roll back steps 4–6 via git restore of backed-up files</span></pre>
+  <p>Both modules must render: the service overlay (new Traefik Ingress in
+     <code>resources:</code>) and the Traefik controller overlay (updated managed-cert
+     host list).</p>
+</div>
+
+<div class="section">
+  <h2>Step 7b · 4-way cross-consistency check</h2>
+  <pre><span class="hl-key">validate_cross_consistency.sh</span> <span class="hl-comment"># DNS ↔ verify ↔ ingress ↔ cert</span>
+<span class="hl-comment"># non-zero exit → HALT; stderr stale-host list goes into the report</span></pre>
+  <p>The four host sources — the DNS script, the verify script, the rendered Ingresses,
+     and the managed-cert host list — must agree before the run may continue.</p>
+</div>
+
+<div class="section">
+  <h2>Halt conditions in this segment</h2>
+  <table>
+    <tr><th>Step</th><th>Halt cause</th><th>Recovery</th></tr>
+    <tr><td>4</td><td class="verdict abort">File already under archive/</td><td>Inspect state, then <code>--resume</code></td></tr>
+    <tr><td>5</td><td class="verdict abort">kustomization.yaml schema mismatch</td><td>Fix overlay, then <code>--resume</code></td></tr>
+    <tr><td>7</td><td class="verdict abort">kustomize build non-zero</td><td>Auto <code>git restore</code> of steps 4–6, then <code>--resume</code></td></tr>
+    <tr><td>7b</td><td class="verdict abort">Cross-consistency check non-zero</td><td>Fix stale hosts, then <code>--resume</code></td></tr>
+  </table>
+  <div class="warning">⛔ After any halt the skill writes
+     <code>state.yaml.verdict: HALTED</code> with the failing step.
+     <code>*nginx-to-traefik --resume</code> re-runs from exactly that step — earlier
+     completed steps are not repeated (Step 5's editor is idempotent by design).</div>
+</div>
+</body>
+</html>

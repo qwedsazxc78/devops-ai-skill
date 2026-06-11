@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Outputs: plan.md + state.yaml — ingress-migration-advisor</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, -apple-system, "Segoe UI", Inter, sans-serif; background: #F3F4F6; color: #1E293B; min-height: 100vh; padding: 2rem 1rem 4rem; }
+  .back-link { display: inline-flex; align-items: center; gap: 0.4rem; color: #0052CC; font-size: 0.82rem; font-weight: 600; text-decoration: none; margin-bottom: 2rem; padding: 0.4rem 0.75rem; border-radius: 6px; border: 1.5px solid #BFDBFE; background: #EFF6FF; transition: background 0.15s; }
+  .back-link:hover { background: #DBEAFE; }
+  .breadcrumb { font-size: 0.72rem; color: #94A3B8; margin-bottom: 0.5rem; }
+  .breadcrumb a { color: #0052CC; text-decoration: none; }
+  .page-header { margin-bottom: 2rem; }
+  .page-header h1 { font-size: 1.5rem; font-weight: 700; color: #0052CC; margin-bottom: 0.4rem; }
+  .page-header p { font-size: 0.9rem; color: #475569; max-width: 680px; line-height: 1.6; }
+  .gate-badge { display: inline-block; font-size: 0.72rem; font-weight: 700; padding: 0.15rem 0.6rem; border-radius: 20px; background: #DCFCE7; color: #14532D; border: 1px solid #86EFAC; margin-bottom: 0.75rem; }
+  .section { background: #fff; border: 1.5px solid #E2E8F0; border-radius: 12px; padding: 1.25rem 1.5rem; margin-bottom: 1.25rem; max-width: 760px; box-shadow: 0 2px 8px rgba(0,82,204,0.07); }
+  .section h2 { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #0052CC; margin-bottom: 0.75rem; }
+  .section p { font-size: 0.85rem; color: #334155; line-height: 1.6; margin-bottom: 0.6rem; }
+  .section ul { padding-left: 1.2rem; }
+  .section li { font-size: 0.85rem; color: #334155; line-height: 1.8; }
+  pre { background: #1E293B; color: #E2E8F0; border-radius: 8px; padding: 1rem 1.25rem; font-size: 0.78rem; font-family: "SFMono-Regular", Consolas, monospace; overflow-x: auto; line-height: 1.6; margin-top: 0.75rem; }
+  .hl-key { color: #7DD3FC; }
+  .hl-val { color: #86EFAC; }
+  .hl-comment { color: #64748B; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.8rem; margin-top: 0.5rem; }
+  th { text-align: left; color: #0052CC; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; padding: 0.4rem 0.6rem; border-bottom: 2px solid #E2E8F0; }
+  td { padding: 0.5rem 0.6rem; border-bottom: 1px solid #F1F5F9; color: #334155; line-height: 1.5; }
+  td code { background: #F1F5F9; padding: 0.05rem 0.3rem; border-radius: 4px; font-size: 0.75rem; font-family: "SFMono-Regular", Consolas, monospace; }
+  .warning { background: #FEF2F2; border: 1px solid #FECACA; border-radius: 8px; padding: 0.75rem 1rem; font-size: 0.82rem; color: #7F1D1D; margin-top: 0.75rem; }
+</style>
+</head>
+<body>
+<a class="back-link" href="../diagram.html">← Back to overview</a>
+<div class="breadcrumb"><a href="../diagram.html">Overview</a> / Outputs: plan.md + state.yaml</div>
+
+<div class="page-header">
+  <div class="gate-badge">Steps 5–6 · render_plan.py · references/plan-template.md</div>
+  <h1>Outputs: plan.md + state.yaml</h1>
+  <p>Everything lands under <code>docs/reports/ingress-migration-advisor/&lt;isodate&gt;-&lt;ulid&gt;/</code>
+     in the consumer repo — the <strong>only</strong> place the skill writes (besides /tmp build
+     scratch). Nothing is ever auto-committed.</p>
+</div>
+
+<div class="section">
+  <h2>plan.md — the human-facing plan</h2>
+  <p>Rendered by <code>render_plan.py</code> substituting <code>references/plan-template.md</code>
+     with <code>state.yaml</code> data. Sections:</p>
+  <ul>
+    <li>Header — deadline, totals per path, # deferred, bake-buffer banner (WARN banner if the schedule overflows <code>deadline − bakeBufferDays</code>)</li>
+    <li><strong>Mermaid Gantt</strong> — one bar per batch, dated to <code>targetWeek</code> (weekly cadence from next Monday)</li>
+    <li>Per-service decision table — service | source class | tier | score | path | rationale</li>
+    <li><strong>Per-batch Zeus command blocks</strong> — ready to copy-paste, operator-run</li>
+    <li>Deferred services + risk register (with <code>advisoryPath</code>: what the score would have said)</li>
+    <li>Audit — operator inputs, schema version, run id</li>
+  </ul>
+  <p>Unresolved <code>{{placeholders}}</code> surface as a banner at the top — informational, not a failure.</p>
+</div>
+
+<div class="section">
+  <h2>Commands are deduplicated at the overlay level</h2>
+  <p><code>*gateway-migrate &lt;overlay&gt;</code> processes <em>every</em> nginx-source Ingress in
+     that overlay in one invocation — so 5 services × 3 envs collapse to 3 unique commands
+     (one per env), not 15. Same for <code>*nginx-to-gateway &lt;env&gt;</code>. Only
+     <code>*nginx-to-traefik &lt;env&gt; &lt;service&gt;</code> is service-specific.</p>
+  <pre><span class="hl-key">batches:</span>
+  - <span class="hl-key">id:</span> <span class="hl-val">b1</span>
+    <span class="hl-key">path:</span> <span class="hl-val">direct-gateway</span>
+    <span class="hl-key">services:</span> [<span class="hl-val">grafana</span>, <span class="hl-val">kibana</span>]
+    <span class="hl-key">targetWeek:</span> <span class="hl-val">2025-07-07</span>
+    <span class="hl-key">estimatedDuration:</span> <span class="hl-val">1 week</span>
+    <span class="hl-key">commands:</span>
+      <span class="hl-comment"># Deduplicated: one command per overlay processes all services</span>
+      - <span class="hl-val">"*gateway-migrate common.service/overlays/dev --source-class nginx --gateway-class traefik"</span>
+      - <span class="hl-val">"*gateway-migrate common.service/overlays/stg --source-class nginx --gateway-class traefik"</span>
+      - <span class="hl-val">"*gateway-migrate common.service/overlays/prd --source-class nginx --gateway-class traefik"</span></pre>
+</div>
+
+<div class="section">
+  <h2>state.yaml — the machine-readable snapshot</h2>
+  <table>
+    <tr><th>Section</th><th>Contents</th></tr>
+    <tr><td><code>inputs</code></td><td>deadline, bakeBufferDays, batchSizeCap, targetPathOverride, strictTierMap, tierMap snapshot</td></tr>
+    <tr><td><code>inventory[]</code></td><td>service, namespace, sourceClass, envs, modulePathPerEnv, hostsPerEnv, annotation stats, tlsMode, pathTypes, backendResolved</td></tr>
+    <tr><td><code>scores[]</code></td><td>vetoed / vetoReason, 5 dimension scores, total (empty dimensions when vetoed)</td></tr>
+    <tr><td><code>decisions[]</code></td><td>path, advisoryPath, vetoReason, overrideReason, suggestedCommand</td></tr>
+    <tr><td><code>batches[]</code></td><td>id, path, services, targetWeek, estimatedDuration, commands</td></tr>
+    <tr><td><code>deferred[]</code> / <code>warnings[]</code></td><td>vetoed and very-high-risk services with rationale; non-fatal issues</td></tr>
+    <tr><td><code>verdict</code> / <code>reportPath</code></td><td>PASS | WARN | FAIL, path to plan.md</td></tr>
+  </table>
+  <p style="margin-top:0.75rem;"><code>--resume &lt;state-path&gt;</code> re-renders plan.md from this
+     file <strong>without re-scoring</strong> — it does NOT refresh inventory or scores.</p>
+</div>
+
+<div class="section">
+  <h2>Step 6 — session summary (never auto-commit)</h2>
+  <pre>Plan: docs/reports/ingress-migration-advisor/&lt;slug&gt;/plan.md
+
+  Total services:        <span class="hl-val">18</span>
+  direct-gateway:         <span class="hl-val">3</span>  <span class="hl-comment">(1 batch, week of 2025-07-07)</span>
+  two-step:              <span class="hl-val">12</span>  <span class="hl-comment">(3 batches, weeks of 2025-07-21 → 2025-09-01)</span>
+  swap-only:              <span class="hl-val">2</span>  <span class="hl-comment">(1 batch, week of 2025-09-15)</span>
+  defer:                  <span class="hl-val">1</span>  <span class="hl-comment">(kafka-proxy — critical-tier veto)</span>
+
+  Deadline:              <span class="hl-val">2025-10-31</span>
+  Bake buffer:           <span class="hl-val">30 days</span>
+  Final cutover by:      <span class="hl-val">2025-10-01</span> <span class="hl-comment">(29 days margin)</span></pre>
+  <div class="warning">⚠ Recommendations, not commands: the advisor never invokes
+     <code>*nginx-to-traefik</code> / <code>*gateway-migrate</code> / <code>*nginx-to-gateway</code>
+     itself. The operator copies each batch's commands into Zeus when ready.</div>
+</div>
+</body>
+</html>

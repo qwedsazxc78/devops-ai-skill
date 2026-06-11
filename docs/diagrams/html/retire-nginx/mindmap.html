@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>nginx-ingress-retire — Mindmap Explainer</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", Inter, sans-serif;
+    background: #F3F4F6;
+    color: #1E293B;
+    min-height: 100vh;
+    padding: 2rem 1rem 4rem;
+  }
+  .page-header { text-align: center; margin-bottom: 2.5rem; }
+  .page-header h1 { font-size: 1.6rem; font-weight: 700; color: #0052CC; margin-bottom: 0.4rem; }
+  .page-header p { font-size: 0.9rem; color: #64748B; max-width: 640px; margin: 0 auto; }
+  .nav-link { display: inline-block; margin-top: 0.75rem; font-size: 0.7rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; padding: 0.2rem 0.6rem; border-radius: 4px; background: #EFF6FF; color: #0052CC; border: 1px solid #BFDBFE; text-decoration: none; }
+  .nav-link:hover { background: #DBEAFE; }
+
+  /* Mindmap: central root, branches as a connector tree */
+  .mindmap { max-width: 1240px; margin: 0 auto; display: flex; align-items: flex-start; justify-content: center; gap: 0; }
+  .root-col { display: flex; align-items: center; position: sticky; top: 2rem; padding-top: 14rem; }
+  .root {
+    background: #0052CC;
+    color: #fff;
+    border-radius: 16px;
+    padding: 1.2rem 1.4rem;
+    width: 215px;
+    text-align: center;
+    box-shadow: 0 8px 28px rgba(0,82,204,0.35);
+  }
+  .root .icon { font-size: 1.6rem; display: block; margin-bottom: 0.4rem; }
+  .root h2 { font-size: 1rem; font-family: "SFMono-Regular", Consolas, monospace; margin-bottom: 0.3rem; }
+  .root p { font-size: 0.68rem; color: #BFDBFE; line-height: 1.45; }
+
+  /* trunk from root into the branch tree */
+  .trunk { width: 36px; height: 3px; background: #CBD5E1; margin-top: 16.4rem; flex-shrink: 0; }
+
+  .branches { list-style: none; position: relative; padding-left: 28px; }
+  .branches > li { position: relative; padding: 0.55rem 0; padding-left: 24px; }
+  /* vertical spine */
+  .branches::before { content: ""; position: absolute; left: 0; top: 2.2rem; bottom: 2.2rem; width: 3px; background: #CBD5E1; border-radius: 2px; }
+  /* horizontal elbow per branch */
+  .branches > li::before { content: ""; position: absolute; left: 0; top: 50%; width: 24px; height: 3px; background: #CBD5E1; }
+
+  .branch { display: flex; align-items: flex-start; gap: 0.9rem; }
+  .branch-node {
+    flex-shrink: 0;
+    border-radius: 10px;
+    padding: 0.6rem 0.85rem;
+    width: 168px;
+    color: #fff;
+    box-shadow: 0 3px 10px rgba(15,23,42,0.15);
+  }
+  .branch-node h3 { font-size: 0.8rem; font-weight: 700; margin-bottom: 0.15rem; }
+  .branch-node span { font-size: 0.64rem; opacity: 0.85; }
+  .b-when  .branch-node { background: #16A34A; }
+  .b-rules .branch-node { background: #0052CC; }
+  .b-steps .branch-node { background: #2563EB; }
+  .b-gates .branch-node { background: #DC2626; }
+  .b-edge  .branch-node { background: #D97706; }
+  .b-out   .branch-node { background: #475569; }
+
+  .leaves { list-style: none; display: flex; flex-wrap: wrap; gap: 0.4rem; align-content: flex-start; padding-top: 0.15rem; max-width: 720px; }
+  .leaves li {
+    background: #fff;
+    border: 1.5px solid #E2E8F0;
+    border-radius: 8px;
+    padding: 0.4rem 0.6rem;
+    font-size: 0.72rem;
+    color: #334155;
+    line-height: 1.45;
+    box-shadow: 0 1px 4px rgba(15,23,42,0.06);
+    max-width: 230px;
+  }
+  .leaves li strong { color: #0F172A; display: block; font-size: 0.72rem; }
+  .leaves li code { background: #EFF6FF; color: #1E40AF; padding: 0 0.25rem; border-radius: 3px; font-size: 0.66rem; font-family: "SFMono-Regular", Consolas, monospace; }
+  .b-gates .leaves li { border-color: #FECACA; background: #FFF7F7; }
+  .b-when  .leaves li { border-color: #BBF7D0; background: #F7FEF9; }
+  .b-edge  .leaves li { border-color: #FDE68A; background: #FFFDF5; }
+
+  .footer-note { max-width: 760px; margin: 2.5rem auto 0; background: #EFF6FF; border: 1px solid #BFDBFE; border-radius: 8px; padding: 0.75rem 1rem; font-size: 0.78rem; color: #1E40AF; text-align: center; }
+  .footer-note code { background: #0052CC; color: #fff; padding: 0.1rem 0.4rem; border-radius: 4px; font-size: 0.72rem; font-family: "SFMono-Regular", Consolas, monospace; }
+
+  @media (max-width: 900px) {
+    .mindmap { flex-direction: column; align-items: center; }
+    .root-col { position: static; padding-top: 0; margin-bottom: 1.5rem; }
+    .trunk { display: none; }
+    .branches { padding-left: 0; }
+    .branches::before, .branches > li::before { display: none; }
+    .branch { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+<div class="page-header">
+  <h1>🧠 nginx-ingress-retire — at a glance</h1>
+  <p>One skill, six branches: when it's safe to run, the rules it never breaks, the
+     eight steps it walks, the gates that stop it, the edge cases it knows, and what
+     it leaves behind.</p>
+  <a class="nav-link" href="diagram.html">📐 Architecture diagram</a>
+</div>
+
+<div class="mindmap">
+  <div class="root-col">
+    <div class="root">
+      <span class="icon">🧹</span>
+      <h2>*retire-nginx</h2>
+      <p>devops:nginx-ingress-retire · v1.17.0<br>post-migration nginx cleanup<br>per-env or all (dev → stg → prd)</p>
+    </div>
+  </div>
+  <div class="trunk"></div>
+
+  <ul class="branches">
+    <li class="b-when">
+      <div class="branch">
+        <div class="branch-node"><h3>✅ When to run</h3><span>all three must hold</span></div>
+        <ul class="leaves">
+          <li><strong>Replacements live</strong>every service has an active HTTPRoute or Traefik Ingress</li>
+          <li><strong>DNS cut over</strong>A-records point at the Traefik / Gateway LB</li>
+          <li><strong>nginx idle</strong>no live traffic on the nginx controller</li>
+        </ul>
+      </div>
+    </li>
+
+    <li class="b-rules">
+      <div class="branch">
+        <div class="branch-node"><h3>📜 Core rules</h3><span>never broken</span></div>
+        <ul class="leaves">
+          <li><strong>Overlay edits only</strong><code>$patch: delete</code> in the env kustomization — base files stay for other envs</li>
+          <li><strong>One file kills the controller</strong>delete <code>argocd/&lt;env&gt;.yaml</code>; prune + finalizer cascade do the rest</li>
+          <li><strong>Right zero</strong>validate nginx-class = 0, not Ingress-total = 0</li>
+          <li><strong>Ordered envs</strong><code>all</code> = dev → stg → prd, validating each</li>
+          <li><strong>archive/ is fair game</strong>migration snapshots, never referenced — safe to delete</li>
+        </ul>
+      </div>
+    </li>
+
+    <li class="b-steps">
+      <div class="branch">
+        <div class="branch-node"><h3>⚙️ Eight steps</h3><span>per environment</span></div>
+        <ul class="leaves">
+          <li><strong>1 Parse</strong>env arg or interactive detection</li>
+          <li><strong>2 Pre-flight</strong>build baseline + inventory verdict</li>
+          <li><strong>3 Discovery</strong>names via <code>kustomize build</code>, not grep</li>
+          <li><strong>4 Plan + confirm</strong>DELETE / PATCH / KEEP, wait for yes</li>
+          <li><strong>5 Execute</strong>app yaml, patches, orphans, archive/</li>
+          <li><strong>6 Validate</strong>zero nginx-class + regression builds</li>
+          <li><strong>7 Module cleanup</strong>after <code>all</code>: archive common.ingress/</li>
+          <li><strong>8 Report</strong>summary table + commit message</li>
+        </ul>
+      </div>
+    </li>
+
+    <li class="b-gates">
+      <div class="branch">
+        <div class="branch-node"><h3>⛔ Safety gates</h3><span>abort &gt; outage</span></div>
+        <ul class="leaves">
+          <li><strong>Broken build</strong>hard abort — never retire a broken overlay</li>
+          <li><strong>nginx &gt; 0, replacements = 0</strong>hard abort — nginx is the only routing path</li>
+          <li><strong>nothing at all</strong>hard abort — migration not done</li>
+          <li><strong>already retired</strong>soft warn + confirm (cleanup-only rerun)</li>
+          <li><strong>regression failure</strong>halt — other env broke, do not commit</li>
+        </ul>
+      </div>
+    </li>
+
+    <li class="b-edge">
+      <div class="branch">
+        <div class="branch-node"><h3>⚠️ Edge cases</h3><span>learned in production</span></div>
+        <ul class="leaves">
+          <li><strong>Class-override patch</strong>file named <code>*nginx*</code> but renders <code>gce</code>/<code>alb</code> — keep it, rename only the file</li>
+          <li><strong>Never rename metadata.name</strong>delete + recreate reprovisions the cloud LB</li>
+          <li><strong>namePrefix order</strong>patches run before prefixing — target un-prefixed names</li>
+          <li><strong>No delete + same-name resource</strong>Kustomize duplicate-ID error at accumulation</li>
+        </ul>
+      </div>
+    </li>
+
+    <li class="b-out">
+      <div class="branch">
+        <div class="branch-node"><h3>📦 Outputs</h3><span>Git-only, no kubectl</span></div>
+        <ul class="leaves">
+          <li><strong>Deleted</strong><code>common.ingress/argocd/&lt;env&gt;.yaml</code>, orphans, archive/</li>
+          <li><strong>Modified</strong>overlay kustomization (+N <code>$patch: delete</code>)</li>
+          <li><strong>Kept</strong>base files, other envs' apps, Traefik Ingresses</li>
+          <li><strong>Commit</strong><code>retire(nginx/&lt;env&gt;): remove controller app + exclude base nginx Ingress resources</code></li>
+        </ul>
+      </div>
+    </li>
+  </ul>
+</div>
+
+<div class="footer-note">
+  Sourced from the live retirement of <code>eye-of-horus-gitops</code> dev + stg + prd (CTS-9828) ·
+  Skill: <code>skills/nginx-ingress-retire/SKILL.md</code> · Pipeline: <code>prompts/zeus/retire-nginx.md</code>
+</div>
+</body>
+</html>

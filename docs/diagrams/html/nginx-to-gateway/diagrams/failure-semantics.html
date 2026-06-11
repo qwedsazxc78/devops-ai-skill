@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Failure + resume semantics — nginx-to-gateway</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, -apple-system, "Segoe UI", Inter, sans-serif; background: #F3F4F6; color: #1E293B; min-height: 100vh; padding: 2rem 1rem 4rem; }
+  .back-link { display: inline-flex; align-items: center; gap: 0.4rem; color: #0052CC; font-size: 0.82rem; font-weight: 600; text-decoration: none; margin-bottom: 2rem; padding: 0.4rem 0.75rem; border-radius: 6px; border: 1.5px solid #BFDBFE; background: #EFF6FF; transition: background 0.15s; }
+  .back-link:hover { background: #DBEAFE; }
+  .breadcrumb { font-size: 0.72rem; color: #94A3B8; margin-bottom: 0.5rem; }
+  .breadcrumb a { color: #0052CC; text-decoration: none; }
+  .page-header { margin-bottom: 2rem; }
+  .page-header h1 { font-size: 1.5rem; font-weight: 700; color: #0052CC; margin-bottom: 0.4rem; }
+  .page-header p { font-size: 0.9rem; color: #475569; max-width: 680px; line-height: 1.6; }
+  .gate-badge { display: inline-block; font-size: 0.72rem; font-weight: 700; padding: 0.15rem 0.6rem; border-radius: 20px; background: #FEF2F2; color: #991B1B; border: 1px solid #FECACA; margin-bottom: 0.75rem; }
+  .section { background: #fff; border: 1.5px solid #E2E8F0; border-radius: 12px; padding: 1.25rem 1.5rem; margin-bottom: 1.25rem; max-width: 760px; box-shadow: 0 2px 8px rgba(0,82,204,0.07); }
+  .section h2 { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #0052CC; margin-bottom: 0.75rem; }
+  .section p { font-size: 0.85rem; color: #334155; line-height: 1.6; margin-bottom: 0.6rem; }
+  .section ul { padding-left: 1.2rem; }
+  .section li { font-size: 0.85rem; color: #334155; line-height: 1.8; }
+  pre { background: #1E293B; color: #E2E8F0; border-radius: 8px; padding: 1rem 1.25rem; font-size: 0.78rem; font-family: "SFMono-Regular", Consolas, monospace; overflow-x: auto; line-height: 1.6; margin-top: 0.75rem; }
+  .hl-key { color: #7DD3FC; }
+  .hl-val { color: #86EFAC; }
+  .hl-comment { color: #64748B; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.8rem; margin-top: 0.5rem; }
+  th { text-align: left; color: #0052CC; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; padding: 0.4rem 0.6rem; border-bottom: 2px solid #E2E8F0; }
+  td { padding: 0.5rem 0.6rem; border-bottom: 1px solid #F1F5F9; color: #334155; line-height: 1.5; }
+  td code, li code, p code { background: #EFF6FF; color: #1E40AF; padding: 0.05rem 0.3rem; border-radius: 4px; font-size: 0.78rem; font-family: "SFMono-Regular", Consolas, monospace; }
+  .verdict { font-weight: 700; white-space: nowrap; }
+  .verdict.abort { color: #DC2626; }
+  .verdict.warn { color: #D97706; }
+  .verdict.ok { color: #16A34A; }
+  .warning { background: #FEF2F2; border: 1px solid #FECACA; border-radius: 8px; padding: 0.75rem 1rem; font-size: 0.82rem; color: #7F1D1D; margin-top: 0.75rem; }
+</style>
+</head>
+<body>
+<a class="back-link" href="../diagram.html">← Back to overview</a>
+<div class="breadcrumb"><a href="../diagram.html">Overview</a> / Failure + resume semantics</div>
+
+<div class="page-header">
+  <div class="gate-badge">3 halt patterns · each resumes differently</div>
+  <h1>Failure + halt semantics between phases</h1>
+  <p>Halting at different points in the chain leaves different state behind.
+     The orchestrator records exactly where the chain broke so the right
+     <strong>partial resume</strong> can be chosen — work already done is never redone.</p>
+</div>
+
+<div class="section">
+  <h2>The three halt patterns</h2>
+  <table>
+    <tr><th>Where it halts</th><th>Resulting state</th><th>Resume path</th></tr>
+    <tr>
+      <td class="verdict abort">⛔ A halts (C.2)</td>
+      <td><code>phaseA: failed</code> · <code>phaseB: blocked</code> · <code>verdict: FAIL</code> — B is never invoked</td>
+      <td>Fix A's halt cause, re-run the chain (pass <code>--resume</code> through to A)</td>
+    </tr>
+    <tr>
+      <td class="verdict abort">⛔ B halts (C.4)</td>
+      <td><code>phaseB: failed</code> · <code>verdict: FAIL</code> — A's outputs stay intact</td>
+      <td>Resume re-runs C.4 only (<code>--skip-a</code> + <code>--phase-a-state</code>)</td>
+    </tr>
+    <tr>
+      <td class="verdict warn">⚠ C halts after B, before rendering</td>
+      <td>Both phases completed, combined <code>index.md</code> missing</td>
+      <td>Resume re-runs C.5 only</td>
+    </tr>
+  </table>
+</div>
+
+<div class="section">
+  <h2>index.yaml after an A-side failure</h2>
+  <pre><span class="hl-key">phaseA:</span>
+  <span class="hl-key">status:</span> <span class="hl-val">failed</span>
+<span class="hl-key">phaseB:</span>
+  <span class="hl-key">status:</span> <span class="hl-val">blocked</span>      <span class="hl-comment"># B was never invoked — nothing to roll back</span>
+<span class="hl-key">verdict:</span> <span class="hl-val">FAIL</span></pre>
+  <div class="warning">⛔ A's HALT halts the chain immediately. The orchestrator never
+     invokes phase B against an incomplete class swap.</div>
+</div>
+
+<div class="section">
+  <h2>Clean early exit — --skip-b</h2>
+  <p>Passing <code>--skip-b</code> runs phase A only: C.4 and C.5 are skipped, and the
+     chain halts <strong>cleanly</strong> (this is not a failure):</p>
+  <pre><span class="hl-key">phaseB:</span>
+  <span class="hl-key">status:</span> <span class="hl-val">skipped</span>
+<span class="hl-key">verdict:</span> <span class="hl-val">COMPLETED_A_ONLY</span></pre>
+  <p>The class swap is live; the resource swap can be chained later with
+     <code>--skip-a --phase-a-state &lt;A's state.yaml&gt;</code>.</p>
+</div>
+
+<div class="section">
+  <h2>Why partial resume is safe</h2>
+  <ul>
+    <li>No state merging — each phase's state.yaml is self-contained, so re-running one phase cannot corrupt the other's record</li>
+    <li>B's classifier reads A's outputs fresh from <code>--source-state</code> — the orchestrator caches nothing it would have to invalidate</li>
+    <li>The chain run-dir is guarded by C.1: an existing <code>&lt;slug&gt;</code> directory HALTs unless <code>--force</code> is set</li>
+  </ul>
+</div>
+</body>
+</html>

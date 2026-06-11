@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Traefik Ingress generation rules — nginx-to-traefik</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, -apple-system, "Segoe UI", Inter, sans-serif; background: #F3F4F6; color: #1E293B; min-height: 100vh; padding: 2rem 1rem 4rem; }
+  .back-link { display: inline-flex; align-items: center; gap: 0.4rem; color: #0052CC; font-size: 0.82rem; font-weight: 600; text-decoration: none; margin-bottom: 2rem; padding: 0.4rem 0.75rem; border-radius: 6px; border: 1.5px solid #BFDBFE; background: #EFF6FF; transition: background 0.15s; }
+  .back-link:hover { background: #DBEAFE; }
+  .breadcrumb { font-size: 0.72rem; color: #94A3B8; margin-bottom: 0.5rem; }
+  .breadcrumb a { color: #0052CC; text-decoration: none; }
+  .page-header { margin-bottom: 2rem; }
+  .page-header h1 { font-size: 1.5rem; font-weight: 700; color: #0052CC; margin-bottom: 0.4rem; }
+  .page-header p { font-size: 0.9rem; color: #475569; max-width: 680px; line-height: 1.6; }
+  .gate-badge { display: inline-block; font-size: 0.72rem; font-weight: 700; padding: 0.15rem 0.6rem; border-radius: 20px; background: #EFF6FF; color: #1E40AF; border: 1px solid #BFDBFE; margin-bottom: 0.75rem; }
+  .section { background: #fff; border: 1.5px solid #E2E8F0; border-radius: 12px; padding: 1.25rem 1.5rem; margin-bottom: 1.25rem; max-width: 760px; box-shadow: 0 2px 8px rgba(0,82,204,0.07); }
+  .section h2 { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #0052CC; margin-bottom: 0.75rem; }
+  .section p { font-size: 0.85rem; color: #334155; line-height: 1.6; margin-bottom: 0.6rem; }
+  .section ul { padding-left: 1.2rem; }
+  .section li { font-size: 0.85rem; color: #334155; line-height: 1.8; }
+  pre { background: #1E293B; color: #E2E8F0; border-radius: 8px; padding: 1rem 1.25rem; font-size: 0.78rem; font-family: "SFMono-Regular", Consolas, monospace; overflow-x: auto; line-height: 1.6; margin-top: 0.75rem; }
+  .hl-key { color: #7DD3FC; }
+  .hl-val { color: #86EFAC; }
+  .hl-comment { color: #64748B; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.8rem; margin-top: 0.5rem; }
+  th { text-align: left; color: #0052CC; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; padding: 0.4rem 0.6rem; border-bottom: 2px solid #E2E8F0; }
+  td { padding: 0.5rem 0.6rem; border-bottom: 1px solid #F1F5F9; color: #334155; line-height: 1.5; }
+  .warning { background: #FEF2F2; border: 1px solid #FECACA; border-radius: 8px; padding: 0.75rem 1rem; font-size: 0.82rem; color: #7F1D1D; margin-top: 0.75rem; }
+</style>
+</head>
+<body>
+<a class="back-link" href="../diagram.html">← Back to overview</a>
+<div class="breadcrumb"><a href="../diagram.html">Overview</a> / Traefik Ingress generation rules</div>
+
+<div class="page-header">
+  <div class="gate-badge">Steps 3 · 5 · 6 — resources, never patches</div>
+  <h1>Traefik Ingress generation rules</h1>
+  <p>The eye-of-horus-gitops conventions are baked into the generator and the
+     kustomization editor: new Traefik Ingresses are first-class
+     <code>resources:</code> entries, and names that Kustomize must not rewrite are
+     written verbatim.</p>
+</div>
+
+<div class="section">
+  <h2>Step 3 · One generated file per service</h2>
+  <pre><span class="hl-key">generate_traefik_ingress.py</span> \
+  --input  <span class="hl-val">&lt;service&gt;-nginx-ingress.yaml</span> \
+  --output <span class="hl-val">&lt;service&gt;-traefik-ingress.yaml</span>
+<span class="hl-comment"># stderr WARN lines  → state.yaml.warnings[]</span>
+<span class="hl-comment"># SHA256 of output   → state.yaml.outputs.traefikIngresses[].sha256</span>
+<span class="hl-comment"># exit code != 0     → HALT</span></pre>
+  <p>Annotation mapping follows <code>references/annotation-translation.md</code>
+     (read at Step 3). Each output is recorded in the hand-off contract:</p>
+  <pre><span class="hl-key">outputs:</span>
+  <span class="hl-key">traefikIngresses:</span>
+    - { <span class="hl-key">file:</span> <span class="hl-val">argocd-traefik-ingress.yaml</span>, <span class="hl-key">host:</span> <span class="hl-val">argocd.dev.example.com</span>,
+        <span class="hl-key">namespace:</span> <span class="hl-val">argocd</span>, <span class="hl-key">backend:</span> <span class="hl-val">argocd-server</span>, <span class="hl-key">port:</span> <span class="hl-val">80</span>, <span class="hl-key">sha256:</span> <span class="hl-val">&lt;hex&gt;</span> }</pre>
+  <p>When chained under <code>*nginx-to-gateway</code>, this list is exactly what
+     <code>gateway-api-migration</code> consumes via
+     <code>--source-class traefik --source-state &lt;statePath&gt;</code>.</p>
+</div>
+
+<div class="section">
+  <h2>Step 5 · Kustomization edit — resources, not patches</h2>
+  <pre><span class="hl-key">update_kustomization.py</span> --overlay-dir <span class="hl-val">&lt;overlay&gt;</span> \
+  --replace <span class="hl-val">&lt;service&gt;-nginx-ingress.yaml=&lt;service&gt;-traefik-ingress.yaml</span> \
+  --drop-patch <span class="hl-val">&lt;service&gt;-nginx-ingress.yaml</span>
+<span class="hl-comment"># idempotent: re-running on a complete state is a no-op</span>
+<span class="hl-comment"># kustomization.yaml schema mismatch → HALT</span></pre>
+  <ul>
+    <li>The Traefik file is added to <code>resources:</code> — Traefik Ingresses
+        <strong>never</strong> live in <code>patches:</code>.</li>
+    <li>The nginx entry is dropped from <code>patches:</code> in the same edit.</li>
+  </ul>
+</div>
+
+<div class="section">
+  <h2>Verbatim names — namePrefix does not touch them</h2>
+  <p>Backend Service names and TLS <code>secretName</code> are written
+     <strong>verbatim</strong> into the generated Ingress: Kustomize
+     <code>namePrefix</code> does not rewrite them, so copying a prefixed or guessed
+     name would break routing or TLS after build.</p>
+  <table>
+    <tr><th>Field</th><th>Rule</th></tr>
+    <tr><td><code>spec.rules[].backend.service.name</code></td><td>Verbatim from the nginx source — never prefixed</td></tr>
+    <tr><td><code>spec.tls[].secretName</code></td><td>Verbatim from the nginx source — never prefixed</td></tr>
+    <tr><td><code>ingressClassName</code></td><td>Always <code>traefik</code></td></tr>
+  </table>
+  <div class="warning">⚠ This is the core class-swap invariant: only the Ingress class
+     and file placement change — the backends and certificates the service already uses
+     stay byte-identical.</div>
+</div>
+
+<div class="section">
+  <h2>Step 6 · Managed-cert host list</h2>
+  <p>Every new Traefik Ingress's primary host must be present in
+     <code>common.traefik/overlays/&lt;env&gt;/app.ingress.yaml</code> under both
+     <code>spec.tls[].hosts</code> and <code>spec.rules[].host</code>:</p>
+  <pre><span class="hl-key">update_kustomization.py</span> --app-ingress <span class="hl-val">&lt;path&gt;</span> --add-host <span class="hl-val">&lt;host&gt;</span></pre>
+</div>
+</body>
+</html>

@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Verdict model + artifacts — traefik-controller-decommission</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, -apple-system, "Segoe UI", Inter, sans-serif; background: #F3F4F6; color: #1E293B; min-height: 100vh; padding: 2rem 1rem 4rem; }
+  .back-link { display: inline-flex; align-items: center; gap: 0.4rem; color: #0052CC; font-size: 0.82rem; font-weight: 600; text-decoration: none; margin-bottom: 2rem; padding: 0.4rem 0.75rem; border-radius: 6px; border: 1.5px solid #BFDBFE; background: #EFF6FF; transition: background 0.15s; }
+  .back-link:hover { background: #DBEAFE; }
+  .breadcrumb { font-size: 0.72rem; color: #94A3B8; margin-bottom: 0.5rem; }
+  .breadcrumb a { color: #0052CC; text-decoration: none; }
+  .page-header { margin-bottom: 2rem; }
+  .page-header h1 { font-size: 1.5rem; font-weight: 700; color: #0052CC; margin-bottom: 0.4rem; }
+  .page-header p { font-size: 0.9rem; color: #475569; max-width: 680px; line-height: 1.6; }
+  .gate-badge { display: inline-block; font-size: 0.72rem; font-weight: 700; padding: 0.15rem 0.6rem; border-radius: 20px; background: #DCFCE7; color: #14532D; border: 1px solid #86EFAC; margin-bottom: 0.75rem; }
+  .section { background: #fff; border: 1.5px solid #E2E8F0; border-radius: 12px; padding: 1.25rem 1.5rem; margin-bottom: 1.25rem; max-width: 760px; box-shadow: 0 2px 8px rgba(0,82,204,0.07); }
+  .section h2 { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #0052CC; margin-bottom: 0.75rem; }
+  .section p { font-size: 0.85rem; color: #334155; line-height: 1.6; margin-bottom: 0.6rem; }
+  .section ul { padding-left: 1.2rem; }
+  .section li { font-size: 0.85rem; color: #334155; line-height: 1.8; }
+  pre { background: #1E293B; color: #E2E8F0; border-radius: 8px; padding: 1rem 1.25rem; font-size: 0.78rem; font-family: "SFMono-Regular", Consolas, monospace; overflow-x: auto; line-height: 1.6; margin-top: 0.75rem; }
+  .hl-key { color: #7DD3FC; }
+  .hl-val { color: #86EFAC; }
+  .hl-comment { color: #64748B; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.8rem; margin-top: 0.5rem; }
+  th { text-align: left; color: #0052CC; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; padding: 0.4rem 0.6rem; border-bottom: 2px solid #E2E8F0; }
+  td { padding: 0.5rem 0.6rem; border-bottom: 1px solid #F1F5F9; color: #334155; line-height: 1.5; }
+  .verdict { font-weight: 700; white-space: nowrap; }
+  .verdict.abort { color: #DC2626; }
+  .verdict.warn { color: #D97706; }
+  .verdict.ok { color: #16A34A; }
+  .warning { background: #FEF2F2; border: 1px solid #FECACA; border-radius: 8px; padding: 0.75rem 1rem; font-size: 0.82rem; color: #7F1D1D; margin-top: 0.75rem; }
+</style>
+</head>
+<body>
+<a class="back-link" href="../diagram.html">← Back to overview</a>
+<div class="breadcrumb"><a href="../diagram.html">Overview</a> / Verdict model + artifacts</div>
+
+<div class="page-header">
+  <div class="gate-badge">Step 6 · state.yaml · 4 verdicts</div>
+  <h1>Verdict model + output artifacts</h1>
+  <p>Every run ends with exactly one verdict written into <code>state.yaml</code> and printed
+     to the operator, plus a report directory that doubles as the audit trail and the
+     <code>--resume</code> checkpoint.</p>
+</div>
+
+<div class="section">
+  <h2>The four verdicts</h2>
+  <table>
+    <tr><th>Verdict</th><th>Cause</th><th>What the operator does</th></tr>
+    <tr><td class="verdict ok">READY</td><td>Both scans clean, DNS bake confirmed, plan generated</td><td>Read plan.md, drive commands.sh block-by-block</td></tr>
+    <tr><td class="verdict abort">BLOCKED</td><td>Active nginx Ingress found (Step 3, exit 1) or DNS bake declined (Step 4)</td><td>Re-migrate the leftover or delete the stale Ingress; retry. commands.sh is NOT written</td></tr>
+    <tr><td class="verdict warn">NEEDS_REVIEW</td><td>Operator bypassed the DNS bake gate with <code>--skip-dns-bake</code></td><td>The override is recorded — a human must review before executing the plan</td></tr>
+    <tr><td class="verdict warn">DEGRADED</td><td>A scan could not run (Step 3, exit 2 — e.g. kubectl missing, cluster scan skipped)</td><td>Re-run with full tooling, or accept the partial-evidence risk explicitly</td></tr>
+  </table>
+</div>
+
+<div class="section">
+  <h2>Report directory</h2>
+  <pre><span class="hl-key">docs/reports/traefik-controller-decommission/&lt;date&gt;/</span>
+  <span class="hl-val">state.yaml</span>     <span class="hl-comment"># machine-readable state (--resume checkpoint)</span>
+  <span class="hl-val">verify.json</span>    <span class="hl-comment"># raw cluster + repo scan results</span>
+  <span class="hl-val">plan.md</span>        <span class="hl-comment"># operator-readable plan</span>
+  <span class="hl-val">commands.sh</span>    <span class="hl-comment"># copy-paste-ready (NEVER auto-executed)</span></pre>
+</div>
+
+<div class="section">
+  <h2>state.yaml essentials</h2>
+  <pre><span class="hl-key">discovery:</span>
+  <span class="hl-key">nginxModule:</span> <span class="hl-val">common.ingress-nginx</span>
+  <span class="hl-key">argocdAppManifests:</span> <span class="hl-val">[common.ingress-nginx/argocd/dev.yaml, ...]</span>
+  <span class="hl-key">nginxNamespace:</span> <span class="hl-val">ingress-nginx</span>
+<span class="hl-key">verification:</span>
+  <span class="hl-key">activeNginxIngresses:</span> <span class="hl-val">{ cluster: [], repo: [] }</span>
+  <span class="hl-key">dnsBakeConfirmed:</span> <span class="hl-val">{ confirmed: true, confirmedBy: ..., confirmedAt: ... }</span>
+<span class="hl-key">plan:</span>
+  <span class="hl-key">archive:</span> <span class="hl-val">{ sourcePath: common.ingress-nginx, targetPath: archive/common.ingress-nginx }</span>
+  <span class="hl-key">lbRelease:</span> <span class="hl-val">null</span>  <span class="hl-comment"># null if --no-lb-cleanup</span>
+<span class="hl-key">verdict:</span> <span class="hl-val">READY | BLOCKED | NEEDS_REVIEW | DEGRADED</span></pre>
+</div>
+
+<div class="section">
+  <h2>Next-step instructions printed on completion</h2>
+  <ul>
+    <li>Read <code>docs/reports/traefik-controller-decommission/&lt;date&gt;/plan.md</code></li>
+    <li>Execute <code>commands.sh</code> block-by-block (not in one shot)</li>
+    <li>Commit the report directory once decommission is complete</li>
+  </ul>
+  <div class="warning">⛔ The skill stops here by design. It never runs <code>helm uninstall</code>
+     or <code>kubectl delete</code> itself — ArgoCD's pruner removes the controller once the
+     operator pushes the archive commit and disables the Application.</div>
+</div>
+</body>
+</html>

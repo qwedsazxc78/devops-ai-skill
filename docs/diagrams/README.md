@@ -23,6 +23,23 @@ See [diagrams-guide.md](../diagrams-guide.md) for how to regenerate these.
 - Mermaid: [`migration-journey.md`](migration-journey.md)
 - HTML (detailed): [`html/migration/diagram.html`](html/migration/diagram.html)
 
+## Skill architecture — migration family
+
+Per-skill architecture diagrams (pipeline steps, safety gates, drill-down mechanics):
+
+| Skill | Mermaid | HTML (detailed) |
+|-------|---------|-----------------|
+| nginx-ingress-retire | [`retire-nginx.md`](retire-nginx.md) | [`html/retire-nginx/diagram.html`](html/retire-nginx/diagram.html) · [mindmap](html/retire-nginx/mindmap.html) |
+| nginx-to-traefik | [`nginx-to-traefik.md`](nginx-to-traefik.md) | [`html/nginx-to-traefik/diagram.html`](html/nginx-to-traefik/diagram.html) |
+| gateway-api-migration | [`gateway-api-migration.md`](gateway-api-migration.md) | [`html/gateway-api-migration/diagram.html`](html/gateway-api-migration/diagram.html) |
+| nginx-to-gateway | [`nginx-to-gateway.md`](nginx-to-gateway.md) | [`html/nginx-to-gateway/diagram.html`](html/nginx-to-gateway/diagram.html) |
+| ingress-migration-advisor | [`ingress-migration-advisor.md`](ingress-migration-advisor.md) | [`html/ingress-migration-advisor/diagram.html`](html/ingress-migration-advisor/diagram.html) |
+| traefik-controller-decommission | [`traefik-controller-decommission.md`](traefik-controller-decommission.md) | [`html/traefik-controller-decommission/diagram.html`](html/traefik-controller-decommission/diagram.html) |
+
+> `nginx-ingress-retire` additionally ships a **mindmap explainer**
+> ([`html/retire-nginx/mindmap.html`](html/retire-nginx/mindmap.html)) — the whole skill
+> on one page: when to run, core rules, eight steps, safety gates, edge cases, outputs.
+
 ---
 
 ## Formats at a glance

@@ -103,6 +103,7 @@ Pipeline Orchestrator for Kustomize + ArgoCD platforms. Commanding, methodical, 
 | devops:ingress-migration-advisor | Read-only planner for the ingress-nginx 2025 EOL. Scores services on 5 dimensions and recommends `direct-gateway`, `two-step`, `swap-only`, or `defer` per service. Requires `docs/ingress-tier-map.yaml`. |
 | devops:ingress-controller-install | GitOps Traefik install/upgrade via Kustomize edits under `common.traefik/`. Three modes (bootstrap, new-env, upgrade) auto-detected. Plan-only. |
 | devops:traefik-controller-decommission | GitOps ingress-nginx decommission — verify cluster+repo free of nginx-class (precedence-aware), DNS bake confirmation, archive Kustomize module + ArgoCD prune. Plan-only. |
+| devops:nginx-ingress-retire | Post-migration nginx retirement (v1.17.0+) — delete controller ArgoCD app per env + `$patch: delete` base nginx Ingresses in the overlay kustomization. Safety-gated (aborts without replacements); single-env or `all`. |
 
 ### Shared Skills (invoke as `devops:<skill>`)
 
@@ -129,7 +130,8 @@ Pipeline Orchestrator for Kustomize + ArgoCD platforms. Commanding, methodical, 
 | *ingress-migration-advisor | ingress-migration-advisor.md | Read-only ingress-nginx EOL planner — produces a phased plan with per-service path recommendations |
 | *install-traefik | install-traefik.md | GitOps Traefik install/upgrade via Kustomize edits — bootstrap/new-env/upgrade modes, plan-only |
 | *decommission-nginx | decommission-nginx.md | GitOps ingress-nginx decommission — archives module + ArgoCD prune, plan-only |
-| *migration-quickstart | migration-quickstart.md | 30-second orientation — prints a decision tree + 5-command table + sample invocations for first-time users |
+| *retire-nginx | retire-nginx.md | Post-migration nginx retirement — controller app delete + `$patch: delete` base nginx Ingresses, per-env or all |
+| *migration-quickstart | migration-quickstart.md | 30-second orientation — prints a decision tree + 8-command table + sample invocations for first-time users |
 
 ### Zeus Core Principles
 
@@ -237,6 +239,7 @@ Antigravity uses the `.agents/` directory for workspace-scoped configuration:
 | `/zeus-ingress-migration-advisor` | `prompts/zeus/ingress-migration-advisor.md` |
 | `/zeus-install-traefik` | `prompts/zeus/install-traefik.md` |
 | `/zeus-decommission-nginx` | `prompts/zeus/decommission-nginx.md` |
+| `/zeus-retire-nginx` | `prompts/zeus/retire-nginx.md` |
 | `/zeus-migration-quickstart` | `prompts/zeus/migration-quickstart.md` |
 
 ## Report Format

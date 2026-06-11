@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Annotation translation — gateway-api-migration</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, -apple-system, "Segoe UI", Inter, sans-serif; background: #F3F4F6; color: #1E293B; min-height: 100vh; padding: 2rem 1rem 4rem; }
+  .back-link { display: inline-flex; align-items: center; gap: 0.4rem; color: #0052CC; font-size: 0.82rem; font-weight: 600; text-decoration: none; margin-bottom: 2rem; padding: 0.4rem 0.75rem; border-radius: 6px; border: 1.5px solid #BFDBFE; background: #EFF6FF; transition: background 0.15s; }
+  .back-link:hover { background: #DBEAFE; }
+  .breadcrumb { font-size: 0.72rem; color: #94A3B8; margin-bottom: 0.5rem; }
+  .breadcrumb a { color: #0052CC; text-decoration: none; }
+  .page-header { margin-bottom: 2rem; }
+  .page-header h1 { font-size: 1.5rem; font-weight: 700; color: #0052CC; margin-bottom: 0.4rem; }
+  .page-header p { font-size: 0.9rem; color: #475569; max-width: 680px; line-height: 1.6; }
+  .gate-badge { display: inline-block; font-size: 0.72rem; font-weight: 700; padding: 0.15rem 0.6rem; border-radius: 20px; background: #EFF6FF; color: #1E40AF; border: 1px solid #BFDBFE; margin-bottom: 0.75rem; }
+  .section { background: #fff; border: 1.5px solid #E2E8F0; border-radius: 12px; padding: 1.25rem 1.5rem; margin-bottom: 1.25rem; max-width: 760px; box-shadow: 0 2px 8px rgba(0,82,204,0.07); }
+  .section h2 { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #0052CC; margin-bottom: 0.75rem; }
+  .section p { font-size: 0.85rem; color: #334155; line-height: 1.6; margin-bottom: 0.6rem; }
+  .section ul { padding-left: 1.2rem; }
+  .section li { font-size: 0.85rem; color: #334155; line-height: 1.8; }
+  pre { background: #1E293B; color: #E2E8F0; border-radius: 8px; padding: 1rem 1.25rem; font-size: 0.78rem; font-family: "SFMono-Regular", Consolas, monospace; overflow-x: auto; line-height: 1.6; margin-top: 0.75rem; }
+  .hl-key { color: #7DD3FC; }
+  .hl-val { color: #86EFAC; }
+  .hl-comment { color: #64748B; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.8rem; margin-top: 0.5rem; }
+  th { text-align: left; color: #0052CC; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; padding: 0.4rem 0.6rem; border-bottom: 2px solid #E2E8F0; }
+  td { padding: 0.5rem 0.6rem; border-bottom: 1px solid #F1F5F9; color: #334155; line-height: 1.5; }
+  .verdict { font-weight: 700; white-space: nowrap; }
+  .verdict.abort { color: #DC2626; }
+  .verdict.warn { color: #D97706; }
+  .verdict.ok { color: #16A34A; }
+  .warning { background: #FEF2F2; border: 1px solid #FECACA; border-radius: 8px; padding: 0.75rem 1rem; font-size: 0.82rem; color: #7F1D1D; margin-top: 0.75rem; }
+</style>
+</head>
+<body>
+<a class="back-link" href="../diagram.html">← Back to overview</a>
+<div class="breadcrumb"><a href="../diagram.html">Overview</a> / Annotation translation</div>
+
+<div class="page-header">
+  <div class="gate-badge">Step 2 · ends in an operator confirm gate</div>
+  <h1>Annotation translation — three buckets</h1>
+  <p>NGINX Ingress annotations are inventoried by
+     <code>scripts/inventory_annotations.py</code> against the <strong>built overlays</strong>
+     from Step 1 — so dead-file annotations are excluded and base-to-overlay variance is
+     already patched in. Every entry carries its source <code>file:line</code> and the
+     <code>references/annotation-map.md</code> row number, which has per-target columns
+     (Traefik default, GKE opt-in).</p>
+</div>
+
+<div class="section">
+  <h2>The buckets</h2>
+  <table>
+    <tr><th>Bucket</th><th>Verdict</th><th>Meaning</th></tr>
+    <tr><td><code>translated</code></td><td class="verdict ok">✓ Clean</td><td>Direct Gateway API / provider-CRD equivalent emitted.</td></tr>
+    <tr><td><code>translatedLossy</code></td><td class="verdict warn">⚠ Lossy</td><td>Translated with semantic loss (e.g. <code>proxy-*-timeout</code> values collapse).</td></tr>
+    <tr><td><code>stubbed</code></td><td class="verdict warn">⚠ Manual</td><td>Emitted as inline <code># TODO(gateway-migrate)</code> stubs in the generated YAML, linked to a Manual Review item (e.g. <code>server-snippet</code> path denylists).</td></tr>
+    <tr><td><code>unknown</code></td><td class="verdict abort">! Review</td><td>No mapping known — dropped with a WARN, surfaced in report Section 4.4 with exact source location.</td></tr>
+    <tr><td><code>dropInfo</code></td><td class="verdict ok">ℹ Info</td><td>Intentionally dropped, informational only.</td></tr>
+  </table>
+  <div class="warning">⚠ <strong>Security promotion:</strong> an unknown annotation that looks
+     security-relevant (contains "auth", "cors", "security", "cert", "ssl", "tls", "waf")
+     is promoted to severity <strong>S1</strong> in the risk register — a human must confirm
+     it is safe to drop before cutover.</div>
+</div>
+
+<div class="section">
+  <h2>Invocation</h2>
+  <pre><span class="hl-key">ls</span> /tmp/gwm/built/*.yaml &gt; /tmp/gwm/inventory-input.txt
+<span class="hl-key">python3</span> scripts/inventory_annotations.py <span class="hl-key">--files-from</span> /tmp/gwm/inventory-input.txt \
+  &gt; /tmp/gwm/annotations.json
+<span class="hl-comment"># raw-fallback mode uses /tmp/gwm/ingress-files.txt instead</span>
+<span class="hl-comment"># full inventory written to state.yaml.annotations</span></pre>
+</div>
+
+<div class="section">
+  <h2>Per-target translation (resolved at Step 3)</h2>
+  <ul>
+    <li><strong>Traefik target</strong> (<code>traefik*</code>): CORS → <code>Middleware</code>
+        (kind <code>headers</code>) per target namespace; path denylists →
+        <code>Middleware</code> (kind <code>redirectRegex</code>); HTTPRoutes attach them via
+        <code>extensionRef</code> filters in the route's own namespace.</li>
+    <li><strong>GKE target</strong> (<code>gke-l7-*</code>): CORS / lossy timeouts →
+        <code>GCPBackendPolicy</code> per backend Service; path denylists remain stubs
+        pointing at Cloud Armor.</li>
+    <li><strong>Other GatewayClass</strong>: vanilla Gateway API only — provider policies
+        deferred to manual review and recorded in the risk register.</li>
+  </ul>
+</div>
+
+<div class="section">
+  <h2>2.3 · Per-overlay variance check</h2>
+  <p>In built mode, the translated-annotation sets are diffed across the env masters.
+     Any annotation present in one env but missing in another is a variance finding —
+     recorded in <code>state.yaml.annotations.overlayVariance[]</code> and surfaced as
+     <strong>S2</strong> in the risk register. Host-count differences between env masters
+     are recorded too (e.g. "dev declares 14 hosts; stg and prd declare 12").</p>
+</div>
+
+<div class="section">
+  <h2>2.4 · Terminal summary → confirm gate</h2>
+  <pre>Annotations:
+  <span class="hl-key">translated:</span>       <span class="hl-val">38</span>
+  <span class="hl-key">translatedLossy:</span>   <span class="hl-val">2</span> <span class="hl-comment">(proxy-*-timeout — will collapse)</span>
+  <span class="hl-key">stubbed:</span>           <span class="hl-val">3</span> <span class="hl-comment">(server-snippet: 1× path denylist, 2× Set-Cookie)</span>
+  <span class="hl-key">unknown:</span>           <span class="hl-val">2</span> <span class="hl-comment">(!) — review before proceeding</span>
+  <span class="hl-key">dropInfo:</span>          <span class="hl-val">1</span>
+
+Proceed with conversion? [y/N]
+<span class="hl-comment"># gate: user must confirm — HALT on decline (state status: aborted)</span></pre>
+</div>
+</body>
+</html>

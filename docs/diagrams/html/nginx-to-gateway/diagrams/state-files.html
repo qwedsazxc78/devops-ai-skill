@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>State files + index.yaml — nginx-to-gateway</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, -apple-system, "Segoe UI", Inter, sans-serif; background: #F3F4F6; color: #1E293B; min-height: 100vh; padding: 2rem 1rem 4rem; }
+  .back-link { display: inline-flex; align-items: center; gap: 0.4rem; color: #0052CC; font-size: 0.82rem; font-weight: 600; text-decoration: none; margin-bottom: 2rem; padding: 0.4rem 0.75rem; border-radius: 6px; border: 1.5px solid #BFDBFE; background: #EFF6FF; transition: background 0.15s; }
+  .back-link:hover { background: #DBEAFE; }
+  .breadcrumb { font-size: 0.72rem; color: #94A3B8; margin-bottom: 0.5rem; }
+  .breadcrumb a { color: #0052CC; text-decoration: none; }
+  .page-header { margin-bottom: 2rem; }
+  .page-header h1 { font-size: 1.5rem; font-weight: 700; color: #0052CC; margin-bottom: 0.4rem; }
+  .page-header p { font-size: 0.9rem; color: #475569; max-width: 680px; line-height: 1.6; }
+  .gate-badge { display: inline-block; font-size: 0.72rem; font-weight: 700; padding: 0.15rem 0.6rem; border-radius: 20px; background: #EFF6FF; color: #1E40AF; border: 1px solid #BFDBFE; margin-bottom: 0.75rem; }
+  .section { background: #fff; border: 1.5px solid #E2E8F0; border-radius: 12px; padding: 1.25rem 1.5rem; margin-bottom: 1.25rem; max-width: 760px; box-shadow: 0 2px 8px rgba(0,82,204,0.07); }
+  .section h2 { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #0052CC; margin-bottom: 0.75rem; }
+  .section p { font-size: 0.85rem; color: #334155; line-height: 1.6; margin-bottom: 0.6rem; }
+  .section ul { padding-left: 1.2rem; }
+  .section li { font-size: 0.85rem; color: #334155; line-height: 1.8; }
+  pre { background: #1E293B; color: #E2E8F0; border-radius: 8px; padding: 1rem 1.25rem; font-size: 0.78rem; font-family: "SFMono-Regular", Consolas, monospace; overflow-x: auto; line-height: 1.6; margin-top: 0.75rem; }
+  .hl-key { color: #7DD3FC; }
+  .hl-val { color: #86EFAC; }
+  .hl-comment { color: #64748B; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.8rem; margin-top: 0.5rem; }
+  th { text-align: left; color: #0052CC; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; padding: 0.4rem 0.6rem; border-bottom: 2px solid #E2E8F0; }
+  td { padding: 0.5rem 0.6rem; border-bottom: 1px solid #F1F5F9; color: #334155; line-height: 1.5; }
+  td code, li code, p code { background: #EFF6FF; color: #1E40AF; padding: 0.05rem 0.3rem; border-radius: 4px; font-size: 0.78rem; font-family: "SFMono-Regular", Consolas, monospace; }
+  .warning { background: #FEF2F2; border: 1px solid #FECACA; border-radius: 8px; padding: 0.75rem 1rem; font-size: 0.82rem; color: #7F1D1D; margin-top: 0.75rem; }
+</style>
+</head>
+<body>
+<a class="back-link" href="../diagram.html">← Back to overview</a>
+<div class="breadcrumb"><a href="../diagram.html">Overview</a> / State files + index.yaml</div>
+
+<div class="page-header">
+  <div class="gate-badge">Steps C.1 / C.3 / C.5 · no state merging</div>
+  <h1>Per-phase state files + the chain index.yaml</h1>
+  <p>Three documents, three owners. Each sub-skill keeps its <strong>own</strong>
+     state file and report; the chain's <code>index.yaml</code> records only statuses,
+     paths, the copied hand-off, and the verdict.</p>
+</div>
+
+<div class="section">
+  <h2>Who owns what</h2>
+  <table>
+    <tr><th>Document</th><th>Owner</th><th>Location</th></tr>
+    <tr><td>state.yaml + report.md (phase A)</td><td><code>nginx-to-traefik</code></td><td><code>docs/reports/nginx-to-traefik/&lt;slug-a&gt;/</code></td></tr>
+    <tr><td>state.yaml + report.md (phase B)</td><td><code>gateway-api-migration</code></td><td><code>docs/reports/gateway-migration/&lt;slug-b&gt;/</code></td></tr>
+    <tr><td>index.yaml + index.md (chain)</td><td><code>nginx-to-gateway</code></td><td><code>docs/reports/nginx-to-gateway/&lt;slug&gt;/</code></td></tr>
+  </table>
+  <p style="margin-top:0.75rem;">Chain slug format: <code>&lt;env&gt;-&lt;isodate&gt;-&lt;ulid&gt;</code>
+     (ULID generated locally). If the run-dir already exists and <code>--force</code> is
+     not set, C.1 HALTs.</p>
+</div>
+
+<div class="section">
+  <h2>C.1 · Initial index.yaml</h2>
+  <pre><span class="hl-key">schemaVersion:</span> <span class="hl-val">1</span>
+<span class="hl-key">skillVersion:</span> <span class="hl-val">"1.0.0"</span>
+<span class="hl-key">chainId:</span> <span class="hl-val">&lt;ulid&gt;</span>
+<span class="hl-key">env:</span> <span class="hl-val">&lt;env&gt;</span>
+<span class="hl-key">gatewayClass:</span> <span class="hl-val">&lt;gatewayClass&gt;</span>
+<span class="hl-key">createdAt:</span> <span class="hl-val">&lt;iso&gt;</span>
+<span class="hl-key">phaseA:</span> { <span class="hl-key">status:</span> <span class="hl-val">pending</span> }
+<span class="hl-key">phaseB:</span> { <span class="hl-key">status:</span> <span class="hl-val">pending</span> }
+<span class="hl-key">verdict:</span> <span class="hl-val">IN_PROGRESS</span></pre>
+</div>
+
+<div class="section">
+  <h2>Completed chain state file</h2>
+  <pre><span class="hl-key">schemaVersion:</span> <span class="hl-val">1</span>
+<span class="hl-key">skillVersion:</span> <span class="hl-val">"1.0.0"</span>
+<span class="hl-key">chainId:</span> <span class="hl-val">&lt;ulid&gt;</span>
+<span class="hl-key">env:</span> <span class="hl-val">dev</span>
+<span class="hl-key">gatewayClass:</span> <span class="hl-val">traefik</span>
+<span class="hl-key">createdAt:</span> <span class="hl-val">2026-05-14T10:00:00Z</span>
+<span class="hl-key">phaseA:</span>
+  <span class="hl-key">status:</span> <span class="hl-val">completed | failed | skipped</span>
+  <span class="hl-key">statePath:</span> <span class="hl-val">docs/reports/nginx-to-traefik/&lt;slug-a&gt;/state.yaml</span>
+  <span class="hl-key">reportPath:</span> <span class="hl-val">docs/reports/nginx-to-traefik/&lt;slug-a&gt;/report.md</span>
+  <span class="hl-key">traefikIngresses:</span> <span class="hl-val">[...]</span>          <span class="hl-comment"># copied at C.3 — the hand-off</span>
+<span class="hl-key">phaseB:</span>
+  <span class="hl-key">status:</span> <span class="hl-val">completed | failed | skipped | blocked</span>
+  <span class="hl-key">statePath:</span> <span class="hl-val">docs/reports/gateway-migration/&lt;slug-b&gt;/state.yaml</span>
+  <span class="hl-key">reportPath:</span> <span class="hl-val">docs/reports/gateway-migration/&lt;slug-b&gt;/report.md</span>
+<span class="hl-key">verdict:</span> <span class="hl-val">PASS | COMPLETED_WITH_MANUAL_REVIEW | COMPLETED_A_ONLY | FAIL</span></pre>
+</div>
+
+<div class="section">
+  <h2>C.5 · Combined index.md + verdict rules</h2>
+  <p>The human-readable index is rendered from
+     <code>references/chain-report-template.md</code> by substituting
+     <code>{{ ... }}</code> variables from <code>index.yaml</code>, and written to
+     <code>index.md</code> alongside it. It links both sub-reports — it does not
+     duplicate them.</p>
+  <ul>
+    <li><code>PASS</code> — both phases completed</li>
+    <li><code>COMPLETED_WITH_MANUAL_REVIEW</code> — any sub-skill had WARN-level findings</li>
+    <li><code>COMPLETED_A_ONLY</code> — <code>--skip-b</code> was passed</li>
+    <li><code>FAIL</code> — otherwise</li>
+  </ul>
+  <div class="warning">Path note — v1.11.0 vs v2.0.0: in v1.11.0 phase B writes to
+     <code>docs/reports/gateway-migration/</code>; after the v2.0.0 rename it becomes
+     <code>docs/reports/ingress-to-gateway/</code>. The chain records whichever the
+     sub-skill produces — no special-casing.</div>
+</div>
+</body>
+</html>

@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hand-off contract — nginx-to-gateway</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, -apple-system, "Segoe UI", Inter, sans-serif; background: #F3F4F6; color: #1E293B; min-height: 100vh; padding: 2rem 1rem 4rem; }
+  .back-link { display: inline-flex; align-items: center; gap: 0.4rem; color: #0052CC; font-size: 0.82rem; font-weight: 600; text-decoration: none; margin-bottom: 2rem; padding: 0.4rem 0.75rem; border-radius: 6px; border: 1.5px solid #BFDBFE; background: #EFF6FF; transition: background 0.15s; }
+  .back-link:hover { background: #DBEAFE; }
+  .breadcrumb { font-size: 0.72rem; color: #94A3B8; margin-bottom: 0.5rem; }
+  .breadcrumb a { color: #0052CC; text-decoration: none; }
+  .page-header { margin-bottom: 2rem; }
+  .page-header h1 { font-size: 1.5rem; font-weight: 700; color: #0052CC; margin-bottom: 0.4rem; }
+  .page-header p { font-size: 0.9rem; color: #475569; max-width: 680px; line-height: 1.6; }
+  .gate-badge { display: inline-block; font-size: 0.72rem; font-weight: 700; padding: 0.15rem 0.6rem; border-radius: 20px; background: #FEF2F2; color: #991B1B; border: 1px solid #FECACA; margin-bottom: 0.75rem; }
+  .section { background: #fff; border: 1.5px solid #E2E8F0; border-radius: 12px; padding: 1.25rem 1.5rem; margin-bottom: 1.25rem; max-width: 760px; box-shadow: 0 2px 8px rgba(0,82,204,0.07); }
+  .section h2 { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #0052CC; margin-bottom: 0.75rem; }
+  .section p { font-size: 0.85rem; color: #334155; line-height: 1.6; margin-bottom: 0.6rem; }
+  .section ul { padding-left: 1.2rem; }
+  .section li { font-size: 0.85rem; color: #334155; line-height: 1.8; }
+  pre { background: #1E293B; color: #E2E8F0; border-radius: 8px; padding: 1rem 1.25rem; font-size: 0.78rem; font-family: "SFMono-Regular", Consolas, monospace; overflow-x: auto; line-height: 1.6; margin-top: 0.75rem; }
+  .hl-key { color: #7DD3FC; }
+  .hl-val { color: #86EFAC; }
+  .hl-comment { color: #64748B; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.8rem; margin-top: 0.5rem; }
+  th { text-align: left; color: #0052CC; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; padding: 0.4rem 0.6rem; border-bottom: 2px solid #E2E8F0; }
+  td { padding: 0.5rem 0.6rem; border-bottom: 1px solid #F1F5F9; color: #334155; line-height: 1.5; }
+  td code, li code, p code { background: #EFF6FF; color: #1E40AF; padding: 0.05rem 0.3rem; border-radius: 4px; font-size: 0.78rem; font-family: "SFMono-Regular", Consolas, monospace; }
+  .warning { background: #FEF2F2; border: 1px solid #FECACA; border-radius: 8px; padding: 0.75rem 1rem; font-size: 0.82rem; color: #7F1D1D; margin-top: 0.75rem; }
+</style>
+</head>
+<body>
+<a class="back-link" href="../diagram.html">← Back to overview</a>
+<div class="breadcrumb"><a href="../diagram.html">Overview</a> / Hand-off contract</div>
+
+<div class="page-header">
+  <div class="gate-badge">Step C.3 · HALT if A produced zero outputs</div>
+  <h1>The outputs.traefikIngresses[] hand-off</h1>
+  <p>Phase A's state file is the <strong>only bridge</strong> between the two phases.
+     The orchestrator copies four fields out of it into the chain's
+     <code>index.yaml</code>, then hands the state path to phase B verbatim.</p>
+</div>
+
+<div class="section">
+  <h2>C.3 · Fields copied from A's state.yaml</h2>
+  <table>
+    <tr><th>Source (A's state.yaml)</th><th>Destination (chain index.yaml)</th></tr>
+    <tr><td><code>outputs.traefikIngresses[]</code></td><td><code>phaseA.traefikIngresses</code></td></tr>
+    <tr><td><code>steps."10".status</code></td><td><code>phaseA.cutover.status</code></td></tr>
+    <tr><td>A's state path</td><td><code>phaseA.statePath</code></td></tr>
+    <tr><td>A's report path</td><td><code>phaseA.reportPath</code></td></tr>
+  </table>
+  <div class="warning">⛔ HALT if <code>traefikIngresses[]</code> is empty — phase A
+     produced no outputs, so phase B would have nothing to convert.</div>
+</div>
+
+<div class="section">
+  <h2>C.4 · How phase B consumes the hand-off</h2>
+  <p>Skill B (<code>gateway-api-migration</code>) is spawned with the state path —
+     not the copied data — so its classifier reads A's outputs <strong>fresh</strong>.
+     The orchestrator never re-validates them itself:</p>
+  <pre><span class="hl-key">gateway-migrate</span> common.service/overlays/&lt;env&gt; \
+  <span class="hl-val">--source-class traefik</span> \      <span class="hl-comment"># convert the Ingresses A just created, not nginx ones</span>
+  <span class="hl-val">--no-redirect</span> \                <span class="hl-comment"># A already handled the cutover semantics</span>
+  <span class="hl-val">--gateway-class</span> &lt;chosen&gt; \     <span class="hl-comment"># from C.1: traefik (default) or gke-l7-global-external-managed</span>
+  <span class="hl-val">--source-state</span> &lt;index.yaml.phaseA.statePath&gt;</pre>
+</div>
+
+<div class="section">
+  <h2>--skip-a · Supplying the hand-off manually</h2>
+  <p>When phase A was already done in an earlier session, <code>--skip-a</code> skips
+     C.2 — but the contract still must be satisfied:</p>
+  <ul>
+    <li>Operator must pass <code>--phase-a-state &lt;path&gt;</code> pointing at a completed skill A state.yaml</li>
+    <li>The file must have <code>verdict: COMPLETE</code></li>
+    <li>It must contain at least one <code>outputs.traefikIngresses[]</code> entry</li>
+    <li>HALT otherwise</li>
+  </ul>
+</div>
+</body>
+</html>
