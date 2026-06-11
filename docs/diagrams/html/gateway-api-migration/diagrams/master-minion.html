@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Master/minion discovery — gateway-api-migration</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, -apple-system, "Segoe UI", Inter, sans-serif; background: #F3F4F6; color: #1E293B; min-height: 100vh; padding: 2rem 1rem 4rem; }
+  .back-link { display: inline-flex; align-items: center; gap: 0.4rem; color: #0052CC; font-size: 0.82rem; font-weight: 600; text-decoration: none; margin-bottom: 2rem; padding: 0.4rem 0.75rem; border-radius: 6px; border: 1.5px solid #BFDBFE; background: #EFF6FF; transition: background 0.15s; }
+  .back-link:hover { background: #DBEAFE; }
+  .breadcrumb { font-size: 0.72rem; color: #94A3B8; margin-bottom: 0.5rem; }
+  .breadcrumb a { color: #0052CC; text-decoration: none; }
+  .page-header { margin-bottom: 2rem; }
+  .page-header h1 { font-size: 1.5rem; font-weight: 700; color: #0052CC; margin-bottom: 0.4rem; }
+  .page-header p { font-size: 0.9rem; color: #475569; max-width: 680px; line-height: 1.6; }
+  .gate-badge { display: inline-block; font-size: 0.72rem; font-weight: 700; padding: 0.15rem 0.6rem; border-radius: 20px; background: #EFF6FF; color: #1E40AF; border: 1px solid #BFDBFE; margin-bottom: 0.75rem; }
+  .section { background: #fff; border: 1.5px solid #E2E8F0; border-radius: 12px; padding: 1.25rem 1.5rem; margin-bottom: 1.25rem; max-width: 760px; box-shadow: 0 2px 8px rgba(0,82,204,0.07); }
+  .section h2 { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #0052CC; margin-bottom: 0.75rem; }
+  .section p { font-size: 0.85rem; color: #334155; line-height: 1.6; margin-bottom: 0.6rem; }
+  .section ul { padding-left: 1.2rem; }
+  .section li { font-size: 0.85rem; color: #334155; line-height: 1.8; }
+  pre { background: #1E293B; color: #E2E8F0; border-radius: 8px; padding: 1rem 1.25rem; font-size: 0.78rem; font-family: "SFMono-Regular", Consolas, monospace; overflow-x: auto; line-height: 1.6; margin-top: 0.75rem; }
+  .hl-key { color: #7DD3FC; }
+  .hl-val { color: #86EFAC; }
+  .hl-comment { color: #64748B; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.8rem; margin-top: 0.5rem; }
+  th { text-align: left; color: #0052CC; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; padding: 0.4rem 0.6rem; border-bottom: 2px solid #E2E8F0; }
+  td { padding: 0.5rem 0.6rem; border-bottom: 1px solid #F1F5F9; color: #334155; line-height: 1.5; }
+  .verdict { font-weight: 700; white-space: nowrap; }
+  .verdict.abort { color: #DC2626; }
+  .verdict.warn { color: #D97706; }
+  .verdict.ok { color: #16A34A; }
+  .warning { background: #FEF2F2; border: 1px solid #FECACA; border-radius: 8px; padding: 0.75rem 1rem; font-size: 0.82rem; color: #7F1D1D; margin-top: 0.75rem; }
+</style>
+</head>
+<body>
+<a class="back-link" href="../diagram.html">← Back to overview</a>
+<div class="breadcrumb"><a href="../diagram.html">Overview</a> / Master/minion discovery</div>
+
+<div class="page-header">
+  <div class="gate-badge">Step 1 · classify what Kustomize actually applies</div>
+  <h1>Master/minion topology discovery</h1>
+  <p>Every run starts with a full classification of every Ingress in the repo —
+     delegated to <code>scripts/classify_ingress.py</code> (one JSONL line per Ingress)
+     followed by <code>scripts/pair_minions.py</code> (pairing report). The primary case is
+     master/minion topology (<code>common.ingress/</code> + <code>common.service/</code>);
+     standalone Ingress is the fallback.</p>
+</div>
+
+<div class="section">
+  <h2>1.1 · Built-overlay mode (preferred) — why raw files lie</h2>
+  <p>Repos using base templates contain placeholder hostnames
+     (<code>base-mlflow.example.com</code>) that overlays patch per env. A raw-file
+     classifier sees the placeholder literally, fails to pair it with any master, and
+     HALTs with a spurious "orphan minion" error. So the skill builds each overlay first
+     and classifies the <strong>rendered</strong> Ingress docs:</p>
+  <pre><span class="hl-comment"># enumerate overlays under common.ingress/ and common.service/</span>
+<span class="hl-key">find</span> common.ingress common.service -type f -name kustomization.yaml \
+  -path <span class="hl-val">"*/overlays/*"</span> &gt; /tmp/gwm/overlays.txt
+
+<span class="hl-comment"># build each overlay, keep only the Ingress documents</span>
+<span class="hl-key">kustomize build</span> <span class="hl-val">"$overlay"</span> \
+  | <span class="hl-key">yq</span> ea <span class="hl-val">'[select(.kind == "Ingress")] | .[] | split_doc'</span> - &gt; /tmp/gwm/built/&lt;module&gt;-&lt;env&gt;.yaml</pre>
+  <p>Built mode also automatically excludes <strong>dead files</strong> — YAML on disk that
+     no <code>kustomization.yaml</code> references — because Kustomize never includes them
+     in the build output. Dead files are still surfaced as a diagnostic in
+     <code>state.yaml.discovery.deadFiles[]</code>.</p>
+</div>
+
+<div class="section">
+  <h2>1.1 fallback · Raw-file mode</h2>
+  <p>If the repo has no <code>overlays/*</code> structure, or every build yields zero
+     Ingress docs, discovery falls back to a raw grep and records
+     <code>state.yaml.discovery.mode: "raw-fallback"</code>. This is a legitimate mode for
+     standalone Ingress repos, not an error.</p>
+  <pre><span class="hl-key">grep</span> -rIl <span class="hl-val">"^kind: Ingress$"</span> . --include=<span class="hl-val">"*.yaml"</span> --include=<span class="hl-val">"*.yml"</span> \
+  &gt; /tmp/gwm/ingress-files.txt</pre>
+</div>
+
+<div class="section">
+  <h2>1.2 · Classify each Ingress</h2>
+  <pre><span class="hl-key">python3</span> scripts/classify_ingress.py /tmp/gwm/built/*.yaml \
+  &gt; /tmp/gwm/classifications.jsonl
+<span class="hl-comment"># one JSON object per Ingress: classification, reason, hosts,</span>
+<span class="hl-comment"># hasPaths, hasTls, mergeableIngressType, full annotations map</span></pre>
+  <p>Classification values: <strong>master</strong>, <strong>minion</strong>,
+     <strong>standalone</strong>, <strong>foreign</strong> (non-nginx class — skipped, but
+     recorded in <code>state.yaml.discovery.foreign[]</code>), <strong>unknown</strong>.</p>
+</div>
+
+<div class="section">
+  <h2>1.3 · Pair minions with masters — exit codes are gates</h2>
+  <pre><span class="hl-key">python3</span> scripts/pair_minions.py --input /tmp/classifications.jsonl &gt; /tmp/pairs.json
+<span class="hl-comment"># returns topology, pairs[], orphanHosts, orphanMinions, ambiguous, foreign, standalone</span></pre>
+  <table>
+    <tr><th>Exit</th><th>Verdict</th><th>Meaning</th></tr>
+    <tr><td>0</td><td class="verdict ok">✓ Proceed</td><td>Happy path — topology is <code>master-minion</code>, <code>standalone</code>, <code>master-only</code>, <code>mixed</code>, or <code>none</code>.</td></tr>
+    <tr><td>1</td><td class="verdict abort">⛔ HALT</td><td>Orphan minion(s) or ambiguous pairing — print <code>orphanMinions[].reason</code> and <code>ambiguous[].candidates[]</code> so the user can fix the source.</td></tr>
+    <tr><td>2</td><td class="verdict abort">⛔ HALT</td><td>Bad input (no classifications).</td></tr>
+  </table>
+  <div class="warning">⚠ <strong>Orphan hosts</strong> (master declares a host with no matching
+     minion) are a WARN, not a halt — their listeners are skipped by default and surface in
+     report Section 3.2. Pass <code>--include-orphan-hosts</code> to emit listeners anyway.</div>
+</div>
+
+<div class="section">
+  <h2>Feedback loop and interactive mode</h2>
+  <ul>
+    <li>Minion namespaces are extracted (<code>jq -r '.pairs[].minion.namespace'</code>) and
+        fed back to Step 0b for per-namespace preflight status.</li>
+    <li>Invoked without a module path, the skill prints a numbered list of detected
+        migration units and lets the user pick one.</li>
+    <li>The full pair report is stored as-is in <code>state.yaml.topology</code>.</li>
+  </ul>
+</div>
+</body>
+</html>

@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Three-section plan — traefik-controller-decommission</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, -apple-system, "Segoe UI", Inter, sans-serif; background: #F3F4F6; color: #1E293B; min-height: 100vh; padding: 2rem 1rem 4rem; }
+  .back-link { display: inline-flex; align-items: center; gap: 0.4rem; color: #0052CC; font-size: 0.82rem; font-weight: 600; text-decoration: none; margin-bottom: 2rem; padding: 0.4rem 0.75rem; border-radius: 6px; border: 1.5px solid #BFDBFE; background: #EFF6FF; transition: background 0.15s; }
+  .back-link:hover { background: #DBEAFE; }
+  .breadcrumb { font-size: 0.72rem; color: #94A3B8; margin-bottom: 0.5rem; }
+  .breadcrumb a { color: #0052CC; text-decoration: none; }
+  .page-header { margin-bottom: 2rem; }
+  .page-header h1 { font-size: 1.5rem; font-weight: 700; color: #0052CC; margin-bottom: 0.4rem; }
+  .page-header p { font-size: 0.9rem; color: #475569; max-width: 680px; line-height: 1.6; }
+  .gate-badge { display: inline-block; font-size: 0.72rem; font-weight: 700; padding: 0.15rem 0.6rem; border-radius: 20px; background: #EFF6FF; color: #1E40AF; border: 1px solid #BFDBFE; margin-bottom: 0.75rem; }
+  .section { background: #fff; border: 1.5px solid #E2E8F0; border-radius: 12px; padding: 1.25rem 1.5rem; margin-bottom: 1.25rem; max-width: 760px; box-shadow: 0 2px 8px rgba(0,82,204,0.07); }
+  .section h2 { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #0052CC; margin-bottom: 0.75rem; }
+  .section p { font-size: 0.85rem; color: #334155; line-height: 1.6; margin-bottom: 0.6rem; }
+  .section ul { padding-left: 1.2rem; }
+  .section li { font-size: 0.85rem; color: #334155; line-height: 1.8; }
+  pre { background: #1E293B; color: #E2E8F0; border-radius: 8px; padding: 1rem 1.25rem; font-size: 0.78rem; font-family: "SFMono-Regular", Consolas, monospace; overflow-x: auto; line-height: 1.6; margin-top: 0.75rem; }
+  .hl-key { color: #7DD3FC; }
+  .hl-val { color: #86EFAC; }
+  .hl-comment { color: #64748B; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.8rem; margin-top: 0.5rem; }
+  th { text-align: left; color: #0052CC; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; padding: 0.4rem 0.6rem; border-bottom: 2px solid #E2E8F0; }
+  td { padding: 0.5rem 0.6rem; border-bottom: 1px solid #F1F5F9; color: #334155; line-height: 1.5; }
+  .warning { background: #FEF2F2; border: 1px solid #FECACA; border-radius: 8px; padding: 0.75rem 1rem; font-size: 0.82rem; color: #7F1D1D; margin-top: 0.75rem; }
+</style>
+</head>
+<body>
+<a class="back-link" href="../diagram.html">← Back to overview</a>
+<div class="breadcrumb"><a href="../diagram.html">Overview</a> / Three-section plan</div>
+
+<div class="page-header">
+  <div class="gate-badge">Step 5 · generate_decommission_plan.sh · plan-only</div>
+  <h1>The three-section decommission plan</h1>
+  <p>The script renders <code>plan.md</code> (operator-readable) and <code>commands.sh</code>
+     (copy-paste-ready, <strong>never auto-executed</strong>). The plan is GitOps-shaped: Git is
+     the lever, ArgoCD's pruner does the deleting — <code>helm uninstall</code> never appears.</p>
+</div>
+
+<div class="section">
+  <h2>Inputs (env vars from Steps 1–2)</h2>
+  <table>
+    <tr><th>Variable</th><th>Source</th></tr>
+    <tr><td><code>NGINX_MODULE</code></td><td>Step 1 discovery, e.g. <code>common.ingress-nginx</code></td></tr>
+    <tr><td><code>ARGOCD_APP_MANIFESTS</code></td><td>Comma-separated ArgoCD app YAML paths from Step 1</td></tr>
+    <tr><td><code>NGINX_NAMESPACE</code></td><td>Destination namespace from Step 1</td></tr>
+    <tr><td><code>GCP_PROJECT</code></td><td>Step 2 input, or a <code>&lt;TODO&gt;</code> placeholder</td></tr>
+    <tr><td><code>REPORT_DIR</code></td><td>Absolute path to the report directory</td></tr>
+  </table>
+</div>
+
+<div class="section">
+  <h2>5a · Archive the Kustomize module</h2>
+  <pre><span class="hl-comment"># Make sure we're on the deployment branch</span>
+<span class="hl-key">git checkout</span> <span class="hl-val">main</span> && <span class="hl-key">git pull</span>
+
+<span class="hl-comment"># Move the entire ingress-nginx module under archive/</span>
+<span class="hl-key">git mv</span> <span class="hl-val">common.ingress-nginx/</span> <span class="hl-val">archive/</span>
+
+<span class="hl-comment"># ArgoCD sees the deleted resources and prunes them</span>
+<span class="hl-key">git commit</span> -m <span class="hl-val">"chore(ingress-nginx): archive controller module for decommission"</span>
+<span class="hl-key">git push</span></pre>
+</div>
+
+<div class="section">
+  <h2>5b · Disable + delete the ArgoCD Application</h2>
+  <p>Per environment (dev → stg → prd, or the operator's preferred order):</p>
+  <pre><span class="hl-comment"># Disable auto-sync so ArgoCD doesn't try to recreate</span>
+<span class="hl-key">kubectl patch application</span> &lt;nginx-app-name&gt; -n argocd --type merge \
+  -p <span class="hl-val">'{"spec":{"syncPolicy":{"automated":null}}}'</span>
+
+<span class="hl-comment"># Explicit prune sync — deletes Deployment, Service, RBAC,</span>
+<span class="hl-comment"># ServiceAccount, Helm Secret, etc. via ArgoCD's pruner</span>
+<span class="hl-key">kubectl patch application</span> &lt;nginx-app-name&gt; -n argocd --type merge \
+  -p <span class="hl-val">'{"operation":{"sync":{"prune":true,"force":true}}}'</span>
+
+<span class="hl-comment"># Wait for the prune, then remove the Application manifest itself</span>
+<span class="hl-key">kubectl wait application</span> &lt;nginx-app-name&gt; -n argocd \
+  --for=condition=Healthy=False --timeout=5m || true
+<span class="hl-key">kubectl delete</span> -f common.ingress-nginx/argocd/&lt;env&gt;.yaml
+
+<span class="hl-comment"># Verify zero resources remain, then optionally drop the namespace</span>
+<span class="hl-key">kubectl get all</span> -n &lt;nginx-namespace&gt;
+<span class="hl-key">kubectl delete namespace</span> &lt;nginx-namespace&gt;</pre>
+</div>
+
+<div class="section">
+  <h2>5c · Optional: LB IP release + IAM cleanup</h2>
+  <ul>
+    <li><code>gcloud compute addresses list</code>, then delete the nginx LB IP only after
+        confirming no forwarding rule still references it.</li>
+    <li>Service-account enumeration + IAM binding cleanup.</li>
+    <li>Skipped entirely with <code>--no-lb-cleanup</code>; written with
+        <code>&lt;TODO&gt;</code> placeholders when no GCP project was given.</li>
+  </ul>
+  <div class="warning">⛔ Releasing the LB IP is irreversible — that address goes back to the
+     pool. This section exists in the plan precisely so it happens last, after the prune
+     has been verified.</div>
+</div>
+</body>
+</html>

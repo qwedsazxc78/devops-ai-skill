@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inventory &amp; batch plan — nginx-to-traefik</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, -apple-system, "Segoe UI", Inter, sans-serif; background: #F3F4F6; color: #1E293B; min-height: 100vh; padding: 2rem 1rem 4rem; }
+  .back-link { display: inline-flex; align-items: center; gap: 0.4rem; color: #0052CC; font-size: 0.82rem; font-weight: 600; text-decoration: none; margin-bottom: 2rem; padding: 0.4rem 0.75rem; border-radius: 6px; border: 1.5px solid #BFDBFE; background: #EFF6FF; transition: background 0.15s; }
+  .back-link:hover { background: #DBEAFE; }
+  .breadcrumb { font-size: 0.72rem; color: #94A3B8; margin-bottom: 0.5rem; }
+  .breadcrumb a { color: #0052CC; text-decoration: none; }
+  .page-header { margin-bottom: 2rem; }
+  .page-header h1 { font-size: 1.5rem; font-weight: 700; color: #0052CC; margin-bottom: 0.4rem; }
+  .page-header p { font-size: 0.9rem; color: #475569; max-width: 680px; line-height: 1.6; }
+  .gate-badge { display: inline-block; font-size: 0.72rem; font-weight: 700; padding: 0.15rem 0.6rem; border-radius: 20px; background: #FEF2F2; color: #991B1B; border: 1px solid #FECACA; margin-bottom: 0.75rem; }
+  .section { background: #fff; border: 1.5px solid #E2E8F0; border-radius: 12px; padding: 1.25rem 1.5rem; margin-bottom: 1.25rem; max-width: 760px; box-shadow: 0 2px 8px rgba(0,82,204,0.07); }
+  .section h2 { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #0052CC; margin-bottom: 0.75rem; }
+  .section p { font-size: 0.85rem; color: #334155; line-height: 1.6; margin-bottom: 0.6rem; }
+  .section ul { padding-left: 1.2rem; }
+  .section li { font-size: 0.85rem; color: #334155; line-height: 1.8; }
+  pre { background: #1E293B; color: #E2E8F0; border-radius: 8px; padding: 1rem 1.25rem; font-size: 0.78rem; font-family: "SFMono-Regular", Consolas, monospace; overflow-x: auto; line-height: 1.6; margin-top: 0.75rem; }
+  .hl-key { color: #7DD3FC; }
+  .hl-val { color: #86EFAC; }
+  .hl-comment { color: #64748B; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.8rem; margin-top: 0.5rem; }
+  th { text-align: left; color: #0052CC; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; padding: 0.4rem 0.6rem; border-bottom: 2px solid #E2E8F0; }
+  td { padding: 0.5rem 0.6rem; border-bottom: 1px solid #F1F5F9; color: #334155; line-height: 1.5; }
+  .verdict { font-weight: 700; white-space: nowrap; }
+  .verdict.abort { color: #DC2626; }
+  .verdict.ok { color: #16A34A; }
+  .warning { background: #FEF2F2; border: 1px solid #FECACA; border-radius: 8px; padding: 0.75rem 1rem; font-size: 0.82rem; color: #7F1D1D; margin-top: 0.75rem; }
+</style>
+</head>
+<body>
+<a class="back-link" href="../diagram.html">← Back to overview</a>
+<div class="breadcrumb"><a href="../diagram.html">Overview</a> / Inventory &amp; batch plan</div>
+
+<div class="page-header">
+  <div class="gate-badge">Steps 1–2 · 2 halt gates</div>
+  <h1>Inventory &amp; batch plan</h1>
+  <p>Discovery is deterministic script work, not LLM guessing: a bundled Python script
+     walks one env overlay and the operator approves an explicit batch plan before any
+     file is generated or moved.</p>
+</div>
+
+<div class="section">
+  <h2>Step 1 · Per-overlay nginx inventory</h2>
+  <pre><span class="hl-key">inventory_nginx_ingresses.py</span> --overlay-dir <span class="hl-val">common.service/overlays/&lt;env&gt;</span>
+<span class="hl-comment"># filter: ingressClass == "nginx" only</span>
+<span class="hl-comment"># result written to state.yaml.inventory[]</span>
+<span class="hl-comment"># HALT if zero nginx Ingresses found — nothing to migrate</span></pre>
+  <p>Each inventory entry captures the source file, Ingress name, namespace, and hosts:</p>
+  <pre><span class="hl-key">inventory:</span>
+  - { <span class="hl-key">file:</span> <span class="hl-val">argocd-nginx-ingress.yaml</span>, <span class="hl-key">name:</span> <span class="hl-val">argocd-server</span>,
+      <span class="hl-key">namespace:</span> <span class="hl-val">argocd</span>, <span class="hl-key">hosts:</span> [<span class="hl-val">argocd.dev.example.com</span>] }</pre>
+</div>
+
+<div class="section">
+  <h2>Step 2 · Batch plan + y/N confirmation</h2>
+  <p>Inventory entries are grouped by <strong>host TLD + service criticality</strong>
+     into default batches:</p>
+  <table>
+    <tr><th>Batch</th><th>Contents</th><th>Rationale</th></tr>
+    <tr><td><code>b1</code></td><td>Read-mostly services</td><td>Lowest blast radius — migrate first</td></tr>
+    <tr><td><code>b2</code></td><td>Write-heavy services</td><td>Migrate after b1 proves the path</td></tr>
+  </table>
+  <pre><span class="hl-comment"># proposed plan is printed, then the skill waits</span>
+<span class="hl-key">batchPlan:</span>
+  <span class="hl-key">b1:</span> [<span class="hl-val">argocd-server</span>, <span class="hl-val">grafana</span>]
+Proceed with batch b1? [y/N]</pre>
+  <div class="warning">⛔ Operator declines → HALT. <code>state.yaml.verdict: HALTED</code>
+     is written with the failing step, and <code>--resume</code> re-runs from Step 2.</div>
+</div>
+
+<div class="section">
+  <h2>Invocation forms decide the scope</h2>
+  <table>
+    <tr><th>Form</th><th>Scope</th><th>Verdict path</th></tr>
+    <tr><td><code>*nginx-to-traefik</code></td><td>Interactive: inventory + propose batches</td><td class="verdict ok">✓ Full Step 1–2 flow</td></tr>
+    <tr><td><code>*nginx-to-traefik &lt;env&gt;</code></td><td>All services in one env</td><td class="verdict ok">✓ Full Step 1–2 flow</td></tr>
+    <tr><td><code>*nginx-to-traefik &lt;env&gt; &lt;batch&gt;</code></td><td>Named batch (b1 | b2)</td><td class="verdict ok">✓ Confirm that batch</td></tr>
+    <tr><td><code>*nginx-to-traefik &lt;env&gt; &lt;service&gt;</code></td><td>Single service</td><td class="verdict ok">✓ Confirm one entry</td></tr>
+    <tr><td><code>*nginx-to-traefik --resume</code></td><td>Continue from state.yaml</td><td class="verdict abort">↻ Re-runs failed step</td></tr>
+  </table>
+</div>
+</body>
+</html>

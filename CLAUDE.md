@@ -45,4 +45,5 @@ On session start:
 | *ingress-migration-advisor | `prompts/zeus/ingress-migration-advisor.md` |
 | *install-traefik | `prompts/zeus/install-traefik.md` |
 | *decommission-nginx | `prompts/zeus/decommission-nginx.md` |
+| *retire-nginx | `prompts/zeus/retire-nginx.md` |
 | *migration-quickstart | `prompts/zeus/migration-quickstart.md` |

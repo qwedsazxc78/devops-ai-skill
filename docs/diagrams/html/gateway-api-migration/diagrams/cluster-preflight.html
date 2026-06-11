@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cluster preflight — gateway-api-migration</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, -apple-system, "Segoe UI", Inter, sans-serif; background: #F3F4F6; color: #1E293B; min-height: 100vh; padding: 2rem 1rem 4rem; }
+  .back-link { display: inline-flex; align-items: center; gap: 0.4rem; color: #0052CC; font-size: 0.82rem; font-weight: 600; text-decoration: none; margin-bottom: 2rem; padding: 0.4rem 0.75rem; border-radius: 6px; border: 1.5px solid #BFDBFE; background: #EFF6FF; transition: background 0.15s; }
+  .back-link:hover { background: #DBEAFE; }
+  .breadcrumb { font-size: 0.72rem; color: #94A3B8; margin-bottom: 0.5rem; }
+  .breadcrumb a { color: #0052CC; text-decoration: none; }
+  .page-header { margin-bottom: 2rem; }
+  .page-header h1 { font-size: 1.5rem; font-weight: 700; color: #0052CC; margin-bottom: 0.4rem; }
+  .page-header p { font-size: 0.9rem; color: #475569; max-width: 680px; line-height: 1.6; }
+  .gate-badge { display: inline-block; font-size: 0.72rem; font-weight: 700; padding: 0.15rem 0.6rem; border-radius: 20px; background: #FEF2F2; color: #991B1B; border: 1px solid #FECACA; margin-bottom: 0.75rem; }
+  .section { background: #fff; border: 1.5px solid #E2E8F0; border-radius: 12px; padding: 1.25rem 1.5rem; margin-bottom: 1.25rem; max-width: 760px; box-shadow: 0 2px 8px rgba(0,82,204,0.07); }
+  .section h2 { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #0052CC; margin-bottom: 0.75rem; }
+  .section p { font-size: 0.85rem; color: #334155; line-height: 1.6; margin-bottom: 0.6rem; }
+  .section ul { padding-left: 1.2rem; }
+  .section li { font-size: 0.85rem; color: #334155; line-height: 1.8; }
+  pre { background: #1E293B; color: #E2E8F0; border-radius: 8px; padding: 1rem 1.25rem; font-size: 0.78rem; font-family: "SFMono-Regular", Consolas, monospace; overflow-x: auto; line-height: 1.6; margin-top: 0.75rem; }
+  .hl-key { color: #7DD3FC; }
+  .hl-val { color: #86EFAC; }
+  .hl-comment { color: #64748B; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.8rem; margin-top: 0.5rem; }
+  th { text-align: left; color: #0052CC; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; padding: 0.4rem 0.6rem; border-bottom: 2px solid #E2E8F0; }
+  td { padding: 0.5rem 0.6rem; border-bottom: 1px solid #F1F5F9; color: #334155; line-height: 1.5; }
+  .verdict { font-weight: 700; white-space: nowrap; }
+  .verdict.abort { color: #DC2626; }
+  .verdict.warn { color: #D97706; }
+  .verdict.ok { color: #16A34A; }
+  .warning { background: #FEF2F2; border: 1px solid #FECACA; border-radius: 8px; padding: 0.75rem 1rem; font-size: 0.82rem; color: #7F1D1D; margin-top: 0.75rem; }
+</style>
+</head>
+<body>
+<a class="back-link" href="../diagram.html">← Back to overview</a>
+<div class="breadcrumb"><a href="../diagram.html">Overview</a> / Cluster preflight</div>
+
+<div class="page-header">
+  <div class="gate-badge">Step 0b · halts[] → stop before any file is written</div>
+  <h1>Cluster preflight</h1>
+  <p>This is the step that fails real migrations before they start — missing GatewayClass,
+     wrong CRD version, policy CRDs absent. Fully delegated to
+     <code>scripts/check_cluster_preflight.sh</code>, which embodies
+     <code>references/preflight-checks.md</code> and emits structured JSON.</p>
+</div>
+
+<div class="section">
+  <h2>Invocation — coarse first, per-namespace after Step 1</h2>
+  <p>On first invocation (no state.yaml yet) the script runs <strong>without</strong>
+     <code>--namespaces</code> as a coarse check. After Step 1 discovers the target
+     namespaces, it re-runs with the discovered list to record per-namespace status:</p>
+  <pre><span class="hl-key">bash</span> scripts/check_cluster_preflight.sh \
+  <span class="hl-key">--namespaces</span> <span class="hl-val">"&lt;space-separated-target-namespaces-from-step-1&gt;"</span>
+<span class="hl-comment"># exit 0 = success (possibly with WARNs) · exit 2 = any halt</span>
+<span class="hl-comment"># full JSON stdout written verbatim to state.yaml.environment.cluster</span></pre>
+</div>
+
+<div class="section">
+  <h2>What it checks</h2>
+  <ul>
+    <li><strong>kubectl reachability</strong> and cluster access</li>
+    <li><strong>Gateway API CRDs</strong> installed at a usable version</li>
+    <li><strong>GatewayClass existence</strong> — checks 3 and 4 are parameterized on
+        <code>--gateway-class</code> (default <code>traefik</code>)</li>
+    <li><strong>Policy CRDs</strong> — e.g. <code>gcpbackendpolicies</code> for GKE targets</li>
+    <li><strong>Traefik version probe</strong> on <code>traefik*</code> targets</li>
+    <li><strong>Target namespaces</strong> (when passed via <code>--namespaces</code>)</li>
+  </ul>
+</div>
+
+<div class="section">
+  <h2>Result handling</h2>
+  <table>
+    <tr><th>JSON field</th><th>Verdict</th><th>Behaviour</th></tr>
+    <tr><td><code>halts[]</code> non-empty</td><td class="verdict abort">⛔ HALT</td><td>Print the exact halt messages from the JSON. No recovery attempt — fix the cluster and re-run (not <code>--resume</code>).</td></tr>
+    <tr><td><code>warnings[]</code> non-empty</td><td class="verdict warn">⚠ Continue</td><td>Each warning becomes a risk register entry (report Section 9), severity S2 by default.</td></tr>
+    <tr><td>clean</td><td class="verdict ok">✓ Proceed</td><td>Continue to Step 1.</td></tr>
+  </table>
+  <div class="warning">⚠ A warning is promoted to <strong>S1</strong> when the migration actually
+     needs the missing CRD — e.g. the source Ingress has CORS annotations and
+     <code>policyCRDs.gcpbackendpolicies: false</code>.</div>
+</div>
+
+<div class="section">
+  <h2>Escape hatches</h2>
+  <pre><span class="hl-key">bash</span> scripts/check_cluster_preflight.sh <span class="hl-key">--offline</span>
+<span class="hl-comment"># emits a stub JSON; report header flags the run as offline-verified</span>
+
+<span class="hl-key">bash</span> scripts/check_cluster_preflight.sh <span class="hl-key">--skip-check</span> <span class="hl-val">4</span>
+<span class="hl-comment"># bypasses the GKE policy CRD check (user flag: --skip-preflight 4)</span>
+<span class="hl-comment"># every skip is recorded in state.yaml.environment.cluster.skippedChecks[]</span></pre>
+</div>
+</body>
+</html>

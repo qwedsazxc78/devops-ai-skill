@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dual cluster + repo scan — traefik-controller-decommission</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, -apple-system, "Segoe UI", Inter, sans-serif; background: #F3F4F6; color: #1E293B; min-height: 100vh; padding: 2rem 1rem 4rem; }
+  .back-link { display: inline-flex; align-items: center; gap: 0.4rem; color: #0052CC; font-size: 0.82rem; font-weight: 600; text-decoration: none; margin-bottom: 2rem; padding: 0.4rem 0.75rem; border-radius: 6px; border: 1.5px solid #BFDBFE; background: #EFF6FF; transition: background 0.15s; }
+  .back-link:hover { background: #DBEAFE; }
+  .breadcrumb { font-size: 0.72rem; color: #94A3B8; margin-bottom: 0.5rem; }
+  .breadcrumb a { color: #0052CC; text-decoration: none; }
+  .page-header { margin-bottom: 2rem; }
+  .page-header h1 { font-size: 1.5rem; font-weight: 700; color: #0052CC; margin-bottom: 0.4rem; }
+  .page-header p { font-size: 0.9rem; color: #475569; max-width: 680px; line-height: 1.6; }
+  .gate-badge { display: inline-block; font-size: 0.72rem; font-weight: 700; padding: 0.15rem 0.6rem; border-radius: 20px; background: #FEF2F2; color: #991B1B; border: 1px solid #FECACA; margin-bottom: 0.75rem; }
+  .section { background: #fff; border: 1.5px solid #E2E8F0; border-radius: 12px; padding: 1.25rem 1.5rem; margin-bottom: 1.25rem; max-width: 760px; box-shadow: 0 2px 8px rgba(0,82,204,0.07); }
+  .section h2 { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #0052CC; margin-bottom: 0.75rem; }
+  .section p { font-size: 0.85rem; color: #334155; line-height: 1.6; margin-bottom: 0.6rem; }
+  .section ul { padding-left: 1.2rem; }
+  .section li { font-size: 0.85rem; color: #334155; line-height: 1.8; }
+  pre { background: #1E293B; color: #E2E8F0; border-radius: 8px; padding: 1rem 1.25rem; font-size: 0.78rem; font-family: "SFMono-Regular", Consolas, monospace; overflow-x: auto; line-height: 1.6; margin-top: 0.75rem; }
+  .hl-key { color: #7DD3FC; }
+  .hl-val { color: #86EFAC; }
+  .hl-comment { color: #64748B; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.8rem; margin-top: 0.5rem; }
+  th { text-align: left; color: #0052CC; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; padding: 0.4rem 0.6rem; border-bottom: 2px solid #E2E8F0; }
+  td { padding: 0.5rem 0.6rem; border-bottom: 1px solid #F1F5F9; color: #334155; line-height: 1.5; }
+  .verdict { font-weight: 700; white-space: nowrap; }
+  .verdict.abort { color: #DC2626; }
+  .verdict.warn { color: #D97706; }
+  .verdict.ok { color: #16A34A; }
+  .warning { background: #FEF2F2; border: 1px solid #FECACA; border-radius: 8px; padding: 0.75rem 1rem; font-size: 0.82rem; color: #7F1D1D; margin-top: 0.75rem; }
+</style>
+</head>
+<body>
+<a class="back-link" href="../diagram.html">← Back to overview</a>
+<div class="breadcrumb"><a href="../diagram.html">Overview</a> / Dual cluster + repo scan</div>
+
+<div class="page-header">
+  <div class="gate-badge">Step 3 · Gate · verify_no_nginx_class.sh --all</div>
+  <h1>Dual cluster + repo scan</h1>
+  <p>One scan is not enough: the cluster shows what is <strong>live right now</strong>, the repo
+     shows what ArgoCD will <strong>reconcile back</strong>. Both must be clean of nginx-class
+     Ingresses before any decommission plan is generated.</p>
+</div>
+
+<div class="section">
+  <h2>Scan 1 · Live cluster</h2>
+  <pre><span class="hl-key">kubectl get ingress</span> <span class="hl-val">-A</span>
+<span class="hl-comment"># every Ingress checked against the precedence-aware rule</span>
+<span class="hl-comment"># kubectl missing → scan skipped, WARN records a degraded state</span></pre>
+  <p>The cluster scan catches stale, hand-applied, or drifted Ingresses that exist in the
+     cluster but not in Git.</p>
+</div>
+
+<div class="section">
+  <h2>Scan 2 · Repo (rendered, not grepped)</h2>
+  <pre><span class="hl-comment"># for every module overlay:</span>
+<span class="hl-key">kustomize build</span> common.*/overlays/&lt;env&gt;/
+<span class="hl-comment"># extract Ingresses where</span>
+<span class="hl-key">spec.ingressClassName</span> == <span class="hl-val">"nginx"</span>
+<span class="hl-comment">#   OR (spec.ingressClassName == null</span>
+<span class="hl-comment">#       AND kubernetes.io/ingress.class == "nginx")</span></pre>
+  <p>Rendering every overlay means patches, name prefixes, and generators are all applied
+     before the check — the same manifests ArgoCD would sync.</p>
+</div>
+
+<div class="section">
+  <h2>Exit codes</h2>
+  <table>
+    <tr><th>Exit</th><th>Meaning</th><th>Effect</th></tr>
+    <tr><td><code>0</code></td><td class="verdict ok">✓ PASS</td><td>Both scans clean — pipeline proceeds to the DNS bake gate</td></tr>
+    <tr><td><code>1</code></td><td class="verdict abort">⛔ BLOCKED</td><td>At least one nginx Ingress still active — HALT with the offending list; <code>commands.sh</code> NOT written</td></tr>
+    <tr><td><code>2</code></td><td class="verdict warn">⚠ DEGRADED</td><td>At least one scan could not run (e.g. no kubectl) — recorded in the verdict</td></tr>
+  </table>
+  <div class="warning">⛔ On BLOCKED, the operator either re-migrates the leftover service or
+     deletes the stale Ingress before retrying. The skill never deletes it for them.</div>
+</div>
+</body>
+</html>

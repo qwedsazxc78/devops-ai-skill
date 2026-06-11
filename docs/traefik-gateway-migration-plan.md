@@ -1,9 +1,13 @@
 # Plan: Retarget `*gateway-migrate` to Traefik + Gateway API (dual-target)
 
-**Status:** Draft — pending review
+**Status:** ✅ Implemented & migration arc completed — dual-target shipped in v1.7.0;
+the reference deployment (`eye-of-horus-gitops` dev + stg + prd) finished the journey
+and **retired the nginx ingress controller on 2026-06-05** (CTS-9828) via the
+`nginx-ingress-retire` skill (v1.17.0). Kept for historical context.
 **Author:** Claude (opus-4.6) for @qwedsazxc78
-**Created:** 2026-04-14
-**Related:** `skills/gateway-api-migration/SKILL.md` v1.1.0 (current GKE default)
+**Created:** 2026-04-14 · **Closed:** 2026-06-11
+**Related:** `skills/gateway-api-migration/SKILL.md` (dual-target),
+`skills/nginx-ingress-retire/SKILL.md` (final cleanup step)
 
 ---
 

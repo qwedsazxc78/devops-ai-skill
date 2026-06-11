@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ingress-tier-map.yaml — ingress-migration-advisor</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, -apple-system, "Segoe UI", Inter, sans-serif; background: #F3F4F6; color: #1E293B; min-height: 100vh; padding: 2rem 1rem 4rem; }
+  .back-link { display: inline-flex; align-items: center; gap: 0.4rem; color: #0052CC; font-size: 0.82rem; font-weight: 600; text-decoration: none; margin-bottom: 2rem; padding: 0.4rem 0.75rem; border-radius: 6px; border: 1.5px solid #BFDBFE; background: #EFF6FF; transition: background 0.15s; }
+  .back-link:hover { background: #DBEAFE; }
+  .breadcrumb { font-size: 0.72rem; color: #94A3B8; margin-bottom: 0.5rem; }
+  .breadcrumb a { color: #0052CC; text-decoration: none; }
+  .page-header { margin-bottom: 2rem; }
+  .page-header h1 { font-size: 1.5rem; font-weight: 700; color: #0052CC; margin-bottom: 0.4rem; }
+  .page-header p { font-size: 0.9rem; color: #475569; max-width: 680px; line-height: 1.6; }
+  .gate-badge { display: inline-block; font-size: 0.72rem; font-weight: 700; padding: 0.15rem 0.6rem; border-radius: 20px; background: #FEF2F2; color: #991B1B; border: 1px solid #FECACA; margin-bottom: 0.75rem; }
+  .section { background: #fff; border: 1.5px solid #E2E8F0; border-radius: 12px; padding: 1.25rem 1.5rem; margin-bottom: 1.25rem; max-width: 760px; box-shadow: 0 2px 8px rgba(0,82,204,0.07); }
+  .section h2 { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #0052CC; margin-bottom: 0.75rem; }
+  .section p { font-size: 0.85rem; color: #334155; line-height: 1.6; margin-bottom: 0.6rem; }
+  .section ul { padding-left: 1.2rem; }
+  .section li { font-size: 0.85rem; color: #334155; line-height: 1.8; }
+  pre { background: #1E293B; color: #E2E8F0; border-radius: 8px; padding: 1rem 1.25rem; font-size: 0.78rem; font-family: "SFMono-Regular", Consolas, monospace; overflow-x: auto; line-height: 1.6; margin-top: 0.75rem; }
+  .hl-key { color: #7DD3FC; }
+  .hl-val { color: #86EFAC; }
+  .hl-comment { color: #64748B; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.8rem; margin-top: 0.5rem; }
+  th { text-align: left; color: #0052CC; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; padding: 0.4rem 0.6rem; border-bottom: 2px solid #E2E8F0; }
+  td { padding: 0.5rem 0.6rem; border-bottom: 1px solid #F1F5F9; color: #334155; line-height: 1.5; }
+  td code { background: #F1F5F9; padding: 0.05rem 0.3rem; border-radius: 4px; font-size: 0.75rem; font-family: "SFMono-Regular", Consolas, monospace; }
+  .verdict { font-weight: 700; white-space: nowrap; }
+  .verdict.abort { color: #DC2626; }
+  .verdict.warn { color: #D97706; }
+  .verdict.ok { color: #16A34A; }
+  .warning { background: #FEF2F2; border: 1px solid #FECACA; border-radius: 8px; padding: 0.75rem 1rem; font-size: 0.82rem; color: #7F1D1D; margin-top: 0.75rem; }
+</style>
+</head>
+<body>
+<a class="back-link" href="../diagram.html">← Back to overview</a>
+<div class="breadcrumb"><a href="../diagram.html">Overview</a> / ingress-tier-map.yaml</div>
+
+<div class="page-header">
+  <div class="gate-badge">Step 0b · Required input — HALT if missing</div>
+  <h1>docs/ingress-tier-map.yaml</h1>
+  <p>The advisor <strong>requires an explicit tier map</strong> in the consumer repo so critical
+     services are never auto-scheduled. It lives next to <code>docs/PROJECT.md</code> and is
+     reviewed via PR like any policy change — the tier map is the one source of truth for the
+     critical-tier veto.</p>
+</div>
+
+<div class="section">
+  <h2>File format</h2>
+  <pre><span class="hl-comment"># docs/ingress-tier-map.yaml — sibling of docs/PROJECT.md</span>
+<span class="hl-key">schemaVersion:</span> <span class="hl-val">1</span>
+<span class="hl-key">services:</span>
+  <span class="hl-key">argocd-server:</span>   <span class="hl-val">critical</span>
+  <span class="hl-key">harbor:</span>          <span class="hl-val">critical</span>
+  <span class="hl-key">grafana:</span>         <span class="hl-val">standard</span>
+  <span class="hl-key">kibana:</span>          <span class="hl-val">standard</span>
+  <span class="hl-key">chartmuseum:</span>     <span class="hl-val">standard</span>
+  <span class="hl-key">mlflow:</span>          <span class="hl-val">low</span>
+  <span class="hl-key">registry-mirror:</span> <span class="hl-val">low</span>
+<span class="hl-comment"># Services not listed default to "standard" with a WARN.</span></pre>
+</div>
+
+<div class="section">
+  <h2>Valid tier values</h2>
+  <table>
+    <tr><th>Tier</th><th>Effect on the advisor</th></tr>
+    <tr><td><code>critical</code></td><td>Vetoed — forced to <code>defer</code>; never scored, never batched</td></tr>
+    <tr><td><code>standard</code></td><td>Traffic-tier dimension scores 2 (also the default for unlisted services)</td></tr>
+    <tr><td><code>low</code></td><td>Traffic-tier dimension scores 1; low-tier services sort first in batches</td></tr>
+    <tr><td><em>anything else</em></td><td class="verdict abort">⛔ HALT at Step 0b — validation error, regardless of --strict-tier-map</td></tr>
+  </table>
+</div>
+
+<div class="section">
+  <h2>Validation matrix at Step 0b</h2>
+  <table>
+    <tr><th>Condition</th><th>Default</th><th>With --strict-tier-map</th></tr>
+    <tr><td>File missing entirely</td><td class="verdict abort">⛔ HALT</td><td class="verdict abort">⛔ HALT</td></tr>
+    <tr><td>Map entry not present in inventory (orphan)</td><td class="verdict warn">⚠ WARN</td><td class="verdict abort">⛔ HALT</td></tr>
+    <tr><td>Inventory service missing from map</td><td class="verdict warn">⚠ defaults to <code>standard</code> + per-service WARN</td><td class="verdict warn">⚠ same</td></tr>
+    <tr><td>Invalid tier value</td><td class="verdict abort">⛔ HALT</td><td class="verdict abort">⛔ HALT</td></tr>
+  </table>
+  <pre><span class="hl-comment"># HALT message when the file is missing</span>
+docs/ingress-tier-map.yaml not found. The advisor requires an explicit
+tier map so critical services are never auto-scheduled. Create the file
+with the format documented at the bottom of this SKILL.md, then re-run.</pre>
+</div>
+
+<div class="section">
+  <h2>Why a file, not a flag</h2>
+  <ul>
+    <li>The critical-tier veto is <strong>policy, not a flag</strong> — there is no
+        <code>--force-critical</code> bypass.</li>
+    <li>To migrate a critical service in a given cycle, the team PRs the tier map first;
+        the change is reviewed like any other policy change.</li>
+    <li>The map is persisted into <code>state.yaml.inputs.tierMap</code> so every plan
+        records exactly which policy it was generated under.</li>
+  </ul>
+  <div class="warning">⚠ Plans age: each run snapshots the tier map at that point in time.
+     <code>--resume</code> does not re-read the map — re-run from scratch after a tier change.</div>
+</div>
+</body>
+</html>

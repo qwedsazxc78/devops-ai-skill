@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>nginx-to-traefik — Class-Swap Migration to Traefik Ingress</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", Inter, sans-serif;
+    background: #F3F4F6;
+    color: #1E293B;
+    min-height: 100vh;
+    padding: 2rem 1rem 4rem;
+  }
+  .page-header { text-align: center; margin-bottom: 2.5rem; }
+  .page-header h1 { font-size: 1.75rem; font-weight: 700; color: #0052CC; margin-bottom: 0.5rem; }
+  .page-header p { font-size: 0.95rem; color: #64748B; max-width: 720px; margin: 0 auto; }
+  .pipeline-label { display: inline-block; background: #0052CC; color: #fff; font-size: 0.7rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; padding: 0.2rem 0.6rem; border-radius: 4px; margin-top: 0.75rem; }
+  .section-title { text-align: center; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #94A3B8; margin: 0 auto 1.5rem; max-width: 1100px; }
+
+  /* Step flow */
+  .steps-row {
+    display: flex;
+    align-items: stretch;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0;
+    max-width: 1180px;
+    margin: 0 auto 2.5rem;
+  }
+  .step-card {
+    background: #fff;
+    border: 2px solid #E2E8F0;
+    border-radius: 12px;
+    padding: 1rem 0.9rem;
+    width: 205px;
+    box-shadow: 0 2px 8px rgba(0,82,204,0.07);
+    text-align: center;
+  }
+  .step-card.gate { border-color: #DC2626; }
+  .step-card.exec { border-color: #2563EB; }
+  .step-card.done { border-color: #16A34A; }
+  .step-num { font-size: 0.65rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #0052CC; margin-bottom: 0.25rem; }
+  .step-num.gate { color: #DC2626; }
+  .step-num.done { color: #16A34A; }
+  .step-name { font-size: 0.85rem; font-weight: 700; color: #0F172A; margin-bottom: 0.35rem; }
+  .step-desc { font-size: 0.71rem; color: #64748B; line-height: 1.45; }
+  .transition { display: flex; align-items: center; padding: 0 0.1rem; flex-shrink: 0; }
+  .t-arrow svg { display: block; }
+
+  /* Drill-down cards */
+  .commands-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 1rem;
+    max-width: 1020px;
+    margin: 0 auto 2rem;
+  }
+  a.cmd-card {
+    display: block; text-decoration: none; color: inherit;
+    background: #fff;
+    border: 1.5px solid #E2E8F0;
+    border-radius: 12px;
+    padding: 1.1rem 1rem;
+    box-shadow: 0 2px 8px rgba(0,82,204,0.07);
+    transition: box-shadow 0.18s, border-color 0.18s, transform 0.18s;
+    cursor: pointer;
+  }
+  a.cmd-card:hover {
+    box-shadow: 0 6px 24px rgba(0,82,204,0.18);
+    border-color: #0052CC;
+    transform: translateY(-2px);
+  }
+  .cmd-card-label { font-size: 0.65rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #0052CC; margin-bottom: 0.3rem; }
+  a.cmd-card h3 { font-size: 0.88rem; font-weight: 700; color: #0F172A; margin-bottom: 0.4rem; font-family: "SFMono-Regular", Consolas, monospace; }
+  a.cmd-card p { font-size: 0.76rem; color: #475569; line-height: 1.5; }
+  .cmd-card-hint { font-size: 0.7rem; color: #0052CC; font-weight: 600; text-align: right; display: block; margin-top: 0.5rem; }
+  .gate-badge {
+    display: inline-block; font-size: 0.65rem; font-weight: 700;
+    padding: 0.1rem 0.4rem; border-radius: 4px; margin-bottom: 0.4rem;
+    background: #FEF2F2; color: #991B1B; border: 1px solid #FECACA;
+  }
+  .gate-badge.blue { background: #EFF6FF; color: #1E40AF; border-color: #BFDBFE; }
+  .gate-badge.green { background: #DCFCE7; color: #14532D; border-color: #86EFAC; }
+
+  /* Usage strip */
+  .usage { background: #1E293B; color: #E2E8F0; border-radius: 12px; padding: 1rem 1.5rem; max-width: 680px; margin: 0 auto 2.5rem; font-family: "SFMono-Regular", Consolas, monospace; font-size: 0.8rem; line-height: 1.9; box-shadow: 0 2px 8px rgba(0,82,204,0.15); }
+  .usage .cmd { color: #7DD3FC; }
+  .usage .comment { color: #64748B; }
+
+  /* Checklist */
+  .checklist { background: #fff; border: 1.5px solid #E2E8F0; border-radius: 12px; padding: 1.25rem 1.5rem; max-width: 740px; margin: 0 auto 2rem; box-shadow: 0 2px 8px rgba(0,82,204,0.06); }
+  .checklist h2 { font-size: 0.8rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #0052CC; margin-bottom: 0.75rem; }
+  .checklist ul { list-style: none; display: flex; flex-wrap: wrap; gap: 0.5rem 1.5rem; }
+  .checklist li { font-size: 0.82rem; color: #334155; display: flex; align-items: center; gap: 0.4rem; }
+  .checklist li::before { content: "✓"; color: #16A34A; font-weight: 700; font-size: 0.9rem; }
+  .cmd-legend { background: #EFF6FF; border: 1px solid #BFDBFE; border-radius: 8px; padding: 0.75rem 1rem; max-width: 740px; margin: 0 auto; font-size: 0.78rem; color: #1E40AF; text-align: center; }
+  .cmd-legend code { background: #0052CC; color: #fff; padding: 0.1rem 0.4rem; border-radius: 4px; font-size: 0.72rem; font-family: "SFMono-Regular", Consolas, monospace; margin: 0 0.1rem; }
+</style>
+</head>
+<body>
+<div class="page-header">
+  <h1>nginx-to-traefik</h1>
+  <p>Class-swap migration: port a batch of services from NGINX Ingress to Traefik Ingress
+     (<code>ingressClassName: traefik</code>) while <strong>both controllers keep running
+     in parallel</strong>. DNS A-records are the only cutover lever. First half of the
+     chained NGINX → Traefik → Gateway API migration — its <code>state.yaml</code> output
+     feeds <code>gateway-api-migration --source-class traefik</code>.</p>
+  <span class="pipeline-label">devops:zeus · *nginx-to-traefik · detailed</span>
+</div>
+
+<div class="section-title">Thirteen-step pipeline (0 → 10) — red borders are halt gates</div>
+
+<div class="steps-row">
+  <div class="step-card gate">
+    <div class="step-num gate">Step 0 / 0b · Gate</div>
+    <div class="step-name">Tools + env-config</div>
+    <div class="step-desc">command -v kustomize yq git. Then prompt operator for Traefik + nginx LB IPs — never derived from the cluster.</div>
+  </div>
+  <div class="transition"><div class="t-arrow"><svg width="30" height="20" viewBox="0 0 30 20"><line x1="0" y1="10" x2="22" y2="10" stroke="#DC2626" stroke-width="2"/><polygon points="20,5 30,10 20,15" fill="#DC2626"/></svg></div></div>
+  <div class="step-card gate">
+    <div class="step-num gate">Step 1 · Gate</div>
+    <div class="step-name">Inventory</div>
+    <div class="step-desc">inventory_nginx_ingresses.py per env overlay, filtered to ingressClass == nginx. Halt if zero found.</div>
+  </div>
+  <div class="transition"><div class="t-arrow"><svg width="30" height="20" viewBox="0 0 30 20"><line x1="0" y1="10" x2="22" y2="10" stroke="#DC2626" stroke-width="2"/><polygon points="20,5 30,10 20,15" fill="#DC2626"/></svg></div></div>
+  <div class="step-card gate">
+    <div class="step-num gate">Step 2 · Gate</div>
+    <div class="step-name">Batch plan + y/N</div>
+    <div class="step-desc">Group by host TLD + criticality. b1 = read-mostly, b2 = write-heavy. Halt on operator decline.</div>
+  </div>
+  <div class="transition"><div class="t-arrow"><svg width="30" height="20" viewBox="0 0 30 20"><line x1="0" y1="10" x2="22" y2="10" stroke="#94A3B8" stroke-width="2"/><polygon points="20,5 30,10 20,15" fill="#94A3B8"/></svg></div></div>
+  <div class="step-card exec">
+    <div class="step-num">Step 3</div>
+    <div class="step-name">Generate Traefik Ingress</div>
+    <div class="step-desc">generate_traefik_ingress.py emits &lt;service&gt;-traefik-ingress.yaml. WARNs + SHA256 recorded in state.yaml.</div>
+  </div>
+  <div class="transition"><div class="t-arrow"><svg width="30" height="20" viewBox="0 0 30 20"><line x1="0" y1="10" x2="22" y2="10" stroke="#2563EB" stroke-width="2"/><polygon points="20,5 30,10 20,15" fill="#2563EB"/></svg></div></div>
+  <div class="step-card exec">
+    <div class="step-num">Step 4</div>
+    <div class="step-name">Archive nginx file</div>
+    <div class="step-desc">git mv &lt;service&gt;-nginx-ingress.yaml → archive/ (never deleted). Pre-edit path saved to state.yaml.backups[].</div>
+  </div>
+</div>
+
+<div class="steps-row">
+  <div class="step-card exec">
+    <div class="step-num">Step 5 + 6</div>
+    <div class="step-name">Kustomization + cert edits</div>
+    <div class="step-desc">Add Traefik file to resources:, drop nginx from patches:. Add hosts to common.traefik app.ingress.yaml managed cert.</div>
+  </div>
+  <div class="transition"><div class="t-arrow"><svg width="30" height="20" viewBox="0 0 30 20"><line x1="0" y1="10" x2="22" y2="10" stroke="#94A3B8" stroke-width="2"/><polygon points="20,5 30,10 20,15" fill="#94A3B8"/></svg></div></div>
+  <div class="step-card gate">
+    <div class="step-num gate">Step 7 / 7b · Gate</div>
+    <div class="step-name">Build + consistency</div>
+    <div class="step-desc">kustomize build both modules; failure rolls back steps 4–6 via git restore. Then 4-way DNS↔verify↔ingress↔cert check.</div>
+  </div>
+  <div class="transition"><div class="t-arrow"><svg width="30" height="20" viewBox="0 0 30 20"><line x1="0" y1="10" x2="22" y2="10" stroke="#DC2626" stroke-width="2"/><polygon points="20,5 30,10 20,15" fill="#DC2626"/></svg></div></div>
+  <div class="step-card exec">
+    <div class="step-num">Step 8 + 9</div>
+    <div class="step-name">DNS + verify scripts</div>
+    <div class="step-desc">Append hosts to HOSTS_&lt;ENV&gt;_&lt;BATCH&gt; in dns-create-traefik.sh and URLs to verify-traefik-&lt;env&gt;.sh (idempotent).</div>
+  </div>
+  <div class="transition"><div class="t-arrow"><svg width="30" height="20" viewBox="0 0 30 20"><line x1="0" y1="10" x2="22" y2="10" stroke="#16A34A" stroke-width="2"/><polygon points="20,5 30,10 20,15" fill="#16A34A"/></svg></div></div>
+  <div class="step-card done">
+    <div class="step-num done">Step 10</div>
+    <div class="step-name">Commit msg + runbook</div>
+    <div class="step-desc">Print file list + Conventional Commits zh-TW message — never auto-commit. Point operator at dns-cutover-runbook.md.</div>
+  </div>
+</div>
+
+<div class="section-title">Usage</div>
+<div class="usage">
+  <span class="cmd">*nginx-to-traefik</span>                  <span class="comment"># interactive: inventory + propose batches</span><br>
+  <span class="cmd">*nginx-to-traefik dev</span>              <span class="comment"># process all services in one env</span><br>
+  <span class="cmd">*nginx-to-traefik dev b1</span>           <span class="comment"># named batch (b1 | b2)</span><br>
+  <span class="cmd">*nginx-to-traefik dev grafana</span>      <span class="comment"># single service</span><br>
+  <span class="cmd">*nginx-to-traefik --resume</span>         <span class="comment"># continue from state.yaml failed step</span>
+</div>
+
+<div class="section-title">Core mechanics — drill down for details</div>
+<div class="commands-grid">
+  <a class="cmd-card" href="diagrams/inventory.html">
+    <div class="gate-badge">Halt × 2</div>
+    <div class="cmd-card-label">Steps 1–2</div>
+    <h3>Inventory &amp; batch plan</h3>
+    <p>Per-overlay nginx Ingress discovery, filtered to ingressClass == nginx, grouped into b1/b2 batches. Nothing proceeds without an explicit y.</p>
+    <span class="cmd-card-hint">View details →</span>
+  </a>
+  <a class="cmd-card" href="diagrams/generation-rules.html">
+    <div class="gate-badge blue">Resources, not patches</div>
+    <div class="cmd-card-label">Steps 3 · 5 · 6</div>
+    <h3>Traefik Ingress generation</h3>
+    <p>Generated files join kustomization.resources; Service names and secretName are verbatim — Kustomize namePrefix never touches them.</p>
+    <span class="cmd-card-hint">View details →</span>
+  </a>
+  <a class="cmd-card" href="diagrams/archive-rollback.html">
+    <div class="gate-badge blue">git mv · git restore</div>
+    <div class="cmd-card-label">Steps 4 · 7 · 7b</div>
+    <h3>Archive &amp; rollback</h3>
+    <p>nginx files move to archive/ (never deleted). A failed kustomize build rolls back steps 4–6 from state.yaml.backups[].</p>
+    <span class="cmd-card-hint">View details →</span>
+  </a>
+  <a class="cmd-card" href="diagrams/dns-cutover.html">
+    <div class="gate-badge green">Only cutover lever</div>
+    <div class="cmd-card-label">Steps 0b · 8 · 9 · 10</div>
+    <h3>DNS A-record cutover</h3>
+    <p>Operator-declared LB IPs only (never read from the cluster), idempotent host/URL script edits, and the post-commit cutover runbook.</p>
+    <span class="cmd-card-hint">View details →</span>
+  </a>
+</div>
+
+<div class="checklist">
+  <h2>Run is complete when</h2>
+  <ul>
+    <li>state.yaml verdict: COMPLETE</li>
+    <li>Both kustomize builds pass</li>
+    <li>4-way consistency check clean</li>
+    <li>nginx originals safe in archive/</li>
+    <li>Operator commits the printed file list</li>
+    <li>DNS cutover runbook followed</li>
+  </ul>
+</div>
+
+<div class="cmd-legend">
+  Related: <code>*nginx-to-gateway</code> (orchestrator chaining this skill + gateway-api-migration) ·
+  <code>*ingress-migration-advisor</code> (per-service path planning) ·
+  <code>*install-traefik</code> (controller bootstrap) ·
+  <code>*decommission-nginx</code> (after DNS bake)
+</div>
+</body>
+</html>

@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>$patch: delete pattern — nginx-ingress-retire</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, -apple-system, "Segoe UI", Inter, sans-serif; background: #F3F4F6; color: #1E293B; min-height: 100vh; padding: 2rem 1rem 4rem; }
+  .back-link { display: inline-flex; align-items: center; gap: 0.4rem; color: #0052CC; font-size: 0.82rem; font-weight: 600; text-decoration: none; margin-bottom: 2rem; padding: 0.4rem 0.75rem; border-radius: 6px; border: 1.5px solid #BFDBFE; background: #EFF6FF; transition: background 0.15s; }
+  .back-link:hover { background: #DBEAFE; }
+  .breadcrumb { font-size: 0.72rem; color: #94A3B8; margin-bottom: 0.5rem; }
+  .breadcrumb a { color: #0052CC; text-decoration: none; }
+  .page-header { margin-bottom: 2rem; }
+  .page-header h1 { font-size: 1.5rem; font-weight: 700; color: #0052CC; margin-bottom: 0.4rem; font-family: "SFMono-Regular", Consolas, monospace; }
+  .page-header p { font-size: 0.9rem; color: #475569; max-width: 680px; line-height: 1.6; }
+  .gate-badge { display: inline-block; font-size: 0.72rem; font-weight: 700; padding: 0.15rem 0.6rem; border-radius: 20px; background: #EFF6FF; color: #1E40AF; border: 1px solid #BFDBFE; margin-bottom: 0.75rem; }
+  .section { background: #fff; border: 1.5px solid #E2E8F0; border-radius: 12px; padding: 1.25rem 1.5rem; margin-bottom: 1.25rem; max-width: 760px; box-shadow: 0 2px 8px rgba(0,82,204,0.07); }
+  .section h2 { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #0052CC; margin-bottom: 0.75rem; }
+  .section p { font-size: 0.85rem; color: #334155; line-height: 1.6; margin-bottom: 0.6rem; }
+  .section ul { padding-left: 1.2rem; }
+  .section li { font-size: 0.85rem; color: #334155; line-height: 1.8; }
+  pre { background: #1E293B; color: #E2E8F0; border-radius: 8px; padding: 1rem 1.25rem; font-size: 0.78rem; font-family: "SFMono-Regular", Consolas, monospace; overflow-x: auto; line-height: 1.6; margin-top: 0.75rem; }
+  .hl-key { color: #7DD3FC; }
+  .hl-val { color: #86EFAC; }
+  .hl-comment { color: #64748B; }
+  .warning { background: #FEF2F2; border: 1px solid #FECACA; border-radius: 8px; padding: 0.75rem 1rem; font-size: 0.82rem; color: #7F1D1D; margin-top: 0.75rem; }
+  .note { background: #FFFBEB; border: 1px solid #FDE68A; border-radius: 8px; padding: 0.75rem 1rem; font-size: 0.82rem; color: #78350F; margin-top: 0.75rem; }
+</style>
+</head>
+<body>
+<a class="back-link" href="../diagram.html">← Back to overview</a>
+<div class="breadcrumb"><a href="../diagram.html">Overview</a> / $patch: delete</div>
+
+<div class="page-header">
+  <div class="gate-badge">Step 5c · overlay-only · base files untouched</div>
+  <h1>$patch: delete</h1>
+  <p>Excludes base nginx Ingress resources from <strong>one env's render</strong> without editing
+     the base — other environments still using those files keep rendering them.</p>
+</div>
+
+<div class="section">
+  <h2>The patch appended to the overlay kustomization</h2>
+  <pre><span class="hl-comment"># common.service/overlays/&lt;env&gt;/kustomization.yaml</span>
+<span class="hl-key">patches:</span>
+  <span class="hl-comment"># Nginx ingress retirement (&lt;env&gt;): replaced by Traefik/HTTPRoutes</span>
+  - <span class="hl-key">patch:</span> |-
+      $patch: delete
+      <span class="hl-key">apiVersion:</span> <span class="hl-val">networking.k8s.io/v1</span>
+      <span class="hl-key">kind:</span> <span class="hl-val">Ingress</span>
+      <span class="hl-key">metadata:</span>
+        <span class="hl-key">name:</span> <span class="hl-val">&lt;resource-name&gt;</span>
+    <span class="hl-key">target:</span>
+      <span class="hl-key">kind:</span> <span class="hl-val">Ingress</span>
+      <span class="hl-key">name:</span> <span class="hl-val">&lt;resource-name&gt;</span></pre>
+  <div class="note">📌 <strong>namePrefix:</strong> target names are the <em>original</em> names —
+     Kustomize applies patches <em>before</em> the <code>namePrefix: &lt;env&gt;-</code> transformation.
+     <strong>Section order:</strong> if the kustomization has a <code>configurations:</code> block,
+     patches go before it.</div>
+</div>
+
+<div class="section">
+  <h2>Names come from kustomize build, not file names</h2>
+  <pre><span class="hl-key">kustomize build</span> common.service/base \
+  | awk '/^kind: Ingress/{f=1} f &amp;&amp; /^  name:/{n=$2}
+         f &amp;&amp; /ingress.class: nginx/{print n} /^---/{f=0}'
+<span class="hl-comment"># file names don't always match resource names — render and extract</span></pre>
+</div>
+
+<div class="section">
+  <h2>Special case: class-override patches (GCE / ALB)</h2>
+  <p>If an env overlay patches a base nginx Ingress to a different class
+     (e.g. <code>ingress.class: gce</code> for a GCE external LB), that resource must
+     <strong>stay rendered</strong>:</p>
+  <ul>
+    <li>Keep the patch file under <code>patches:</code> — it owns the class override</li>
+    <li>Do <strong>not</strong> add <code>$patch: delete</code> for that resource name</li>
+    <li>Rename only the <em>file</em> for clarity (<code>n8n-nginx-ingress.yaml → n8n-gce-ingress.yaml</code>) — never <code>metadata.name</code></li>
+  </ul>
+  <div class="warning">⛔ Renaming the K8s resource deletes + recreates the Ingress, which
+     <strong>reprovisions the cloud LB</strong> (downtime). And Kustomize rejects
+     <code>$patch: delete</code> + a same-name standalone resource — duplicate resource IDs
+     error at accumulation, before patches even run.</div>
+</div>
+</body>
+</html>

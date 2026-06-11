@@ -17,9 +17,14 @@ stateDiagram-v2
   S1 --> S2: *nginx-to-gateway &lt;env&gt;<br/>(full chain)
   S2 --> S2: *ingress-to-gateway &lt;module&gt;<br/>(auto-detect source)
   S2 --> S3: (DNS cutover complete)
-  S3 --> [*]: *decommission-nginx
+  S3 --> [*]: *retire-nginx &lt;env&gt;/all<br/>(per-env retirement)
+  S3 --> [*]: *decommission-nginx<br/>(repo-wide archive)
 ```
 
-**7 commands:** `*install-traefik`, `*ingress-migration-advisor`, `*nginx-to-traefik`,
-`*nginx-to-gateway`, `*ingress-to-gateway`, `*decommission-nginx`, plus
+**8 commands:** `*install-traefik`, `*ingress-migration-advisor`, `*nginx-to-traefik`,
+`*nginx-to-gateway`, `*ingress-to-gateway`, `*retire-nginx`, `*decommission-nginx`, plus
 `*migration-quickstart` for orientation. See [diagrams-guide.md](../diagrams-guide.md).
+
+> **Journey completed in the reference deployment**: the `eye-of-horus-gitops`
+> dev + stg + prd environments retired ingress-nginx on 2026-06-05 (CTS-9828) —
+> the live run that produced the `nginx-ingress-retire` skill (v1.17.0).

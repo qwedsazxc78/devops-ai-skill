@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DNS A-record cutover — nginx-to-traefik</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, -apple-system, "Segoe UI", Inter, sans-serif; background: #F3F4F6; color: #1E293B; min-height: 100vh; padding: 2rem 1rem 4rem; }
+  .back-link { display: inline-flex; align-items: center; gap: 0.4rem; color: #0052CC; font-size: 0.82rem; font-weight: 600; text-decoration: none; margin-bottom: 2rem; padding: 0.4rem 0.75rem; border-radius: 6px; border: 1.5px solid #BFDBFE; background: #EFF6FF; transition: background 0.15s; }
+  .back-link:hover { background: #DBEAFE; }
+  .breadcrumb { font-size: 0.72rem; color: #94A3B8; margin-bottom: 0.5rem; }
+  .breadcrumb a { color: #0052CC; text-decoration: none; }
+  .page-header { margin-bottom: 2rem; }
+  .page-header h1 { font-size: 1.5rem; font-weight: 700; color: #0052CC; margin-bottom: 0.4rem; }
+  .page-header p { font-size: 0.9rem; color: #475569; max-width: 680px; line-height: 1.6; }
+  .gate-badge { display: inline-block; font-size: 0.72rem; font-weight: 700; padding: 0.15rem 0.6rem; border-radius: 20px; background: #DCFCE7; color: #14532D; border: 1px solid #86EFAC; margin-bottom: 0.75rem; }
+  .section { background: #fff; border: 1.5px solid #E2E8F0; border-radius: 12px; padding: 1.25rem 1.5rem; margin-bottom: 1.25rem; max-width: 760px; box-shadow: 0 2px 8px rgba(0,82,204,0.07); }
+  .section h2 { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #0052CC; margin-bottom: 0.75rem; }
+  .section p { font-size: 0.85rem; color: #334155; line-height: 1.6; margin-bottom: 0.6rem; }
+  .section ul { padding-left: 1.2rem; }
+  .section li { font-size: 0.85rem; color: #334155; line-height: 1.8; }
+  pre { background: #1E293B; color: #E2E8F0; border-radius: 8px; padding: 1rem 1.25rem; font-size: 0.78rem; font-family: "SFMono-Regular", Consolas, monospace; overflow-x: auto; line-height: 1.6; margin-top: 0.75rem; }
+  .hl-key { color: #7DD3FC; }
+  .hl-val { color: #86EFAC; }
+  .hl-comment { color: #64748B; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.8rem; margin-top: 0.5rem; }
+  th { text-align: left; color: #0052CC; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; padding: 0.4rem 0.6rem; border-bottom: 2px solid #E2E8F0; }
+  td { padding: 0.5rem 0.6rem; border-bottom: 1px solid #F1F5F9; color: #334155; line-height: 1.5; }
+  .warning { background: #FEF2F2; border: 1px solid #FECACA; border-radius: 8px; padding: 0.75rem 1rem; font-size: 0.82rem; color: #7F1D1D; margin-top: 0.75rem; }
+</style>
+</head>
+<body>
+<a class="back-link" href="../diagram.html">← Back to overview</a>
+<div class="breadcrumb"><a href="../diagram.html">Overview</a> / DNS A-record cutover</div>
+
+<div class="page-header">
+  <div class="gate-badge">Steps 0b · 8 · 9 · 10 — DNS is the only cutover lever</div>
+  <h1>DNS A-record cutover &amp; LB IP rules</h1>
+  <p>Both controllers run in parallel for the whole migration. Nothing the skill writes
+     moves traffic — the operator flips DNS A-records from the nginx LB IP to the
+     Traefik LB IP after the commit lands.</p>
+</div>
+
+<div class="section">
+  <h2>Step 0b · Operator-declared LB IPs (invariant §5.3)</h2>
+  <p>The skill reads <code>references/nginx-to-traefik-env-config.md</code>. If
+     <code>state.yaml.envConfig</code> is missing entries for the target env, it issues
+     the 5 prompts from the reference and writes the answers back:</p>
+  <pre><span class="hl-key">envConfig:</span>
+  <span class="hl-key">capturedAt:</span> <span class="hl-val">&lt;iso&gt;</span>
+  <span class="hl-key">envs:</span>
+    <span class="hl-key">dev:</span> { <span class="hl-key">nginxLbIp:</span> <span class="hl-val">...</span>, <span class="hl-key">traefikLbIp:</span> <span class="hl-val">...</span>, <span class="hl-key">certIssuer:</span> <span class="hl-val">...</span>,
+           <span class="hl-key">managedCertNamespace:</span> <span class="hl-val">...</span>, <span class="hl-key">managedCertResourceName:</span> <span class="hl-val">...</span> }</pre>
+  <div class="warning">⛔ Never derive LB IPs from any cluster resource — invariant §5.3
+     from the spec. The operator declares them, or the run halts when they decline.</div>
+</div>
+
+<div class="section">
+  <h2>Step 8 · DNS script update</h2>
+  <pre><span class="hl-comment"># scripts/dns-create-traefik.sh — find or create the batch array</span>
+<span class="hl-key">HOSTS_DEV_B1</span>=(
+  <span class="hl-val">"argocd.dev.example.com"</span>
+  <span class="hl-val">"grafana.dev.example.com"</span>   <span class="hl-comment"># grep -q before append → idempotent</span>
+)
+<span class="hl-comment"># the diff is recorded in state.yaml.steps["8"]</span></pre>
+  <p>Array name pattern: <code>HOSTS_&lt;ENV_UPPER&gt;_&lt;BATCH_UPPER&gt;</code>. Each new
+     host is inserted only if not already present.</p>
+</div>
+
+<div class="section">
+  <h2>Step 9 · Verify script update</h2>
+  <pre><span class="hl-comment"># scripts/verify-traefik-&lt;env&gt;.sh — same idempotent pattern</span>
+<span class="hl-key">URLS_&lt;ENV&gt;_&lt;BATCH&gt;</span>=(
+  <span class="hl-val">"https://argocd.dev.example.com/"</span>   <span class="hl-comment"># URL format: https://&lt;host&gt;/</span>
+)</pre>
+</div>
+
+<div class="section">
+  <h2>Step 10 · Hand back to the operator</h2>
+  <p>The skill <strong>never auto-commits</strong>. At the end of a run it prints:</p>
+  <ul>
+    <li>The full set of files touched — Step 3 outputs, Step 4 moves, Step 5/6 edits,
+        Step 8/9 edits.</li>
+    <li>A suggested commit message in Conventional Commits zh-TW style.</li>
+    <li>A pointer to <code>references/dns-cutover-runbook.md</code> to follow after the
+        commit lands.</li>
+  </ul>
+  <table>
+    <tr><th>Lever</th><th>Owner</th><th>When</th></tr>
+    <tr><td>Git commit of generated files</td><td>Operator</td><td>After Step 10 prints the list</td></tr>
+    <tr><td>DNS A-record: host → Traefik LB IP</td><td>Operator (via <code>dns-create-traefik.sh</code>)</td><td>Per the cutover runbook</td></tr>
+    <tr><td>Verification of live URLs</td><td>Operator (via <code>verify-traefik-&lt;env&gt;.sh</code>)</td><td>After DNS propagates</td></tr>
+  </table>
+  <div class="warning">⚠ Until DNS is flipped, the nginx controller keeps serving the
+     migrated hosts — that is the safety property of the class-swap design, and it is why
+     wrong LB IPs (e.g. auto-derived ones) are the most dangerous failure mode.</div>
+</div>
+</body>
+</html>

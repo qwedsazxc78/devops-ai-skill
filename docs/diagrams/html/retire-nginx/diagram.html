@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>nginx-ingress-retire — Post-Migration Nginx Retirement</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", Inter, sans-serif;
+    background: #F3F4F6;
+    color: #1E293B;
+    min-height: 100vh;
+    padding: 2rem 1rem 4rem;
+  }
+  .page-header { text-align: center; margin-bottom: 2.5rem; }
+  .page-header h1 { font-size: 1.75rem; font-weight: 700; color: #0052CC; margin-bottom: 0.5rem; }
+  .page-header p { font-size: 0.95rem; color: #64748B; max-width: 720px; margin: 0 auto; }
+  .pipeline-label { display: inline-block; background: #0052CC; color: #fff; font-size: 0.7rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; padding: 0.2rem 0.6rem; border-radius: 4px; margin-top: 0.75rem; }
+  .mindmap-link { display: inline-block; margin-top: 0.75rem; margin-left: 0.5rem; font-size: 0.7rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; padding: 0.2rem 0.6rem; border-radius: 4px; background: #EFF6FF; color: #0052CC; border: 1px solid #BFDBFE; text-decoration: none; }
+  .mindmap-link:hover { background: #DBEAFE; }
+  .section-title { text-align: center; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #94A3B8; margin: 0 auto 1.5rem; max-width: 1100px; }
+
+  /* Step flow */
+  .steps-row {
+    display: flex;
+    align-items: stretch;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0;
+    max-width: 1180px;
+    margin: 0 auto 2.5rem;
+  }
+  .step-card {
+    background: #fff;
+    border: 2px solid #E2E8F0;
+    border-radius: 12px;
+    padding: 1rem 0.9rem;
+    width: 205px;
+    box-shadow: 0 2px 8px rgba(0,82,204,0.07);
+    text-align: center;
+  }
+  .step-card.gate { border-color: #DC2626; }
+  .step-card.exec { border-color: #2563EB; }
+  .step-card.done { border-color: #16A34A; }
+  .step-num { font-size: 0.65rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #0052CC; margin-bottom: 0.25rem; }
+  .step-num.gate { color: #DC2626; }
+  .step-num.done { color: #16A34A; }
+  .step-name { font-size: 0.85rem; font-weight: 700; color: #0F172A; margin-bottom: 0.35rem; }
+  .step-desc { font-size: 0.71rem; color: #64748B; line-height: 1.45; }
+  .transition { display: flex; align-items: center; padding: 0 0.1rem; flex-shrink: 0; }
+  .t-arrow svg { display: block; }
+
+  /* Drill-down cards */
+  .commands-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 1rem;
+    max-width: 1020px;
+    margin: 0 auto 2rem;
+  }
+  a.cmd-card {
+    display: block; text-decoration: none; color: inherit;
+    background: #fff;
+    border: 1.5px solid #E2E8F0;
+    border-radius: 12px;
+    padding: 1.1rem 1rem;
+    box-shadow: 0 2px 8px rgba(0,82,204,0.07);
+    transition: box-shadow 0.18s, border-color 0.18s, transform 0.18s;
+    cursor: pointer;
+  }
+  a.cmd-card:hover {
+    box-shadow: 0 6px 24px rgba(0,82,204,0.18);
+    border-color: #0052CC;
+    transform: translateY(-2px);
+  }
+  .cmd-card-label { font-size: 0.65rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #0052CC; margin-bottom: 0.3rem; }
+  a.cmd-card h3 { font-size: 0.88rem; font-weight: 700; color: #0F172A; margin-bottom: 0.4rem; font-family: "SFMono-Regular", Consolas, monospace; }
+  a.cmd-card p { font-size: 0.76rem; color: #475569; line-height: 1.5; }
+  .cmd-card-hint { font-size: 0.7rem; color: #0052CC; font-weight: 600; text-align: right; display: block; margin-top: 0.5rem; }
+  .gate-badge {
+    display: inline-block; font-size: 0.65rem; font-weight: 700;
+    padding: 0.1rem 0.4rem; border-radius: 4px; margin-bottom: 0.4rem;
+    background: #FEF2F2; color: #991B1B; border: 1px solid #FECACA;
+  }
+  .gate-badge.blue { background: #EFF6FF; color: #1E40AF; border-color: #BFDBFE; }
+  .gate-badge.green { background: #DCFCE7; color: #14532D; border-color: #86EFAC; }
+
+  /* Usage strip */
+  .usage { background: #1E293B; color: #E2E8F0; border-radius: 12px; padding: 1rem 1.5rem; max-width: 680px; margin: 0 auto 2.5rem; font-family: "SFMono-Regular", Consolas, monospace; font-size: 0.8rem; line-height: 1.9; box-shadow: 0 2px 8px rgba(0,82,204,0.15); }
+  .usage .cmd { color: #7DD3FC; }
+  .usage .comment { color: #64748B; }
+
+  /* Checklist */
+  .checklist { background: #fff; border: 1.5px solid #E2E8F0; border-radius: 12px; padding: 1.25rem 1.5rem; max-width: 740px; margin: 0 auto 2rem; box-shadow: 0 2px 8px rgba(0,82,204,0.06); }
+  .checklist h2 { font-size: 0.8rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #0052CC; margin-bottom: 0.75rem; }
+  .checklist ul { list-style: none; display: flex; flex-wrap: wrap; gap: 0.5rem 1.5rem; }
+  .checklist li { font-size: 0.82rem; color: #334155; display: flex; align-items: center; gap: 0.4rem; }
+  .checklist li::before { content: "✓"; color: #16A34A; font-weight: 700; font-size: 0.9rem; }
+  .cmd-legend { background: #EFF6FF; border: 1px solid #BFDBFE; border-radius: 8px; padding: 0.75rem 1rem; max-width: 740px; margin: 0 auto; font-size: 0.78rem; color: #1E40AF; text-align: center; }
+  .cmd-legend code { background: #0052CC; color: #fff; padding: 0.1rem 0.4rem; border-radius: 4px; font-size: 0.72rem; font-family: "SFMono-Regular", Consolas, monospace; margin: 0 0.1rem; }
+</style>
+</head>
+<body>
+<div class="page-header">
+  <h1>nginx-ingress-retire</h1>
+  <p>Post-migration cleanup: retire the nginx ingress <strong>controller</strong>
+     (<code>common.ingress</code>) and all nginx <strong>Ingress resources</strong>
+     (<code>common.service</code>) per environment — only after Traefik / Gateway API
+     replacements are live and DNS has been cut over. Safety-gated at every step.</p>
+  <span class="pipeline-label">devops:zeus · *retire-nginx · detailed</span>
+  <a class="mindmap-link" href="mindmap.html">🧠 Mindmap explainer</a>
+</div>
+
+<div class="section-title">Eight-step pipeline — red borders are abort gates</div>
+
+<div class="steps-row">
+  <div class="step-card">
+    <div class="step-num">Step 1</div>
+    <div class="step-name">Parse args</div>
+    <div class="step-desc">dev | stg | prd | all. No arg → interactive env detection from overlays/.</div>
+  </div>
+  <div class="transition"><div class="t-arrow"><svg width="30" height="20" viewBox="0 0 30 20"><line x1="0" y1="10" x2="22" y2="10" stroke="#94A3B8" stroke-width="2"/><polygon points="20,5 30,10 20,15" fill="#94A3B8"/></svg></div></div>
+  <div class="step-card gate">
+    <div class="step-num gate">Step 2 · Gate</div>
+    <div class="step-name">Pre-flight</div>
+    <div class="step-desc">Build must pass. Inventory nginx vs Traefik vs HTTPRoute. Abort if no replacements exist.</div>
+  </div>
+  <div class="transition"><div class="t-arrow"><svg width="30" height="20" viewBox="0 0 30 20"><line x1="0" y1="10" x2="22" y2="10" stroke="#DC2626" stroke-width="2"/><polygon points="20,5 30,10 20,15" fill="#DC2626"/></svg></div></div>
+  <div class="step-card">
+    <div class="step-num">Step 3</div>
+    <div class="step-name">Discovery</div>
+    <div class="step-desc">Controller app yaml, base Ingress names via kustomize build (not grep), orphans, archive/.</div>
+  </div>
+  <div class="transition"><div class="t-arrow"><svg width="30" height="20" viewBox="0 0 30 20"><line x1="0" y1="10" x2="22" y2="10" stroke="#94A3B8" stroke-width="2"/><polygon points="20,5 30,10 20,15" fill="#94A3B8"/></svg></div></div>
+  <div class="step-card gate">
+    <div class="step-num gate">Step 4 · Gate</div>
+    <div class="step-name">Plan + confirm</div>
+    <div class="step-desc">Full DELETE / PATCH / KEEP plan shown. Nothing happens without explicit operator yes.</div>
+  </div>
+</div>
+
+<div class="steps-row">
+  <div class="step-card exec">
+    <div class="step-num">Step 5</div>
+    <div class="step-name">Execute</div>
+    <div class="step-desc">Delete controller app yaml · $patch: delete base nginx Ingresses · rm orphans + archive/.</div>
+  </div>
+  <div class="transition"><div class="t-arrow"><svg width="30" height="20" viewBox="0 0 30 20"><line x1="0" y1="10" x2="22" y2="10" stroke="#2563EB" stroke-width="2"/><polygon points="20,5 30,10 20,15" fill="#2563EB"/></svg></div></div>
+  <div class="step-card gate">
+    <div class="step-num gate">Step 6 · Gate</div>
+    <div class="step-name">Validate</div>
+    <div class="step-desc">nginx-class count must be 0 (not Ingress total). All other envs must still build. Halt → no commit.</div>
+  </div>
+  <div class="transition"><div class="t-arrow"><svg width="30" height="20" viewBox="0 0 30 20"><line x1="0" y1="10" x2="22" y2="10" stroke="#16A34A" stroke-width="2"/><polygon points="20,5 30,10 20,15" fill="#16A34A"/></svg></div></div>
+  <div class="step-card">
+    <div class="step-num">Step 7</div>
+    <div class="step-name">All-env cleanup</div>
+    <div class="step-desc">After `all`: offer to archive the fully-orphaned common.ingress/ module + unused base files.</div>
+  </div>
+  <div class="transition"><div class="t-arrow"><svg width="30" height="20" viewBox="0 0 30 20"><line x1="0" y1="10" x2="22" y2="10" stroke="#94A3B8" stroke-width="2"/><polygon points="20,5 30,10 20,15" fill="#94A3B8"/></svg></div></div>
+  <div class="step-card done">
+    <div class="step-num done">Step 8</div>
+    <div class="step-name">Summary report</div>
+    <div class="step-desc">Per-env table, files deleted/modified/kept, regression results, commit message.</div>
+  </div>
+</div>
+
+<div class="section-title">Usage</div>
+<div class="usage">
+  <span class="cmd">*retire-nginx</span>        <span class="comment"># interactive — detect envs, ask</span><br>
+  <span class="cmd">*retire-nginx dev</span>    <span class="comment"># retire one environment</span><br>
+  <span class="cmd">*retire-nginx all</span>    <span class="comment"># dev → stg → prd, validate each before the next</span>
+</div>
+
+<div class="section-title">Core mechanics — drill down for details</div>
+<div class="commands-grid">
+  <a class="cmd-card" href="diagrams/pre-flight.html">
+    <div class="gate-badge">Hard abort × 3</div>
+    <div class="cmd-card-label">Step 2</div>
+    <h3>Pre-flight gates</h3>
+    <p>Inventory breakdown decides the verdict: nginx with no replacements = outage risk = abort. Replacements present = proceed.</p>
+    <span class="cmd-card-hint">View details →</span>
+  </a>
+  <a class="cmd-card" href="diagrams/cascade.html">
+    <div class="gate-badge blue">GitOps cascade</div>
+    <div class="cmd-card-label">Step 5a</div>
+    <h3>Controller removal</h3>
+    <p>One file deleted in Git → app-of-apps prune → Application finalizer cascades the whole controller away. No kubectl.</p>
+    <span class="cmd-card-hint">View details →</span>
+  </a>
+  <a class="cmd-card" href="diagrams/patch-delete.html">
+    <div class="gate-badge blue">Overlay-only edits</div>
+    <div class="cmd-card-label">Step 5c</div>
+    <h3>$patch: delete</h3>
+    <p>Excludes base nginx Ingresses per env without touching base files. Un-prefixed names; class-override patches (gce/alb) preserved.</p>
+    <span class="cmd-card-hint">View details →</span>
+  </a>
+  <a class="cmd-card" href="diagrams/validate.html">
+    <div class="gate-badge green">Halt → no commit</div>
+    <div class="cmd-card-label">Step 6</div>
+    <h3>Validation</h3>
+    <p>nginx-class = 0 (not Ingress total = 0), remaining Ingresses verified non-nginx, and every other env regression-built.</p>
+    <span class="cmd-card-hint">View details →</span>
+  </a>
+</div>
+
+<div class="checklist">
+  <h2>Run this skill only after</h2>
+  <ul>
+    <li>All services have active HTTPRoutes or Traefik Ingresses</li>
+    <li>DNS cut over to the Traefik/Gateway LB</li>
+    <li>nginx confirmed idle (no live traffic)</li>
+    <li>Other envs' builds unaffected</li>
+  </ul>
+</div>
+
+<div class="cmd-legend">
+  Related: <code>*decommission-nginx</code> (repo-wide controller module archive) ·
+  <code>*nginx-to-traefik</code> / <code>*gateway-migrate</code> (the migrations that must come first) ·
+  <code>*migration-quickstart</code> (orientation)
+</div>
+</body>
+</html>

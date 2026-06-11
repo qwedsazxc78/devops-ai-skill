@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ingress-migration-advisor — Read-Only EOL Migration Planner</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", Inter, sans-serif;
+    background: #F3F4F6;
+    color: #1E293B;
+    min-height: 100vh;
+    padding: 2rem 1rem 4rem;
+  }
+  .page-header { text-align: center; margin-bottom: 2.5rem; }
+  .page-header h1 { font-size: 1.75rem; font-weight: 700; color: #0052CC; margin-bottom: 0.5rem; }
+  .page-header p { font-size: 0.95rem; color: #64748B; max-width: 720px; margin: 0 auto; }
+  .pipeline-label { display: inline-block; background: #0052CC; color: #fff; font-size: 0.7rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; padding: 0.2rem 0.6rem; border-radius: 4px; margin-top: 0.75rem; }
+  .readonly-badge { display: inline-block; margin-top: 0.75rem; margin-left: 0.5rem; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 0.2rem 0.6rem; border-radius: 4px; background: #DCFCE7; color: #14532D; border: 1px solid #86EFAC; }
+  .section-title { text-align: center; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #94A3B8; margin: 0 auto 1.5rem; max-width: 1100px; }
+
+  /* Step flow */
+  .steps-row {
+    display: flex;
+    align-items: stretch;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0;
+    max-width: 1180px;
+    margin: 0 auto 2.5rem;
+  }
+  .step-card {
+    background: #fff;
+    border: 2px solid #E2E8F0;
+    border-radius: 12px;
+    padding: 1rem 0.9rem;
+    width: 205px;
+    box-shadow: 0 2px 8px rgba(0,82,204,0.07);
+    text-align: center;
+  }
+  .step-card.gate { border-color: #DC2626; }
+  .step-card.exec { border-color: #2563EB; }
+  .step-card.done { border-color: #16A34A; }
+  .step-num { font-size: 0.65rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #0052CC; margin-bottom: 0.25rem; }
+  .step-num.gate { color: #DC2626; }
+  .step-num.done { color: #16A34A; }
+  .step-name { font-size: 0.85rem; font-weight: 700; color: #0F172A; margin-bottom: 0.35rem; }
+  .step-desc { font-size: 0.71rem; color: #64748B; line-height: 1.45; }
+  .transition { display: flex; align-items: center; padding: 0 0.1rem; flex-shrink: 0; }
+  .t-arrow svg { display: block; }
+
+  /* Drill-down cards */
+  .commands-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 1rem;
+    max-width: 1020px;
+    margin: 0 auto 2rem;
+  }
+  a.cmd-card {
+    display: block; text-decoration: none; color: inherit;
+    background: #fff;
+    border: 1.5px solid #E2E8F0;
+    border-radius: 12px;
+    padding: 1.1rem 1rem;
+    box-shadow: 0 2px 8px rgba(0,82,204,0.07);
+    transition: box-shadow 0.18s, border-color 0.18s, transform 0.18s;
+    cursor: pointer;
+  }
+  a.cmd-card:hover {
+    box-shadow: 0 6px 24px rgba(0,82,204,0.18);
+    border-color: #0052CC;
+    transform: translateY(-2px);
+  }
+  .cmd-card-label { font-size: 0.65rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #0052CC; margin-bottom: 0.3rem; }
+  a.cmd-card h3 { font-size: 0.88rem; font-weight: 700; color: #0F172A; margin-bottom: 0.4rem; font-family: "SFMono-Regular", Consolas, monospace; }
+  a.cmd-card p { font-size: 0.76rem; color: #475569; line-height: 1.5; }
+  .cmd-card-hint { font-size: 0.7rem; color: #0052CC; font-weight: 600; text-align: right; display: block; margin-top: 0.5rem; }
+  .gate-badge {
+    display: inline-block; font-size: 0.65rem; font-weight: 700;
+    padding: 0.1rem 0.4rem; border-radius: 4px; margin-bottom: 0.4rem;
+    background: #FEF2F2; color: #991B1B; border: 1px solid #FECACA;
+  }
+  .gate-badge.blue { background: #EFF6FF; color: #1E40AF; border-color: #BFDBFE; }
+  .gate-badge.green { background: #DCFCE7; color: #14532D; border-color: #86EFAC; }
+
+  /* Usage strip */
+  .usage { background: #1E293B; color: #E2E8F0; border-radius: 12px; padding: 1rem 1.5rem; max-width: 680px; margin: 0 auto 2.5rem; font-family: "SFMono-Regular", Consolas, monospace; font-size: 0.8rem; line-height: 1.9; box-shadow: 0 2px 8px rgba(0,82,204,0.15); }
+  .usage .cmd { color: #7DD3FC; }
+  .usage .comment { color: #64748B; }
+
+  /* Checklist */
+  .checklist { background: #fff; border: 1.5px solid #E2E8F0; border-radius: 12px; padding: 1.25rem 1.5rem; max-width: 740px; margin: 0 auto 2rem; box-shadow: 0 2px 8px rgba(0,82,204,0.06); }
+  .checklist h2 { font-size: 0.8rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #0052CC; margin-bottom: 0.75rem; }
+  .checklist ul { list-style: none; display: flex; flex-wrap: wrap; gap: 0.5rem 1.5rem; }
+  .checklist li { font-size: 0.82rem; color: #334155; display: flex; align-items: center; gap: 0.4rem; }
+  .checklist li::before { content: "✓"; color: #16A34A; font-weight: 700; font-size: 0.9rem; }
+  .cmd-legend { background: #EFF6FF; border: 1px solid #BFDBFE; border-radius: 8px; padding: 0.75rem 1rem; max-width: 740px; margin: 0 auto; font-size: 0.78rem; color: #1E40AF; text-align: center; }
+  .cmd-legend code { background: #0052CC; color: #fff; padding: 0.1rem 0.4rem; border-radius: 4px; font-size: 0.72rem; font-family: "SFMono-Regular", Consolas, monospace; margin: 0 0.1rem; }
+</style>
+</head>
+<body>
+<div class="page-header">
+  <h1>ingress-migration-advisor</h1>
+  <p><strong>Read-only</strong> EOL planner: inventories every Ingress across all Kustomize overlays,
+     scores each service on <strong>five migration-readiness dimensions</strong>, and recommends one of
+     <strong>four paths</strong> per service. It produces a plan with a Mermaid Gantt and ready-to-paste
+     Zeus commands — it <strong>never mutates the repo</strong> and never invokes the migration skills itself.</p>
+  <span class="pipeline-label">devops:zeus · *ingress-migration-advisor · detailed</span>
+  <span class="readonly-badge">Read-only — re-running is always safe</span>
+</div>
+
+<div class="section-title">Seven-step pipeline — red borders are HALT gates · no file is ever written outside docs/reports/ and /tmp</div>
+
+<div class="steps-row">
+  <div class="step-card gate">
+    <div class="step-num gate">Step 0 · Gate</div>
+    <div class="step-name">Tool check</div>
+    <div class="step-desc">kustomize · yq · git · python3. HALT with install hints if missing. No cluster tools — fully offline.</div>
+  </div>
+  <div class="transition"><div class="t-arrow"><svg width="30" height="20" viewBox="0 0 30 20"><line x1="0" y1="10" x2="22" y2="10" stroke="#DC2626" stroke-width="2"/><polygon points="20,5 30,10 20,15" fill="#DC2626"/></svg></div></div>
+  <div class="step-card gate">
+    <div class="step-num gate">Step 0b · Gate</div>
+    <div class="step-name">Operator inputs</div>
+    <div class="step-desc">EOL deadline (ISO) + batch size cap (default 5). HALT if docs/ingress-tier-map.yaml is missing or deadline is in the past.</div>
+  </div>
+  <div class="transition"><div class="t-arrow"><svg width="30" height="20" viewBox="0 0 30 20"><line x1="0" y1="10" x2="22" y2="10" stroke="#DC2626" stroke-width="2"/><polygon points="20,5 30,10 20,15" fill="#DC2626"/></svg></div></div>
+  <div class="step-card gate">
+    <div class="step-num gate">Step 1 · Gate</div>
+    <div class="step-name">Inventory</div>
+    <div class="step-desc">kustomize build every common.*/overlays/* → classify rendered Ingresses. HALT if zero Ingresses or all builds fail.</div>
+  </div>
+  <div class="transition"><div class="t-arrow"><svg width="30" height="20" viewBox="0 0 30 20"><line x1="0" y1="10" x2="22" y2="10" stroke="#94A3B8" stroke-width="2"/><polygon points="20,5 30,10 20,15" fill="#94A3B8"/></svg></div></div>
+  <div class="step-card">
+    <div class="step-num">Step 2</div>
+    <div class="step-name">Score</div>
+    <div class="step-desc">Critical-tier veto first, then 5 dimensions for non-vetoed services. Total range 4–14.</div>
+  </div>
+</div>
+
+<div class="steps-row">
+  <div class="step-card">
+    <div class="step-num">Step 3</div>
+    <div class="step-name">Decide path</div>
+    <div class="step-desc">Veto → sourceClass shortcut → score bands. direct-gateway · two-step · swap-only · defer.</div>
+  </div>
+  <div class="transition"><div class="t-arrow"><svg width="30" height="20" viewBox="0 0 30 20"><line x1="0" y1="10" x2="22" y2="10" stroke="#94A3B8" stroke-width="2"/><polygon points="20,5 30,10 20,15" fill="#94A3B8"/></svg></div></div>
+  <div class="step-card">
+    <div class="step-num">Step 4</div>
+    <div class="step-name">Batch</div>
+    <div class="step-desc">Group by path + score ±2, weekly cadence from next Monday, fit inside deadline − bake buffer. Commands deduplicated per overlay.</div>
+  </div>
+  <div class="transition"><div class="t-arrow"><svg width="30" height="20" viewBox="0 0 30 20"><line x1="0" y1="10" x2="22" y2="10" stroke="#2563EB" stroke-width="2"/><polygon points="20,5 30,10 20,15" fill="#2563EB"/></svg></div></div>
+  <div class="step-card exec">
+    <div class="step-num">Step 5</div>
+    <div class="step-name">Render plan.md</div>
+    <div class="step-desc">Mermaid Gantt + per-service decision table + per-batch Zeus command blocks + deferred/risk register.</div>
+  </div>
+  <div class="transition"><div class="t-arrow"><svg width="30" height="20" viewBox="0 0 30 20"><line x1="0" y1="10" x2="22" y2="10" stroke="#16A34A" stroke-width="2"/><polygon points="20,5 30,10 20,15" fill="#16A34A"/></svg></div></div>
+  <div class="step-card done">
+    <div class="step-num done">Step 6</div>
+    <div class="step-name">Summary</div>
+    <div class="step-desc">Totals per path, deadline margin, plan path printed to session. Never auto-commits.</div>
+  </div>
+</div>
+
+<div class="section-title">Usage</div>
+<div class="usage">
+  <span class="cmd">*ingress-migration-advisor</span>                          <span class="comment"># interactive: prompts for deadline + batch size</span><br>
+  <span class="cmd">*ingress-migration-advisor --deadline 2025-10-31</span>    <span class="comment"># explicit EOL deadline</span><br>
+  <span class="cmd">*ingress-migration-advisor --target-path two-step</span>   <span class="comment"># one global path for all non-vetoed services</span><br>
+  <span class="cmd">*ingress-migration-advisor --strict-tier-map</span>        <span class="comment"># HALT on orphan tier-map entries</span><br>
+  <span class="cmd">*ingress-migration-advisor --resume &lt;state-path&gt;</span>    <span class="comment"># re-render plan only — no re-scoring</span>
+</div>
+
+<div class="section-title">Core mechanics — drill down for details</div>
+<div class="commands-grid">
+  <a class="cmd-card" href="diagrams/scoring-dimensions.html">
+    <div class="gate-badge blue">Score range 4–14</div>
+    <div class="cmd-card-label">Step 2</div>
+    <h3>5 scoring dimensions</h3>
+    <p>Annotation complexity, TLS mode, hostname count, traffic tier, security annotations. Each 1–3; traffic tier caps at 2 because tier-3 means veto.</p>
+    <span class="cmd-card-hint">View details →</span>
+  </a>
+  <a class="cmd-card" href="diagrams/decision-paths.html">
+    <div class="gate-badge">Critical-tier veto — no bypass</div>
+    <div class="cmd-card-label">Step 3</div>
+    <h3>4 paths + veto + shortcut</h3>
+    <p>Veto → traefik shortcut → foreign-class defer → score bands. direct-gateway (4–7), two-step (8–10), swap-only (11–13), defer (14).</p>
+    <span class="cmd-card-hint">View details →</span>
+  </a>
+  <a class="cmd-card" href="diagrams/tier-map.html">
+    <div class="gate-badge">Required file — HALT if missing</div>
+    <div class="cmd-card-label">Step 0b</div>
+    <h3>ingress-tier-map.yaml</h3>
+    <p>The one source of truth for traffic tiers. critical / standard / low. Critical services are never auto-scheduled — change the map via PR first.</p>
+    <span class="cmd-card-hint">View details →</span>
+  </a>
+  <a class="cmd-card" href="diagrams/outputs.html">
+    <div class="gate-badge green">plan.md + state.yaml</div>
+    <div class="cmd-card-label">Steps 5–6</div>
+    <h3>Outputs</h3>
+    <p>Mermaid Gantt schedule, per-service decision table, ready-to-paste Zeus commands per batch, machine-readable state for --resume.</p>
+    <span class="cmd-card-hint">View details →</span>
+  </a>
+</div>
+
+<div class="checklist">
+  <h2>What this skill never does</h2>
+  <ul>
+    <li>Never mutates the repo (reports only)</li>
+    <li>Never runs git operations or DNS edits</li>
+    <li>Never invokes the migration skills directly</li>
+    <li>Never auto-schedules a critical-tier service</li>
+    <li>Never auto-commits its own reports</li>
+  </ul>
+</div>
+
+<div class="cmd-legend">
+  Downstream (operator-run, suggested by the plan): <code>*gateway-migrate</code> (direct-gateway) ·
+  <code>*nginx-to-gateway</code> (two-step) · <code>*nginx-to-traefik</code> (swap-only) ·
+  <code>*retire-nginx</code> (after everything is migrated)
+</div>
+</body>
+</html>

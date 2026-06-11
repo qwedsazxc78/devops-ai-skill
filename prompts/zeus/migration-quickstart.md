@@ -1,7 +1,7 @@
 # migration-quickstart Pipeline
 
 30-second orientation for the Ingress migration journey. Read-only,
-non-interactive — prints a decision tree and the five migration
+non-interactive — prints a decision tree and the eight migration
 commands so a first-time operator knows which one to type next.
 
 This pipeline owns no logic and produces no artifacts. It is pure
@@ -13,7 +13,7 @@ commands it describes.
 
 - You have an `ingress-nginx` cluster and want to start the journey
   toward Traefik Ingress / Gateway API.
-- You're staring at the 5 migration commands and don't know which one
+- You're staring at the 8 migration commands and don't know which one
   to type first.
 - You're onboarding someone else and want a one-screen overview to
   share.
@@ -29,7 +29,7 @@ exit. No prompts, no scans.
 ---
 
 ```
-INGRESS MIGRATION QUICKSTART — devops-ai-skill v1.13.0
+INGRESS MIGRATION QUICKSTART — devops-ai-skill v1.17.0
 =======================================================
 
 You have an ingress-nginx cluster and want to migrate. Here's the path.
@@ -39,6 +39,7 @@ CLUSTER STATES
   S1 — Traefik is installed alongside ingress-nginx (both running)
   S2 — Services on a mix of nginx + traefik Ingresses
   S3 — Everything on Traefik, ready to retire ingress-nginx
+  S4 — ingress-nginx retired (controller + nginx Ingresses gone)
 
 DECISION TREE (default path: NGINX → Traefik Ingress → Gateway API)
 
@@ -64,9 +65,16 @@ DECISION TREE (default path: NGINX → Traefik Ingress → Gateway API)
                                                                     │
                                                                     └──▶ Eventually ──▶ S3
                                                                                          │
-                                                                                         ▼
-                                                                                  *decommission-nginx
-                                                                                  (Zeus, archive module + ArgoCD prune)
+                                                                                         ├──▶ *retire-nginx <env>|all
+                                                                                         │      (Zeus, per-env: controller app
+                                                                                         │       + $patch: delete nginx Ingresses)
+                                                                                         │
+                                                                                         └──▶ *decommission-nginx
+                                                                                                (Zeus, repo-wide: archive module
+                                                                                                 + ArgoCD prune)
+                                                                                                  │
+                                                                                                  ▼
+                                                                                                 S4
 ```
 
 ```mermaid
@@ -82,11 +90,12 @@ flowchart LR
     S1 -->|*nginx-to-gateway| Gateway[Gateway API]
     S2 -->|*ingress-to-gateway| Gateway
     S2 -->|eventually| S3
-    S3 -->|*decommission-nginx| Done[ingress-nginx removed]
+    S3 -->|*retire-nginx env or all| S4[S4: nginx retired]
+    S3 -->|*decommission-nginx| S4
 ```
 
 ```
-THE FIVE MIGRATION COMMANDS
+THE EIGHT MIGRATION COMMANDS
 
 | Command                       | Agent | Scope             | When                                            |
 |-------------------------------|-------|-------------------|-------------------------------------------------|
@@ -96,6 +105,7 @@ THE FIVE MIGRATION COMMANDS
 | *gateway-migrate <module>     | Zeus  | One module        | Explicit source/target                          |
 | *ingress-to-gateway <module>  | Zeus  | One module        | Auto-detect nginx vs traefik source             |
 | *ingress-migration-advisor    | Zeus  | Whole repo        | Read-only planner; per-service path             |
+| *retire-nginx <env>|all       | Zeus  | Per env           | Delete controller app + exclude base nginx Ingresses (safety-gated) |
 | *decommission-nginx           | Zeus  | common.ingress-*  | Archive module + ArgoCD prune (NO helm uninstall) |
 
 (Plus *gateway-migrate for explicit source/target — the underlying skill
@@ -122,8 +132,13 @@ WHAT TO RUN, BY STARTING STATE
        --source-class explicitly.
 
   S3 (everything on Traefik, nginx ready to retire)
-    1. *decommission-nginx           — generates uninstall plan only
-    2. Read the plan, run commands.sh by hand block-by-block
+    1. *retire-nginx <env>           — per-env: delete the controller's ArgoCD
+       app + $patch: delete the base nginx Ingresses (or `all` for dev→stg→prd)
+    2. *decommission-nginx           — repo-wide: generates uninstall plan only
+    3. Read the plan, run commands.sh by hand block-by-block
+
+  S4 (nginx retired)
+    Done. Verify: kubectl get pods -n ingress-nginx → 0 pods; no 502s.
 
 QUICK PATHS (skip the planner if you just want one service)
 
@@ -157,6 +172,7 @@ NEXT STEP
 
   At S0?  → run *install-traefik
   At S1?  → run *ingress-migration-advisor (with --deadline)
+  At S3?  → run *retire-nginx <env> (or all)
   Just want one batch?  → run *nginx-to-traefik <env>
 ```
 

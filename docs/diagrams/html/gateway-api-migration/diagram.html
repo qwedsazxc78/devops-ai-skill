@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>gateway-api-migration — NGINX Ingress → Gateway API</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", Inter, sans-serif;
+    background: #F3F4F6;
+    color: #1E293B;
+    min-height: 100vh;
+    padding: 2rem 1rem 4rem;
+  }
+  .page-header { text-align: center; margin-bottom: 2.5rem; }
+  .page-header h1 { font-size: 1.75rem; font-weight: 700; color: #0052CC; margin-bottom: 0.5rem; }
+  .page-header p { font-size: 0.95rem; color: #64748B; max-width: 720px; margin: 0 auto; }
+  .pipeline-label { display: inline-block; background: #0052CC; color: #fff; font-size: 0.7rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; padding: 0.2rem 0.6rem; border-radius: 4px; margin-top: 0.75rem; }
+  .section-title { text-align: center; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #94A3B8; margin: 0 auto 1.5rem; max-width: 1100px; }
+
+  /* Step flow */
+  .steps-row {
+    display: flex;
+    align-items: stretch;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0;
+    max-width: 1180px;
+    margin: 0 auto 2.5rem;
+  }
+  .step-card {
+    background: #fff;
+    border: 2px solid #E2E8F0;
+    border-radius: 12px;
+    padding: 1rem 0.9rem;
+    width: 205px;
+    box-shadow: 0 2px 8px rgba(0,82,204,0.07);
+    text-align: center;
+  }
+  .step-card.gate { border-color: #DC2626; }
+  .step-card.exec { border-color: #2563EB; }
+  .step-card.done { border-color: #16A34A; }
+  .step-num { font-size: 0.65rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #0052CC; margin-bottom: 0.25rem; }
+  .step-num.gate { color: #DC2626; }
+  .step-num.done { color: #16A34A; }
+  .step-name { font-size: 0.85rem; font-weight: 700; color: #0F172A; margin-bottom: 0.35rem; }
+  .step-desc { font-size: 0.71rem; color: #64748B; line-height: 1.45; }
+  .transition { display: flex; align-items: center; padding: 0 0.1rem; flex-shrink: 0; }
+  .t-arrow svg { display: block; }
+
+  /* Drill-down cards */
+  .commands-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 1rem;
+    max-width: 1020px;
+    margin: 0 auto 2rem;
+  }
+  a.cmd-card {
+    display: block; text-decoration: none; color: inherit;
+    background: #fff;
+    border: 1.5px solid #E2E8F0;
+    border-radius: 12px;
+    padding: 1.1rem 1rem;
+    box-shadow: 0 2px 8px rgba(0,82,204,0.07);
+    transition: box-shadow 0.18s, border-color 0.18s, transform 0.18s;
+    cursor: pointer;
+  }
+  a.cmd-card:hover {
+    box-shadow: 0 6px 24px rgba(0,82,204,0.18);
+    border-color: #0052CC;
+    transform: translateY(-2px);
+  }
+  .cmd-card-label { font-size: 0.65rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #0052CC; margin-bottom: 0.3rem; }
+  a.cmd-card h3 { font-size: 0.88rem; font-weight: 700; color: #0F172A; margin-bottom: 0.4rem; font-family: "SFMono-Regular", Consolas, monospace; }
+  a.cmd-card p { font-size: 0.76rem; color: #475569; line-height: 1.5; }
+  .cmd-card-hint { font-size: 0.7rem; color: #0052CC; font-weight: 600; text-align: right; display: block; margin-top: 0.5rem; }
+  .gate-badge {
+    display: inline-block; font-size: 0.65rem; font-weight: 700;
+    padding: 0.1rem 0.4rem; border-radius: 4px; margin-bottom: 0.4rem;
+    background: #FEF2F2; color: #991B1B; border: 1px solid #FECACA;
+  }
+  .gate-badge.blue { background: #EFF6FF; color: #1E40AF; border-color: #BFDBFE; }
+  .gate-badge.green { background: #DCFCE7; color: #14532D; border-color: #86EFAC; }
+
+  /* Usage strip */
+  .usage { background: #1E293B; color: #E2E8F0; border-radius: 12px; padding: 1rem 1.5rem; max-width: 680px; margin: 0 auto 2.5rem; font-family: "SFMono-Regular", Consolas, monospace; font-size: 0.8rem; line-height: 1.9; box-shadow: 0 2px 8px rgba(0,82,204,0.15); }
+  .usage .cmd { color: #7DD3FC; }
+  .usage .comment { color: #64748B; }
+
+  /* Checklist */
+  .checklist { background: #fff; border: 1.5px solid #E2E8F0; border-radius: 12px; padding: 1.25rem 1.5rem; max-width: 740px; margin: 0 auto 2rem; box-shadow: 0 2px 8px rgba(0,82,204,0.06); }
+  .checklist h2 { font-size: 0.8rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #0052CC; margin-bottom: 0.75rem; }
+  .checklist ul { list-style: none; display: flex; flex-wrap: wrap; gap: 0.5rem 1.5rem; }
+  .checklist li { font-size: 0.82rem; color: #334155; display: flex; align-items: center; gap: 0.4rem; }
+  .checklist li::before { content: "✓"; color: #16A34A; font-weight: 700; font-size: 0.9rem; }
+  .cmd-legend { background: #EFF6FF; border: 1px solid #BFDBFE; border-radius: 8px; padding: 0.75rem 1rem; max-width: 740px; margin: 0 auto; font-size: 0.78rem; color: #1E40AF; text-align: center; }
+  .cmd-legend code { background: #0052CC; color: #fff; padding: 0.1rem 0.4rem; border-radius: 4px; font-size: 0.72rem; font-family: "SFMono-Regular", Consolas, monospace; margin: 0 0.1rem; }
+</style>
+</head>
+<body>
+<div class="page-header">
+  <h1>gateway-api-migration</h1>
+  <p>Migrate an NGINX Ingress footprint (master/minion or standalone) to Gateway API
+     <strong>side-by-side</strong> with the original, for per-hostname DNS cutover at the
+     operator's pace. Dual-target: default <strong>Traefik</strong>
+     (<code>GatewayClass=traefik</code>), opt-in <strong>GKE Gateway</strong>
+     (<code>--gateway-class gke-l7-*</code>). Every deterministic step is delegated to a
+     bundled script; the master source is never modified.</p>
+  <span class="pipeline-label">devops:zeus · *gateway-migrate · detailed</span>
+</div>
+
+<div class="section-title">Pipeline — red borders are halt gates, blue are atomic writers</div>
+
+<div class="steps-row">
+  <div class="step-card gate">
+    <div class="step-num gate">Step 0 · Gate</div>
+    <div class="step-name">Tool check</div>
+    <div class="step-desc">kustomize · yq · jq · kubectl · python3 required → HALT if missing. kubeconform + ingress2gateway optional (WARN, skip 4b/4c).</div>
+  </div>
+  <div class="transition"><div class="t-arrow"><svg width="30" height="20" viewBox="0 0 30 20"><line x1="0" y1="10" x2="22" y2="10" stroke="#DC2626" stroke-width="2"/><polygon points="20,5 30,10 20,15" fill="#DC2626"/></svg></div></div>
+  <div class="step-card gate">
+    <div class="step-num gate">Step 0b · Gate</div>
+    <div class="step-name">Cluster preflight</div>
+    <div class="step-desc">check_cluster_preflight.sh — kubectl, GatewayClass, CRDs, namespaces. halts[] → stop; warnings[] → risk register.</div>
+  </div>
+  <div class="transition"><div class="t-arrow"><svg width="30" height="20" viewBox="0 0 30 20"><line x1="0" y1="10" x2="22" y2="10" stroke="#DC2626" stroke-width="2"/><polygon points="20,5 30,10 20,15" fill="#DC2626"/></svg></div></div>
+  <div class="step-card">
+    <div class="step-num">Step 1</div>
+    <div class="step-name">Discover</div>
+    <div class="step-desc">kustomize build each overlay → classify_ingress.py → pair_minions.py. Orphan minion / ambiguous pairing → HALT.</div>
+  </div>
+  <div class="transition"><div class="t-arrow"><svg width="30" height="20" viewBox="0 0 30 20"><line x1="0" y1="10" x2="22" y2="10" stroke="#94A3B8" stroke-width="2"/><polygon points="20,5 30,10 20,15" fill="#94A3B8"/></svg></div></div>
+  <div class="step-card gate">
+    <div class="step-num gate">Step 2 · Gate</div>
+    <div class="step-name">Analyze + confirm</div>
+    <div class="step-desc">3-bucket annotation inventory, backend port resolution, overlay variance. Operator must confirm before conversion.</div>
+  </div>
+</div>
+
+<div class="steps-row">
+  <div class="step-card exec">
+    <div class="step-num">Step 3A</div>
+    <div class="step-name">Generate common.gateway/</div>
+    <div class="step-desc">Gateway + per-host listeners + tls-redirect + target policies (Traefik Middleware vs GCPBackendPolicy). Temp dir → atomic rename.</div>
+  </div>
+  <div class="transition"><div class="t-arrow"><svg width="30" height="20" viewBox="0 0 30 20"><line x1="0" y1="10" x2="22" y2="10" stroke="#2563EB" stroke-width="2"/><polygon points="20,5 30,10 20,15" fill="#2563EB"/></svg></div></div>
+  <div class="step-card exec">
+    <div class="step-num">Step 3B</div>
+    <div class="step-name">HTTPRoutes</div>
+    <div class="step-desc">Per (env, minion) HTTPRoute + idempotent kustomization.yaml edits — full-content backups taken first. Build fails → rollback.</div>
+  </div>
+  <div class="transition"><div class="t-arrow"><svg width="30" height="20" viewBox="0 0 30 20"><line x1="0" y1="10" x2="22" y2="10" stroke="#2563EB" stroke-width="2"/><polygon points="20,5 30,10 20,15" fill="#2563EB"/></svg></div></div>
+  <div class="step-card gate">
+    <div class="step-num gate">Step 4 · Gate</div>
+    <div class="step-name">Validate</div>
+    <div class="step-desc">4a build both modules · 4b kubeconform · 4c ingress2gateway diff · 4d validate_generated.py (11 semantic checks). 4a/4d fail → HALT.</div>
+  </div>
+  <div class="transition"><div class="t-arrow"><svg width="30" height="20" viewBox="0 0 30 20"><line x1="0" y1="10" x2="22" y2="10" stroke="#16A34A" stroke-width="2"/><polygon points="20,5 30,10 20,15" fill="#16A34A"/></svg></div></div>
+  <div class="step-card">
+    <div class="step-num">Steps 5–6</div>
+    <div class="step-name">Report + runbook</div>
+    <div class="step-desc">build_report.py renders report.md from state.yaml (verdict PASS / MANUAL REVIEW / FAIL); MIGRATION.md cutover runbook emitted.</div>
+  </div>
+  <div class="transition"><div class="t-arrow"><svg width="30" height="20" viewBox="0 0 30 20"><line x1="0" y1="10" x2="22" y2="10" stroke="#94A3B8" stroke-width="2"/><polygon points="20,5 30,10 20,15" fill="#94A3B8"/></svg></div></div>
+  <div class="step-card done">
+    <div class="step-num done">Step 7</div>
+    <div class="step-name">Pre-commit hints</div>
+    <div class="step-desc">Commit message + git add file list printed. Never auto-commits — the operator drives git.</div>
+  </div>
+</div>
+
+<div class="section-title">Usage — dual-target via one argument</div>
+<div class="usage">
+  <span class="cmd">*gateway-migrate</span>                          <span class="comment"># interactive discovery mode</span><br>
+  <span class="cmd">*gateway-migrate &lt;module-path&gt;</span>            <span class="comment"># default --gateway-class traefik</span><br>
+  <span class="cmd">*gateway-migrate &lt;module-path&gt; --gateway-class gke-l7-global-external-managed</span><br>
+  <span class="cmd">*gateway-migrate &lt;module-path&gt; --resume</span>   <span class="comment"># resume from state.yaml</span><br>
+  <span class="cmd">*gateway-migrate &lt;module-path&gt; --offline</span>  <span class="comment"># skip Step 0b cluster checks</span><br>
+  <span class="cmd">*gateway-migrate &lt;module-path&gt; --source-class traefik --no-redirect</span>  <span class="comment"># chained after *nginx-to-traefik</span>
+</div>
+
+<div class="section-title">Core mechanics — drill down for details</div>
+<div class="commands-grid">
+  <a class="cmd-card" href="diagrams/cluster-preflight.html">
+    <div class="gate-badge">Halt gate</div>
+    <div class="cmd-card-label">Step 0b</div>
+    <h3>Cluster preflight</h3>
+    <p>Gateway API CRDs, GatewayClass existence, policy CRDs, Traefik probe on Traefik targets. JSON verdict: halts[] stop the run before any file is written.</p>
+    <span class="cmd-card-hint">View details →</span>
+  </a>
+  <a class="cmd-card" href="diagrams/master-minion.html">
+    <div class="gate-badge blue">Built, not raw</div>
+    <div class="cmd-card-label">Step 1</div>
+    <h3>Master/minion discovery</h3>
+    <p>Classifies what Kustomize actually applies — kustomize build per overlay, then classify + pair. Placeholder hostnames and dead files never cause false halts.</p>
+    <span class="cmd-card-hint">View details →</span>
+  </a>
+  <a class="cmd-card" href="diagrams/annotations.html">
+    <div class="gate-badge blue">3-bucket inventory</div>
+    <div class="cmd-card-label">Step 2</div>
+    <h3>Annotation translation</h3>
+    <p>translated / stubbed / unknown with file:line provenance. Security-relevant unknowns promote to S1 — a human must confirm before cutover.</p>
+    <span class="cmd-card-hint">View details →</span>
+  </a>
+  <a class="cmd-card" href="diagrams/rollback-validate.html">
+    <div class="gate-badge green">Recoverable by design</div>
+    <div class="cmd-card-label">Steps 3–4</div>
+    <h3>Atomic rollback + validation</h3>
+    <p>Temp-dir rename for 3A, full-content backups for 3B, 11 semantic checks plus an ingress2gateway second-opinion cross-check in 4d.</p>
+    <span class="cmd-card-hint">View details →</span>
+  </a>
+</div>
+
+<div class="checklist">
+  <h2>Every successful run produces</h2>
+  <ul>
+    <li>common.gateway/ Kustomize module (Gateway + overlays)</li>
+    <li>*-httproute.yaml per env + tls-redirect HTTPRoute</li>
+    <li>state.yaml machine-readable audit trail (--resume reads it)</li>
+    <li>report.md — per-hostname map, TLS map, risk register</li>
+    <li>common.gateway/MIGRATION.md operator runbook</li>
+    <li>backups/ of every edited kustomization.yaml</li>
+  </ul>
+</div>
+
+<div class="cmd-legend">
+  Related: <code>*nginx-to-gateway</code> (chain: class swap → this skill) ·
+  <code>*nginx-to-traefik</code> (class swap only) ·
+  <code>*ingress-migration-advisor</code> (per-service path planning) ·
+  <code>*retire-nginx</code> / <code>*decommission-nginx</code> (after DNS cutover)
+</div>
+</body>
+</html>

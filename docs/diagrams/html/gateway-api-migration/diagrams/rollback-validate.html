@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Atomic rollback + validation — gateway-api-migration</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, -apple-system, "Segoe UI", Inter, sans-serif; background: #F3F4F6; color: #1E293B; min-height: 100vh; padding: 2rem 1rem 4rem; }
+  .back-link { display: inline-flex; align-items: center; gap: 0.4rem; color: #0052CC; font-size: 0.82rem; font-weight: 600; text-decoration: none; margin-bottom: 2rem; padding: 0.4rem 0.75rem; border-radius: 6px; border: 1.5px solid #BFDBFE; background: #EFF6FF; transition: background 0.15s; }
+  .back-link:hover { background: #DBEAFE; }
+  .breadcrumb { font-size: 0.72rem; color: #94A3B8; margin-bottom: 0.5rem; }
+  .breadcrumb a { color: #0052CC; text-decoration: none; }
+  .page-header { margin-bottom: 2rem; }
+  .page-header h1 { font-size: 1.5rem; font-weight: 700; color: #0052CC; margin-bottom: 0.4rem; }
+  .page-header p { font-size: 0.9rem; color: #475569; max-width: 680px; line-height: 1.6; }
+  .gate-badge { display: inline-block; font-size: 0.72rem; font-weight: 700; padding: 0.15rem 0.6rem; border-radius: 20px; background: #DCFCE7; color: #14532D; border: 1px solid #86EFAC; margin-bottom: 0.75rem; }
+  .section { background: #fff; border: 1.5px solid #E2E8F0; border-radius: 12px; padding: 1.25rem 1.5rem; margin-bottom: 1.25rem; max-width: 760px; box-shadow: 0 2px 8px rgba(0,82,204,0.07); }
+  .section h2 { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #0052CC; margin-bottom: 0.75rem; }
+  .section p { font-size: 0.85rem; color: #334155; line-height: 1.6; margin-bottom: 0.6rem; }
+  .section ul { padding-left: 1.2rem; }
+  .section li { font-size: 0.85rem; color: #334155; line-height: 1.8; }
+  .section ol { padding-left: 1.2rem; }
+  .section ol li { font-size: 0.85rem; color: #334155; line-height: 1.8; }
+  pre { background: #1E293B; color: #E2E8F0; border-radius: 8px; padding: 1rem 1.25rem; font-size: 0.78rem; font-family: "SFMono-Regular", Consolas, monospace; overflow-x: auto; line-height: 1.6; margin-top: 0.75rem; }
+  .hl-key { color: #7DD3FC; }
+  .hl-val { color: #86EFAC; }
+  .hl-comment { color: #64748B; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.8rem; margin-top: 0.5rem; }
+  th { text-align: left; color: #0052CC; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; padding: 0.4rem 0.6rem; border-bottom: 2px solid #E2E8F0; }
+  td { padding: 0.5rem 0.6rem; border-bottom: 1px solid #F1F5F9; color: #334155; line-height: 1.5; }
+  .verdict { font-weight: 700; white-space: nowrap; }
+  .verdict.abort { color: #DC2626; }
+  .verdict.warn { color: #D97706; }
+  .verdict.ok { color: #16A34A; }
+  .warning { background: #FEF2F2; border: 1px solid #FECACA; border-radius: 8px; padding: 0.75rem 1rem; font-size: 0.82rem; color: #7F1D1D; margin-top: 0.75rem; }
+</style>
+</head>
+<body>
+<a class="back-link" href="../diagram.html">← Back to overview</a>
+<div class="breadcrumb"><a href="../diagram.html">Overview</a> / Atomic rollback + validation</div>
+
+<div class="page-header">
+  <div class="gate-badge">Steps 3–4 · failures are recoverable, by design</div>
+  <h1>Atomic rollback + semantic validation</h1>
+  <p>Conversion is two-phase, each with its own atomicity guarantee. Validation is
+     four sub-steps culminating in <code>scripts/validate_generated.py</code> — 11 semantic
+     checks plus an optional <code>ingress2gateway</code> second-opinion cross-check.</p>
+</div>
+
+<div class="section">
+  <h2>Phase 3A · Temp-dir atomicity</h2>
+  <p>Everything is written to <code>common.gateway.tmp/</code> first, renamed to
+     <code>common.gateway/</code> only on success. Any failure before the rename →
+     <code>rm -rf common.gateway.tmp/</code>, <code>common.gateway/</code> untouched, HALT
+     with a message explaining the target repo is clean. Pre-existing targets HALT without
+     <code>--force</code> (never-clobber).</p>
+</div>
+
+<div class="section">
+  <h2>Phase 3B · Full-content backups, not hashes</h2>
+  <p>Before any in-place edit, every <code>kustomization.yaml</code> that will be modified
+     is backed up <strong>in full</strong>:</p>
+  <pre><span class="hl-key">mkdir</span> -p docs/reports/gateway-migration/&lt;slug&gt;/backups/
+<span class="hl-key">for</span> env <span class="hl-key">in</span> dev stg prd; <span class="hl-key">do</span>
+  <span class="hl-key">cp</span> <span class="hl-val">"common.service/overlays/$env/kustomization.yaml"</span> \
+     <span class="hl-val">"docs/reports/gateway-migration/&lt;slug&gt;/backups/${env}-kustomization.yaml.pre-edit"</span>
+<span class="hl-key">done</span>
+<span class="hl-comment"># state.yaml.steps.3B.backups[]: {originalPath, backupPath, sha256}</span>
+<span class="hl-comment"># SHA256 is for tamper detection ONLY — rollback uses the backup file</span>
+<span class="hl-comment"># contents, not the hash. This fixes the v1.0 bug where rollback could</span>
+<span class="hl-comment"># never work.</span></pre>
+  <p>After each env's HTTPRoutes are written and registered (idempotent
+     <code>yq eval -i ".resources += [...]"</code>), the env is validated with
+     <code>kustomize build</code>. On failure:</p>
+  <ol>
+    <li>Restore <code>kustomization.yaml</code> from the backup file.</li>
+    <li>Remove every newly created <code>*-httproute.yaml</code> for this env.</li>
+    <li>HALT with the kustomize error; <code>steps.3B.rollback</code> is stored so
+        <code>--resume</code> retries from the failing env.</li>
+  </ol>
+</div>
+
+<div class="section">
+  <h2>Step 4 · Validation ladder</h2>
+  <table>
+    <tr><th>Sub-step</th><th>Required</th><th>On failure</th></tr>
+    <tr><td><strong>4a</strong> kustomize build — <em>both</em> modules, every env</td><td>yes</td><td class="verdict abort">⛔ HALT (files left in place for debugging; fix + <code>--resume</code>)</td></tr>
+    <tr><td><strong>4b</strong> kubeconform with Gateway API CRD schemas</td><td>optional</td><td class="verdict warn">⚠ WARN only</td></tr>
+    <tr><td><strong>4c</strong> ingress2gateway second-opinion diff</td><td>optional</td><td class="verdict warn">⚠ WARN, never HALT</td></tr>
+    <tr><td><strong>4d</strong> validate_generated.py — 11 semantic checks</td><td>yes</td><td class="verdict abort">⛔ HALT on <code>overall: fail</code></td></tr>
+  </table>
+</div>
+
+<div class="section">
+  <h2>4d · The 11 semantic checks</h2>
+  <ol>
+    <li><code>kustomize-build-gateway</code> — gateway overlay builds clean</li>
+    <li><code>kustomize-build-service</code> — service overlay builds clean</li>
+    <li><code>listener-coverage</code> — every HTTPRoute <code>sectionName</code> resolves to a Gateway listener</li>
+    <li><code>httproute-parentref-name</code> — every <code>parentRefs[].name</code> matches a real Gateway</li>
+    <li><code>source-hostname-coverage</code> — every source master hostname appears in a listener</li>
+    <li><code>source-backend-coverage</code> — every source minion backend Service appears in a generated <code>backendRefs[]</code></li>
+    <li><code>path-coverage</code> — every source path+pathType appears in generated <code>matches[]</code> (<code>ImplementationSpecific /</code> → <code>PathPrefix /</code> normalized)</li>
+    <li><code>namespace-consistency</code> — HTTPRoute namespace matches its source minion's</li>
+    <li><code>tls-secret-coverage</code> — every source <code>spec.tls[].secretName</code> is in a listener's <code>certificateRefs[]</code></li>
+    <li><code>dead-file-safety</code> — dead files don't leak into built output</li>
+    <li><code>ingress2gateway-second-opinion</code> <em>(optional)</em> — our hostnames/backends must be a <strong>superset</strong> of the upstream tool's (extras like the tls-redirect HTTPRoute are allowed)</li>
+  </ol>
+  <pre><span class="hl-key">python3</span> scripts/validate_generated.py \
+  <span class="hl-key">--target-root</span>      /path/to/target/gitops/repo \
+  <span class="hl-key">--module</span>           common.ingress \
+  <span class="hl-key">--minion-module</span>    common.service \
+  <span class="hl-key">--generated-module</span> common.gateway \
+  <span class="hl-key">--env</span>              dev &gt; docs/reports/gateway-migration/&lt;slug&gt;/step4d.json
+<span class="hl-comment"># overall: fail → HALT · warn → risk register entries · pass → Step 5</span>
+<span class="hl-comment"># add --no-second-opinion to skip check 11</span></pre>
+</div>
+
+<div class="section">
+  <h2>4c · Second-opinion divergence classes</h2>
+  <p>The normalized diff goes to
+     <code>docs/reports/gateway-migration/&lt;slug&gt;/second-opinion.diff</code>; each
+     divergence is classified and counted in
+     <code>state.yaml.steps.4c.divergenceBreakdown</code>:</p>
+  <ul>
+    <li><strong>expected</strong> — intentional extras our skill emits
+        (<code>GCPBackendPolicy</code>, <code>Certificate</code>,
+        <code>ManagedCertificate</code> refs, <code>ResponseHeaderModifier</code>,
+        <code>tls-redirect</code> HTTPRoute)</li>
+    <li><strong>formatting</strong> — key order, whitespace, field nesting</li>
+    <li><strong>needsReview</strong> — anything else; <code>needsReview &gt; 0</code> → WARN,
+        never HALT</li>
+  </ul>
+  <div class="warning">⚠ A 4d listener/path mismatch is treated as a Phase 3A bug — fix the
+     generation, then re-run. If the failure reveals a pre-existing problem in the source
+     Ingress, fix the source instead.</div>
+</div>
+</body>
+</html>
