@@ -203,9 +203,16 @@ npx skills update
 **Windows（PowerShell，原生 — 不需要 Git Bash 或 WSL）：**
 
 ```powershell
+# 互動模式：檢查並提示安裝
 powershell -ExecutionPolicy Bypass -File scripts\install-tools.ps1
+
+# 僅檢查工具狀態（不需要管理員）
 powershell -ExecutionPolicy Bypass -File scripts\install-tools.ps1 check
+
+# 安裝全部缺少的工具（僅 choco 套件需要管理員）
 powershell -ExecutionPolicy Bypass -File scripts\install-tools.ps1 install
+
+# 安裝特定 Agent 的工具
 powershell -ExecutionPolicy Bypass -File scripts\install-tools.ps1 install horus
 powershell -ExecutionPolicy Bypass -File scripts\install-tools.ps1 install zeus
 ```

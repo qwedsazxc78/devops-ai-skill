@@ -143,6 +143,8 @@ Agent 在执行过程中会告诉你缺少哪些工具，你也可以一次安�
 
 **Windows：**
 
+> 大多数工具无需管理员 / UAC — `winget` / `scoop` / `uv` 以当前用户身份安装，仅 `choco` 套件需要提权终端。
+
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\install-tools.ps1
 powershell -ExecutionPolicy Bypass -File scripts\install-tools.ps1 install horus
@@ -177,7 +179,7 @@ claude    # 启动 Agent（或 gemini/codex），输入 *health
 # 一键安装（交互式菜单）
 .\scripts\setup\install.bat
 
-# 或非交互执行
+# 或非交互执行（当前用户安装，无需管理员）
 powershell -ExecutionPolicy Bypass -File scripts\install-global.ps1
 powershell -ExecutionPolicy Bypass -File scripts\install-tools.ps1 install
 ```

@@ -203,10 +203,10 @@ One-command installer supporting macOS (Homebrew), Linux (apt/snap), Windows (wi
 # Interactive: check + prompt install
 powershell -ExecutionPolicy Bypass -File scripts\install-tools.ps1
 
-# Check tool status only
+# Check tool status only (no admin needed)
 powershell -ExecutionPolicy Bypass -File scripts\install-tools.ps1 check
 
-# Install all missing tools
+# Install all missing tools (only choco packages need admin)
 powershell -ExecutionPolicy Bypass -File scripts\install-tools.ps1 install
 
 # Install tools for a specific agent
@@ -216,7 +216,7 @@ powershell -ExecutionPolicy Bypass -File scripts\install-tools.ps1 install zeus
 
 Or double-click `scripts\setup\install.bat` and choose `[2] Tools`. Requires `winget` (built into Windows 10 1809+ / Windows 11) or `choco` / `scoop`.
 
-> **No admin / UAC required.** Tools install per-user via `winget` / `scoop` / `uv` — do **not** run elevated (self-elevation would install into the Administrator profile, not yours). Only `choco` packages need an elevated shell; the installer prefers `winget` where available.
+> **No admin / UAC required for most installs.** Tools install per-user via `winget` / `scoop` / `uv` — do **not** run elevated (self-elevation would install into the Administrator profile, not yours). `check` never needs admin; only `choco` packages need an elevated shell, and the installer prefers `winget` where available.
 
 ### Shared Tools
 

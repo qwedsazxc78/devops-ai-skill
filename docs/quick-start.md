@@ -155,6 +155,8 @@ The agent tells you which tools are missing during execution. You can also insta
 
 **Windows:**
 
+> No admin / UAC needed for most tools — `winget` / `scoop` / `uv` install per-user. Only `choco` packages need an elevated shell.
+
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\install-tools.ps1
 powershell -ExecutionPolicy Bypass -File scripts\install-tools.ps1 install horus
@@ -189,7 +191,7 @@ Native PowerShell install — no Git Bash, no WSL:
 # One-click (interactive menu)
 .\scripts\setup\install.bat
 
-# Or non-interactive
+# Or non-interactive (per-user, no admin needed)
 powershell -ExecutionPolicy Bypass -File scripts\install-global.ps1
 powershell -ExecutionPolicy Bypass -File scripts\install-tools.ps1 install
 ```
