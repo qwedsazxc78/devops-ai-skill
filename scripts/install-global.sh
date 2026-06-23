@@ -455,6 +455,36 @@ _antigravity_purge_legacy_workflows() {
   fi
 }
 
+# --- Dynamic discovery (keeps uninstall/status in sync with the source tree) ---
+# Enumerate skill names straight from skills/ so the lists below never go stale
+# when skills are added or removed. Echoes one name per line.
+_discover_skills() {
+  local d
+  for d in "$SKILL_PACK_DIR"/skills/*/; do
+    [[ -d "$d" ]] || continue
+    basename "$d"
+  done
+}
+
+# Enumerate the workflow filenames install_antigravity writes, derived from the
+# same prompts/ sources and the same naming rule (shared-* / <agent>-*).
+_discover_workflows() {
+  local prompt_dir src_dir f fname
+  for prompt_dir in horus zeus shared; do
+    src_dir="$SKILL_PACK_DIR/prompts/$prompt_dir"
+    [[ -d "$src_dir" ]] || continue
+    for f in "$src_dir"/*.md; do
+      [[ -f "$f" ]] || continue
+      fname=$(basename "$f" .md)
+      if [[ "$prompt_dir" == "shared" ]]; then
+        echo "shared-${fname}"
+      else
+        echo "${prompt_dir}-${fname}"
+      fi
+    done
+  done
+}
+
 # --- Uninstall ---
 _rm_if_exists() {
   local path="$1" label="$2"
@@ -516,7 +546,8 @@ do_uninstall() {
   echo -e "${BOLD}═══ Uninstall (Global) ═══${NC}"
 
   local removed=0
-  local skills=("cicd-enhancer" "gateway-api-migration" "helm-scaffold" "helm-version-upgrade" "kustomize-resource-validation" "release-validate" "repo-detect" "terraform-security" "terraform-validate" "yaml-fix-suggestions")
+  local skills=()
+  while IFS= read -r _s; do skills+=("$_s"); done < <(_discover_skills)
 
   # Claude: ~/.claude/agents/ + ~/.claude/skills/ + ~/.claude/prompts/ + plugin cache
   for agent in horus zeus; do
@@ -561,16 +592,11 @@ do_uninstall() {
   for skill in "${skills[@]}"; do
     _rm_if_exists "$HOME/.agents/skills/$skill" "~/.agents/skills/$skill" && ((removed++)) || true
   done
-  # Workflows — names match what install_antigravity actually writes
-  # (install uses the source filename verbatim, so `full-pipeline.md` →
-  # `horus-full-pipeline.md`, not `horus-full.md`).
-  local workflows=(
-    horus-cicd horus-full-pipeline horus-health horus-scaffold
-    horus-security horus-upgrade horus-validate
-    zeus-diagram zeus-full-pipeline zeus-gateway-migrate zeus-health
-    zeus-pre-merge zeus-review zeus-scaffold zeus-status
-    shared-help shared-repo-detect shared-report-format shared-tool-check
-  )
+  # Workflows — enumerated from prompts/ with the same naming rule install
+  # uses (install writes the source filename verbatim, so `full-pipeline.md` →
+  # `horus-full-pipeline.md`). Dynamic so new pipelines are removed too.
+  local workflows=()
+  while IFS= read -r _w; do workflows+=("$_w"); done < <(_discover_workflows)
   for wf in "${workflows[@]}"; do
     _rm_if_exists "$HOME/.agents/workflows/${wf}.md" "~/.agents/workflows/${wf}.md" && ((removed++)) || true
   done
@@ -590,8 +616,6 @@ do_status() {
   echo ""
   echo -e "${BOLD}═══ Global Install Status ═══${NC}"
 
-  local skills=("cicd-enhancer" "gateway-api-migration" "helm-scaffold" "helm-version-upgrade" "kustomize-resource-validation" "release-validate" "repo-detect" "terraform-security" "terraform-validate" "yaml-fix-suggestions")
-
   # Claude: ~/.claude/
   _status_section "Claude Code" "$HOME/.claude" "claude"
 
@@ -607,7 +631,8 @@ do_status() {
 
 _status_section() {
   local label="$1" base="$2" id="$3"
-  local skills=("cicd-enhancer" "gateway-api-migration" "helm-scaffold" "helm-version-upgrade" "kustomize-resource-validation" "release-validate" "repo-detect" "terraform-security" "terraform-validate" "yaml-fix-suggestions")
+  local skills=()
+  while IFS= read -r _s; do skills+=("$_s"); done < <(_discover_skills)
   local found=0
 
   echo ""

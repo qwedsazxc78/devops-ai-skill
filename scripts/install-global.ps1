@@ -76,6 +76,27 @@ function Test-Dir ([string]$path) {
   Test-Path -LiteralPath $path -PathType Container
 }
 
+# --- Dynamic discovery (keeps uninstall/status in sync with the source tree) ---
+# Enumerate skill names straight from skills/ so the lists below never go stale
+# when skills are added or removed.
+function Get-DiscoveredSkills {
+  Get-ChildItem -LiteralPath (Join-Path $SkillPackDir 'skills') -Directory -ErrorAction SilentlyContinue |
+    ForEach-Object { $_.Name }
+}
+
+# Enumerate the workflow filenames Install-Antigravity writes, derived from the
+# same prompts/ sources and the same naming rule (shared-* / <agent>-*).
+function Get-DiscoveredWorkflows {
+  foreach ($promptDir in @('horus','zeus','shared')) {
+    $srcDir = Join-Path $SkillPackDir ('prompts\' + $promptDir)
+    if (-not (Test-Dir $srcDir)) { continue }
+    Get-ChildItem -LiteralPath $srcDir -Filter '*.md' -ErrorAction SilentlyContinue | ForEach-Object {
+      $fname = [System.IO.Path]::GetFileNameWithoutExtension($_.Name)
+      if ($promptDir -eq 'shared') { "shared-$fname" } else { "$promptDir-$fname" }
+    }
+  }
+}
+
 function Test-Platform ([string]$displayName, [string]$cliCmd, [string]$configDir) {
   if (Test-Cli $cliCmd) {
     $ver = ''
@@ -556,11 +577,7 @@ function Invoke-Uninstall {
   Write-Host '=== Uninstall (Global) ===' -ForegroundColor White
 
   $removed = 0
-  $skills = @(
-    'cicd-enhancer','gateway-api-migration','helm-scaffold',
-    'helm-version-upgrade','kustomize-resource-validation','release-validate',
-    'repo-detect','terraform-security','terraform-validate','yaml-fix-suggestions'
-  )
+  $skills = @(Get-DiscoveredSkills)
 
   # Claude
   foreach ($agent in @('horus','zeus')) {
@@ -604,13 +621,9 @@ function Invoke-Uninstall {
   foreach ($skill in $skills) {
     if (Remove-IfExists (Join-Path $env:USERPROFILE (".agents\skills\$skill")) "~/.agents/skills/$skill") { $removed++ }
   }
-  $workflows = @(
-    'horus-cicd','horus-full-pipeline','horus-health','horus-scaffold',
-    'horus-security','horus-upgrade','horus-validate',
-    'zeus-diagram','zeus-full-pipeline','zeus-gateway-migrate','zeus-health',
-    'zeus-pre-merge','zeus-review','zeus-scaffold','zeus-status',
-    'shared-help','shared-repo-detect','shared-report-format','shared-tool-check'
-  )
+  # Workflows -- enumerated from prompts/ with the same naming rule install
+  # uses, so new pipelines are removed too (never goes stale).
+  $workflows = @(Get-DiscoveredWorkflows)
   foreach ($wf in $workflows) {
     if (Remove-IfExists (Join-Path $env:USERPROFILE (".agents\workflows\$wf.md")) "~/.agents/workflows/$wf.md") { $removed++ }
   }
@@ -638,11 +651,7 @@ function Show-Status {
 }
 
 function Show-StatusSection ([string]$label, [string]$base) {
-  $skills = @(
-    'cicd-enhancer','gateway-api-migration','helm-scaffold',
-    'helm-version-upgrade','kustomize-resource-validation','release-validate',
-    'repo-detect','terraform-security','terraform-validate','yaml-fix-suggestions'
-  )
+  $skills = @(Get-DiscoveredSkills)
   $found = 0
 
   Write-Host ''
