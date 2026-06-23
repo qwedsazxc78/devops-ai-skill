@@ -79,8 +79,9 @@ Use the tool check pipeline or read `prompts/shared/tool-check.md`
 bash scripts/install-tools.sh
 ```
 
-**Windows (PowerShell):**
+**Windows (PowerShell — requires Administrator):**
 ```powershell
+# Run PowerShell as Administrator, then:
 .\scripts\install-tools.ps1
 ```
 

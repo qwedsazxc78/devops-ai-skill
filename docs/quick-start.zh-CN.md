@@ -143,6 +143,8 @@ Agent 在执行过程中会告诉你缺少哪些工具，你也可以一次安�
 
 **Windows：**
 
+> ⚠️ **需要管理员权限：** 执行 `install-tools.ps1` 前，请以管理员身份打开 PowerShell。
+
 ```powershell
 .\scripts\install-tools.ps1
 .\scripts\install-tools.ps1 install horus
@@ -175,7 +177,7 @@ claude    # 启动 Agent（或 gemini/codex），输入 *health
 # 一键安装（交互式菜单）
 .\scripts\setup\install.bat
 
-# 或非交互执行
+# 或非交互执行（需要以管理员身份打开 PowerShell）
 powershell -ExecutionPolicy Bypass -File scripts\install-global.ps1
 powershell -ExecutionPolicy Bypass -File scripts\install-tools.ps1 install
 ```

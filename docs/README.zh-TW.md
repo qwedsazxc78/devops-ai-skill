@@ -200,15 +200,24 @@ npx skills update
 
 **Windows（PowerShell，原生 — 不需要 Git Bash 或 WSL）：**
 
+> ⚠️ **需要管理員權限：** 執行 `install-tools.ps1` 前，請以系統管理員身分開啟 PowerShell。套件管理工具（`winget`、`choco`、`scoop`）需要提升的權限才能安裝系統工具。
+
 ```powershell
+# 互動模式：檢查並提示安裝
 .\scripts\install-tools.ps1
+
+# 僅檢查工具狀態（不需要管理員）
 .\scripts\install-tools.ps1 check
+
+# 安裝全部缺少的工具（需要管理員）
 .\scripts\install-tools.ps1 install
+
+# 安裝特定 Agent 的工具（需要管理員）
 .\scripts\install-tools.ps1 install horus
 .\scripts\install-tools.ps1 install zeus
 ```
 
-或雙擊 `scripts\setup\install.bat`，選擇 `[2] Tools`。需要 `winget`（Windows 10 1809+ / Windows 11 內建）或 `choco` / `scoop`。
+或雙擊 `scripts\setup\install.bat`，選擇 `[2] Tools`（安裝時需要管理員模式）。需要 `winget`（Windows 10 1809+ / Windows 11 內建）或 `choco` / `scoop`。
 
 ### 共用工具
 

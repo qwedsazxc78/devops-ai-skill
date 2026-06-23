@@ -197,22 +197,24 @@ One-command installer supporting macOS (Homebrew), Linux (apt/snap), Windows (wi
 
 **Windows (PowerShell, native — no Git Bash / WSL needed):**
 
+> ⚠️ **Admin Rights Required:** Run PowerShell as Administrator before executing `install-tools.ps1`. Package managers (`winget`, `choco`, `scoop`) require elevated privileges to install system tools.
+
 ```powershell
 # Interactive: check + prompt install
 .\scripts\install-tools.ps1
 
-# Check tool status only
+# Check tool status only (no admin needed)
 .\scripts\install-tools.ps1 check
 
-# Install all missing tools
+# Install all missing tools (requires admin)
 .\scripts\install-tools.ps1 install
 
-# Install tools for a specific agent
+# Install tools for a specific agent (requires admin)
 .\scripts\install-tools.ps1 install horus
 .\scripts\install-tools.ps1 install zeus
 ```
 
-Or double-click `scripts\setup\install.bat` and choose `[2] Tools`. Requires `winget` (built into Windows 10 1809+ / Windows 11) or `choco` / `scoop`.
+Or double-click `scripts\setup\install.bat` and choose `[2] Tools` (admin mode required for install). Requires `winget` (built into Windows 10 1809+ / Windows 11) or `choco` / `scoop`.
 
 ### Shared Tools
 

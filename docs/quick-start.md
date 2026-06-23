@@ -155,6 +155,8 @@ The agent tells you which tools are missing during execution. You can also insta
 
 **Windows:**
 
+> ⚠️ **Admin Rights Required:** Open PowerShell as Administrator before running `install-tools.ps1`.
+
 ```powershell
 .\scripts\install-tools.ps1
 .\scripts\install-tools.ps1 install horus
@@ -187,7 +189,7 @@ Native PowerShell install — no Git Bash, no WSL:
 # One-click (interactive menu)
 .\scripts\setup\install.bat
 
-# Or non-interactive
+# Or non-interactive (requires PowerShell run as Administrator)
 powershell -ExecutionPolicy Bypass -File scripts\install-global.ps1
 powershell -ExecutionPolicy Bypass -File scripts\install-tools.ps1 install
 ```
