@@ -55,6 +55,8 @@ powershell -ExecutionPolicy Bypass -File scripts\install-global.ps1
 
 All paths auto-detect Claude Code / Codex CLI / Gemini CLI / Antigravity and install to their global config paths. The Windows scripts target PowerShell 5.1 (built-in on Windows 10/11) — no Git Bash, no WSL, no extra dependencies.
 
+> **PowerShell execution policy.** Running a `.ps1` directly (e.g. `.\scripts\install-global.ps1`) can fail with *"running scripts is disabled on this system"* under the default `Restricted` policy. Use `scripts\setup\install.bat` or the `powershell -ExecutionPolicy Bypass -File ...` form shown above — both bypass the policy for that one run without changing system settings or needing admin. To allow scripts permanently for your user only (no admin/UAC): `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`.
+
 ![Global Install](docs/guide/01-install-global-run.png)
 
 > 🆕 **New here?** Check out the [5-minute quick start guide](docs/quick-start.md) — zero prior knowledge required!
@@ -199,20 +201,22 @@ One-command installer supporting macOS (Homebrew), Linux (apt/snap), Windows (wi
 
 ```powershell
 # Interactive: check + prompt install
-.\scripts\install-tools.ps1
+powershell -ExecutionPolicy Bypass -File scripts\install-tools.ps1
 
 # Check tool status only
-.\scripts\install-tools.ps1 check
+powershell -ExecutionPolicy Bypass -File scripts\install-tools.ps1 check
 
 # Install all missing tools
-.\scripts\install-tools.ps1 install
+powershell -ExecutionPolicy Bypass -File scripts\install-tools.ps1 install
 
 # Install tools for a specific agent
-.\scripts\install-tools.ps1 install horus
-.\scripts\install-tools.ps1 install zeus
+powershell -ExecutionPolicy Bypass -File scripts\install-tools.ps1 install horus
+powershell -ExecutionPolicy Bypass -File scripts\install-tools.ps1 install zeus
 ```
 
 Or double-click `scripts\setup\install.bat` and choose `[2] Tools`. Requires `winget` (built into Windows 10 1809+ / Windows 11) or `choco` / `scoop`.
+
+> **No admin / UAC required.** Tools install per-user via `winget` / `scoop` / `uv` — do **not** run elevated (self-elevation would install into the Administrator profile, not yours). Only `choco` packages need an elevated shell; the installer prefers `winget` where available.
 
 ### Shared Tools
 

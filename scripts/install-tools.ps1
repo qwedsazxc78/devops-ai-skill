@@ -396,17 +396,30 @@ function Invoke-Interactive {
 }
 
 # --- Main ---
-Test-PlatformInfo
+# Top-level guard: any unexpected terminating error surfaces as a clean message +
+# non-zero exit rather than a raw stack trace. Per-tool install failures are
+# already handled (and retried) inside Invoke-Install, so they do not reach here.
+try {
+  Test-PlatformInfo
 
-switch ($Command) {
-  'check'   { Invoke-Check       -Filter $Filter }
-  'install' { Invoke-Install     -Filter $Filter }
-  Default    {
-    if ($Command) {
-      # Treat single positional arg as filter for interactive mode
-      Invoke-Interactive -Filter $Command
-    } else {
-      Invoke-Interactive -Filter $Filter
+  switch ($Command) {
+    'check'   { Invoke-Check       -Filter $Filter }
+    'install' { Invoke-Install     -Filter $Filter }
+    Default    {
+      if ($Command) {
+        # Treat single positional arg as filter for interactive mode
+        Invoke-Interactive -Filter $Command
+      } else {
+        Invoke-Interactive -Filter $Filter
+      }
     }
   }
+} catch {
+  Write-Host ''
+  Write-Host '[ERROR] ' -ForegroundColor Red -NoNewline
+  Write-Host "Tool installer failed: $($_.Exception.Message)"
+  if ($_.InvocationInfo -and $_.InvocationInfo.ScriptLineNumber) {
+    Write-Host ("    at line {0}" -f $_.InvocationInfo.ScriptLineNumber) -ForegroundColor DarkGray
+  }
+  exit 1
 }

@@ -156,10 +156,12 @@ The agent tells you which tools are missing during execution. You can also insta
 **Windows:**
 
 ```powershell
-.\scripts\install-tools.ps1
-.\scripts\install-tools.ps1 install horus
-.\scripts\install-tools.ps1 install zeus
+powershell -ExecutionPolicy Bypass -File scripts\install-tools.ps1
+powershell -ExecutionPolicy Bypass -File scripts\install-tools.ps1 install horus
+powershell -ExecutionPolicy Bypass -File scripts\install-tools.ps1 install zeus
 ```
+
+> Running `.ps1` files directly can fail under the default `Restricted` execution policy (*"running scripts is disabled on this system"*). The `-ExecutionPolicy Bypass` form above — and `scripts\setup\install.bat` — sidestep this for that one run, no admin/UAC needed.
 
 ## FAQ
 

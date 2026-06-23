@@ -144,10 +144,12 @@ Agent 在執行過程中會告訴你缺少哪些工具，你也可以一次安�
 **Windows：**
 
 ```powershell
-.\scripts\install-tools.ps1
-.\scripts\install-tools.ps1 install horus
-.\scripts\install-tools.ps1 install zeus
+powershell -ExecutionPolicy Bypass -File scripts\install-tools.ps1
+powershell -ExecutionPolicy Bypass -File scripts\install-tools.ps1 install horus
+powershell -ExecutionPolicy Bypass -File scripts\install-tools.ps1 install zeus
 ```
+
+> 直接執行 `.ps1` 在預設 `Restricted` 原則下會報 *"running scripts is disabled on this system"*。上方的 `-ExecutionPolicy Bypass` 形式（或 `scripts\setup\install.bat`）只對該次執行繞過原則，不需系統管理員 / UAC。
 
 ## 常見問題
 

@@ -55,6 +55,8 @@ powershell -ExecutionPolicy Bypass -File scripts\install-global.ps1
 
 自動偵測 Claude Code / Codex CLI / Gemini CLI / Antigravity，安裝至對應全域路徑。Windows 腳本針對 PowerShell 5.1（Windows 10 / 11 內建），不需要 Git Bash 或 WSL。
 
+> **PowerShell 執行原則：** 直接執行 `.ps1`（如 `.\scripts\install-global.ps1`）在預設 `Restricted` 原則下會報 *"running scripts is disabled on this system"*。請使用 `scripts\setup\install.bat` 或上方的 `powershell -ExecutionPolicy Bypass -File ...` 形式 —— 兩者都只對該次執行繞過原則，不需更改系統設定、不需系統管理員（UAC）。若要為目前使用者永久允許指令碼：`Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`。
+
 ![全域安裝](guide/01-install-global-run.png)
 
 > 🆕 **新手？** 請看 [5 分鐘快速上手指南](quick-start.zh-TW.md)，零基礎也能立刻開始！
@@ -201,14 +203,18 @@ npx skills update
 **Windows（PowerShell，原生 — 不需要 Git Bash 或 WSL）：**
 
 ```powershell
-.\scripts\install-tools.ps1
-.\scripts\install-tools.ps1 check
-.\scripts\install-tools.ps1 install
-.\scripts\install-tools.ps1 install horus
-.\scripts\install-tools.ps1 install zeus
+powershell -ExecutionPolicy Bypass -File scripts\install-tools.ps1
+powershell -ExecutionPolicy Bypass -File scripts\install-tools.ps1 check
+powershell -ExecutionPolicy Bypass -File scripts\install-tools.ps1 install
+powershell -ExecutionPolicy Bypass -File scripts\install-tools.ps1 install horus
+powershell -ExecutionPolicy Bypass -File scripts\install-tools.ps1 install zeus
 ```
 
 或雙擊 `scripts\setup\install.bat`，選擇 `[2] Tools`。需要 `winget`（Windows 10 1809+ / Windows 11 內建）或 `choco` / `scoop`。
+
+> **無需系統管理員 / UAC。** 工具以目前使用者身分透過 `winget` / `scoop` / `uv` 安裝，請勿用系統管理員權限執行（自我提權會安裝到 Administrator 設定檔而非你的）。僅 `choco` 套件需要提權終端機；安裝器會優先使用 `winget`。
+>
+> **PowerShell 執行原則：** 直接執行 `.ps1`（如 `.\scripts\install-tools.ps1`）在預設 `Restricted` 原則下會報 *"running scripts is disabled on this system"*。請使用上方的 `powershell -ExecutionPolicy Bypass -File ...` 形式或 `scripts\setup\install.bat`，兩者都只對該次執行繞過原則，不需更改系統設定、不需系統管理員。若要為目前使用者永久允許指令碼（不需 UAC）：`Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`。
 
 ### 共用工具
 

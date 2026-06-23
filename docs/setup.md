@@ -81,8 +81,10 @@ bash scripts/install-tools.sh
 
 **Windows (PowerShell):**
 ```powershell
-.\scripts\install-tools.ps1
+powershell -ExecutionPolicy Bypass -File scripts\install-tools.ps1
 ```
+
+> Direct `.ps1` execution can be blocked by the default `Restricted` policy (*"running scripts is disabled on this system"*). The `-ExecutionPolicy Bypass` form above — or `scripts\setup\install.bat` — runs it without changing system policy or needing admin/UAC.
 
 ### Version Management
 
