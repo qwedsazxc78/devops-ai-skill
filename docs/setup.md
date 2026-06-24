@@ -79,11 +79,12 @@ Use the tool check pipeline or read `prompts/shared/tool-check.md`
 bash scripts/install-tools.sh
 ```
 
-**Windows (PowerShell — requires Administrator):**
+**Windows (PowerShell):**
 ```powershell
-# Run PowerShell as Administrator, then:
-.\scripts\install-tools.ps1
+powershell -ExecutionPolicy Bypass -File scripts\install-tools.ps1
 ```
+
+> Direct `.ps1` execution can be blocked by the default `Restricted` policy (*"running scripts is disabled on this system"*). The `-ExecutionPolicy Bypass` form above — or `scripts\setup\install.bat` — runs it without changing system policy or needing admin/UAC.
 
 ### Version Management
 

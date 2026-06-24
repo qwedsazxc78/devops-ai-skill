@@ -44,7 +44,12 @@ try {
   $OutputEncoding = [System.Text.Encoding]::UTF8
 } catch { }
 
-$ScriptDir     = Split-Path -Parent -LiteralPath $MyInvocation.MyCommand.Path
+# NOTE: Use `Split-Path -LiteralPath` WITHOUT `-Parent`. In Windows PowerShell 5.1,
+# `Split-Path -Parent -LiteralPath` is an ambiguous parameter set and throws
+# "Parameter set cannot be resolved using the specified named parameters." at
+# script start -- which aborted the entire installer on Windows. `-Parent` is the
+# default behavior anyway, so omitting it is both correct and unambiguous.
+$ScriptDir     = Split-Path -LiteralPath $MyInvocation.MyCommand.Path
 $SkillPackDir  = (Resolve-Path -LiteralPath (Join-Path $ScriptDir '..')).Path
 
 # --- Counters ---
@@ -71,6 +76,38 @@ function Test-Dir ([string]$path) {
   Test-Path -LiteralPath $path -PathType Container
 }
 
+# --- Dynamic discovery (keeps uninstall/status in sync with the source tree) ---
+# Enumerate skill names straight from skills/ so the lists below never go stale
+# when skills are added or removed.
+function Get-DiscoveredSkills {
+  Get-ChildItem -LiteralPath (Join-Path $SkillPackDir 'skills') -Directory -ErrorAction SilentlyContinue |
+    ForEach-Object { $_.Name }
+}
+
+# Enumerate the workflow filenames Install-Antigravity writes, derived from the
+# same prompts/ sources and the same naming rule (shared-* / <agent>-*).
+function Get-DiscoveredWorkflows {
+  foreach ($promptDir in @('horus','zeus','shared')) {
+    $srcDir = Join-Path $SkillPackDir ('prompts\' + $promptDir)
+    if (-not (Test-Dir $srcDir)) { continue }
+    Get-ChildItem -LiteralPath $srcDir -Filter '*.md' -ErrorAction SilentlyContinue | ForEach-Object {
+      $fname = [System.IO.Path]::GetFileNameWithoutExtension($_.Name)
+      if ($promptDir -eq 'shared') { "shared-$fname" } else { "$promptDir-$fname" }
+    }
+  }
+}
+
+# How to install each AI coding CLI, surfaced when it is missing or not on PATH.
+function Get-CliInstallHint ([string]$cliCmd) {
+  switch ($cliCmd) {
+    'claude'      { return 'npm install -g @anthropic-ai/claude-code' }
+    'codex'       { return 'npm install -g @openai/codex' }
+    'gemini'      { return 'npm install -g @google/gemini-cli' }
+    'antigravity' { return 'download the Antigravity editor: https://antigravity.google' }
+    Default        { return '' }
+  }
+}
+
 function Test-Platform ([string]$displayName, [string]$cliCmd, [string]$configDir) {
   if (Test-Cli $cliCmd) {
     $ver = ''
@@ -90,7 +127,11 @@ function Test-Platform ([string]$displayName, [string]$cliCmd, [string]$configDi
   } else {
     Write-Host '  [--]   ' -ForegroundColor DarkGray -NoNewline
     Write-Host ("{0,-13} " -f $displayName) -NoNewline
-    Write-Host '(not installed -- skipping)' -ForegroundColor DarkGray
+    Write-Host '(not installed)' -ForegroundColor DarkGray
+    $hint = Get-CliInstallHint $cliCmd
+    if ($hint) {
+      Write-Host ('           to install: {0}' -f $hint) -ForegroundColor DarkGray
+    }
     return $false
   }
 }
@@ -104,11 +145,11 @@ function Copy-DirIdempotent ([string]$src, [string]$dst, [string]$label) {
   if (Test-Path -LiteralPath $dst) {
     # Update: remove old, copy new
     Remove-Item -Recurse -Force -LiteralPath $dst
-    New-Item -ItemType Directory -Force -Path (Split-Path -Parent -LiteralPath $dst) | Out-Null
+    New-Item -ItemType Directory -Force -Path (Split-Path -LiteralPath $dst) | Out-Null
     Copy-Item -Path $src -Destination $dst -Recurse -Force
     Write-Upd $label
   } else {
-    New-Item -ItemType Directory -Force -Path (Split-Path -Parent -LiteralPath $dst) | Out-Null
+    New-Item -ItemType Directory -Force -Path (Split-Path -LiteralPath $dst) | Out-Null
     Copy-Item -Path $src -Destination $dst -Recurse -Force
     Write-New $label
   }
@@ -119,7 +160,7 @@ function Copy-FileIdempotent ([string]$src, [string]$dst, [string]$label) {
     Write-WarnLog "$label source not found: $src"
     return
   }
-  New-Item -ItemType Directory -Force -Path (Split-Path -Parent -LiteralPath $dst) | Out-Null
+  New-Item -ItemType Directory -Force -Path (Split-Path -LiteralPath $dst) | Out-Null
   if (Test-Path -LiteralPath $dst -PathType Leaf) {
     $srcHash = (Get-FileHash -LiteralPath $src -Algorithm SHA256).Hash
     $dstHash = (Get-FileHash -LiteralPath $dst -Algorithm SHA256).Hash
@@ -551,11 +592,7 @@ function Invoke-Uninstall {
   Write-Host '=== Uninstall (Global) ===' -ForegroundColor White
 
   $removed = 0
-  $skills = @(
-    'cicd-enhancer','gateway-api-migration','helm-scaffold',
-    'helm-version-upgrade','kustomize-resource-validation','release-validate',
-    'repo-detect','terraform-security','terraform-validate','yaml-fix-suggestions'
-  )
+  $skills = @(Get-DiscoveredSkills)
 
   # Claude
   foreach ($agent in @('horus','zeus')) {
@@ -599,13 +636,9 @@ function Invoke-Uninstall {
   foreach ($skill in $skills) {
     if (Remove-IfExists (Join-Path $env:USERPROFILE (".agents\skills\$skill")) "~/.agents/skills/$skill") { $removed++ }
   }
-  $workflows = @(
-    'horus-cicd','horus-full-pipeline','horus-health','horus-scaffold',
-    'horus-security','horus-upgrade','horus-validate',
-    'zeus-diagram','zeus-full-pipeline','zeus-gateway-migrate','zeus-health',
-    'zeus-pre-merge','zeus-review','zeus-scaffold','zeus-status',
-    'shared-help','shared-repo-detect','shared-report-format','shared-tool-check'
-  )
+  # Workflows -- enumerated from prompts/ with the same naming rule install
+  # uses, so new pipelines are removed too (never goes stale).
+  $workflows = @(Get-DiscoveredWorkflows)
   foreach ($wf in $workflows) {
     if (Remove-IfExists (Join-Path $env:USERPROFILE (".agents\workflows\$wf.md")) "~/.agents/workflows/$wf.md") { $removed++ }
   }
@@ -633,11 +666,7 @@ function Show-Status {
 }
 
 function Show-StatusSection ([string]$label, [string]$base) {
-  $skills = @(
-    'cicd-enhancer','gateway-api-migration','helm-scaffold',
-    'helm-version-upgrade','kustomize-resource-validation','release-validate',
-    'repo-detect','terraform-security','terraform-validate','yaml-fix-suggestions'
-  )
+  $skills = @(Get-DiscoveredSkills)
   $found = 0
 
   Write-Host ''
@@ -807,4 +836,19 @@ function Invoke-Main {
   Write-Host "To uninstall:     powershell -ExecutionPolicy Bypass -File $ScriptDir\install-global.ps1 -Uninstall"
 }
 
-Invoke-Main
+# Top-level error handler: surface a clean message + non-zero exit instead of a
+# raw PowerShell stack trace. ($ErrorActionPreference='Stop' turns cmdlet errors
+# into terminating errors; the `exit N` calls inside Invoke-Main terminate the
+# process directly and are intentionally NOT caught here.)
+try {
+  Invoke-Main
+} catch {
+  Write-Host ''
+  Write-Host '[ERROR] ' -ForegroundColor Red -NoNewline
+  Write-Host "Global install failed: $($_.Exception.Message)"
+  if ($_.InvocationInfo -and $_.InvocationInfo.ScriptLineNumber) {
+    Write-Host ("    at line {0}" -f $_.InvocationInfo.ScriptLineNumber) -ForegroundColor DarkGray
+  }
+  Write-Host '    Re-run with -Status to inspect current state, or open an issue with the message above.' -ForegroundColor DarkGray
+  exit 1
+}

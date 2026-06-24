@@ -143,13 +143,15 @@ Agent 在执行过程中会告诉你缺少哪些工具，你也可以一次安�
 
 **Windows：**
 
-> ⚠️ **需要管理员权限：** 执行 `install-tools.ps1` 前，请以管理员身份打开 PowerShell。
+> 大多数工具无需管理员 / UAC — `winget` / `scoop` / `uv` 以当前用户身份安装，仅 `choco` 套件需要提权终端。
 
 ```powershell
-.\scripts\install-tools.ps1
-.\scripts\install-tools.ps1 install horus
-.\scripts\install-tools.ps1 install zeus
+powershell -ExecutionPolicy Bypass -File scripts\install-tools.ps1
+powershell -ExecutionPolicy Bypass -File scripts\install-tools.ps1 install horus
+powershell -ExecutionPolicy Bypass -File scripts\install-tools.ps1 install zeus
 ```
+
+> 直接执行 `.ps1` 在默认 `Restricted` 策略下会报 *"running scripts is disabled on this system"*。上方的 `-ExecutionPolicy Bypass` 形式（或 `scripts\setup\install.bat`）只对该次运行绕过策略，无需管理员 / UAC。
 
 ## 常见问题
 
@@ -177,7 +179,7 @@ claude    # 启动 Agent（或 gemini/codex），输入 *health
 # 一键安装（交互式菜单）
 .\scripts\setup\install.bat
 
-# 或非交互执行（需要以管理员身份打开 PowerShell）
+# 或非交互执行（当前用户安装，无需管理员）
 powershell -ExecutionPolicy Bypass -File scripts\install-global.ps1
 powershell -ExecutionPolicy Bypass -File scripts\install-tools.ps1 install
 ```

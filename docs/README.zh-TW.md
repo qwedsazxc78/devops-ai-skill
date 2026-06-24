@@ -55,6 +55,8 @@ powershell -ExecutionPolicy Bypass -File scripts\install-global.ps1
 
 自動偵測 Claude Code / Codex CLI / Gemini CLI / Antigravity，安裝至對應全域路徑。Windows 腳本針對 PowerShell 5.1（Windows 10 / 11 內建），不需要 Git Bash 或 WSL。
 
+> **PowerShell 執行原則：** 直接執行 `.ps1`（如 `.\scripts\install-global.ps1`）在預設 `Restricted` 原則下會報 *"running scripts is disabled on this system"*。請使用 `scripts\setup\install.bat` 或上方的 `powershell -ExecutionPolicy Bypass -File ...` 形式 —— 兩者都只對該次執行繞過原則，不需更改系統設定、不需系統管理員（UAC）。若要為目前使用者永久允許指令碼：`Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`。
+
 ![全域安裝](guide/01-install-global-run.png)
 
 > 🆕 **新手？** 請看 [5 分鐘快速上手指南](quick-start.zh-TW.md)，零基礎也能立刻開始！
@@ -200,24 +202,30 @@ npx skills update
 
 **Windows（PowerShell，原生 — 不需要 Git Bash 或 WSL）：**
 
-> ⚠️ **需要管理員權限：** 執行 `install-tools.ps1` 前，請以系統管理員身分開啟 PowerShell。套件管理工具（`winget`、`choco`、`scoop`）需要提升的權限才能安裝系統工具。
-
 ```powershell
 # 互動模式：檢查並提示安裝
-.\scripts\install-tools.ps1
+powershell -ExecutionPolicy Bypass -File scripts\install-tools.ps1
 
 # 僅檢查工具狀態（不需要管理員）
-.\scripts\install-tools.ps1 check
+powershell -ExecutionPolicy Bypass -File scripts\install-tools.ps1 check
 
-# 安裝全部缺少的工具（需要管理員）
-.\scripts\install-tools.ps1 install
+# 安裝全部缺少的工具（僅 choco 套件需要管理員）
+powershell -ExecutionPolicy Bypass -File scripts\install-tools.ps1 install
 
-# 安裝特定 Agent 的工具（需要管理員）
-.\scripts\install-tools.ps1 install horus
-.\scripts\install-tools.ps1 install zeus
+# 安裝特定 Agent 的工具
+powershell -ExecutionPolicy Bypass -File scripts\install-tools.ps1 install horus
+powershell -ExecutionPolicy Bypass -File scripts\install-tools.ps1 install zeus
 ```
 
-或雙擊 `scripts\setup\install.bat`，選擇 `[2] Tools`（安裝時需要管理員模式）。需要 `winget`（Windows 10 1809+ / Windows 11 內建）或 `choco` / `scoop`。
+或雙擊 `scripts\setup\install.bat`，選擇 `[2] Tools`。需要 `winget`（Windows 10 1809+ / Windows 11 內建）或 `choco` / `scoop`。
+
+> **無需系統管理員 / UAC。** 工具以目前使用者身分安裝，請勿用系統管理員權限執行（自我提權會安裝到 Administrator 設定檔而非你的）。`check` 永遠不需要系統管理員。
+>
+> **自動引導（auto-bootstrap）。** 優先使用 `winget`。當某工具僅能透過 **Go** / **scoop** / **uv·pip** 安裝、而該安裝器缺失時，指令碼會先自動為你安裝它（目前使用者、不需系統管理員），再安裝該工具 —— 例如 `kube-score` / `conftest` / `tfsec` 會引導 Go 工具鏈，`pluto` / `polaris` / `d2` 會引導 scoop，`yamllint` / `checkov` / `pre-commit` 會引導 uv。僅 `choco` 套件需要提權終端機。
+>
+> **安裝後的 PATH。** `go install` 與 `uv` 會把執行檔放到 `%USERPROFILE%\go\bin` 與 `%USERPROFILE%\.local\bin`。指令碼會把這兩個目錄加入你的 **User PATH**，但 Windows 只對*新*行程生效 —— 請**開啟一個新終端機**再執行 `...install-tools.ps1 check`，否則剛裝好的工具尚無法被找到。
+>
+> **PowerShell 執行原則：** 直接執行 `.ps1`（如 `.\scripts\install-tools.ps1`）在預設 `Restricted` 原則下會報 *"running scripts is disabled on this system"*。請使用上方的 `powershell -ExecutionPolicy Bypass -File ...` 形式或 `scripts\setup\install.bat`，兩者都只對該次執行繞過原則，不需更改系統設定、不需系統管理員。若要為目前使用者永久允許指令碼（不需 UAC）：`Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`。
 
 ### 共用工具
 

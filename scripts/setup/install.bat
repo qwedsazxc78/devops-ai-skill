@@ -17,6 +17,32 @@ if %ERRORLEVEL% EQU 0 (
   set "PS=powershell.exe"
 )
 
+REM Fail fast if no PowerShell host is available at all.
+where /q %PS%
+if errorlevel 1 (
+  echo.
+  echo [ERROR] PowerShell not found on PATH ^(looked for pwsh.exe / powershell.exe^).
+  echo         Install PowerShell 7+ from https://aka.ms/powershell, or ensure
+  echo         Windows PowerShell 5.1 is available, then re-run this launcher.
+  goto end
+)
+
+REM Verify the installer scripts exist next to this launcher (full clone check).
+set "GLOBAL_PS=%~dp0..\install-global.ps1"
+set "TOOLS_PS=%~dp0..\install-tools.ps1"
+if not exist "%GLOBAL_PS%" (
+  echo.
+  echo [ERROR] Cannot find install-global.ps1 at "%GLOBAL_PS%".
+  echo         Run this from a complete clone of the devops-ai-skill repo.
+  goto end
+)
+if not exist "%TOOLS_PS%" (
+  echo.
+  echo [ERROR] Cannot find install-tools.ps1 at "%TOOLS_PS%".
+  echo         Run this from a complete clone of the devops-ai-skill repo.
+  goto end
+)
+
 echo.
 echo ===============================================
 echo  DevOps AI Skill Pack -- Windows Install
@@ -42,29 +68,41 @@ echo Invalid choice: %CHOICE%
 goto end
 
 :skills
-%PS% -ExecutionPolicy Bypass -NoProfile -File "%~dp0..\install-global.ps1"
+%PS% -ExecutionPolicy Bypass -NoProfile -File "%GLOBAL_PS%"
+if errorlevel 1 (
+  echo.
+  echo [ERROR] Skill install failed. See the message above.
+)
 goto end
 
 :tools
-%PS% -ExecutionPolicy Bypass -NoProfile -File "%~dp0..\install-tools.ps1" install
+%PS% -ExecutionPolicy Bypass -NoProfile -File "%TOOLS_PS%" install
+if errorlevel 1 (
+  echo.
+  echo [ERROR] Tool install failed. See the message above.
+)
 goto end
 
 :both
-%PS% -ExecutionPolicy Bypass -NoProfile -File "%~dp0..\install-global.ps1"
+%PS% -ExecutionPolicy Bypass -NoProfile -File "%GLOBAL_PS%"
 if errorlevel 1 (
   echo.
-  echo Skill install failed -- skipping tool install.
+  echo [ERROR] Skill install failed -- skipping tool install.
   goto end
 )
-%PS% -ExecutionPolicy Bypass -NoProfile -File "%~dp0..\install-tools.ps1" install
+%PS% -ExecutionPolicy Bypass -NoProfile -File "%TOOLS_PS%" install
+if errorlevel 1 (
+  echo.
+  echo [ERROR] Tool install failed. See the message above.
+)
 goto end
 
 :status
-%PS% -ExecutionPolicy Bypass -NoProfile -File "%~dp0..\install-global.ps1" -Status
+%PS% -ExecutionPolicy Bypass -NoProfile -File "%GLOBAL_PS%" -Status
 goto end
 
 :uninstall
-%PS% -ExecutionPolicy Bypass -NoProfile -File "%~dp0..\install-global.ps1" -Uninstall
+%PS% -ExecutionPolicy Bypass -NoProfile -File "%GLOBAL_PS%" -Uninstall
 goto end
 
 :end

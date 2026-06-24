@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **`--uninstall` / `--status` orphaned newer skills & workflows (stale hardcoded lists)** — `install-global.sh` and `install-global.ps1` enumerated a frozen 10-skill / 19-workflow list, so everything added since (7 skills incl. `ingress-controller-install`, `nginx-to-traefik`, `painter`, `traefik-controller-decommission`; 8 `zeus-*` migration workflows) was never removed on uninstall and not shown by status. Both now discover skills from `skills/` and workflows from `prompts/` dynamically, so the lists never go stale. Verified: `--all` install (17 skills + 27 workflows) followed by `--uninstall` now leaves **0** leftovers.
+
+- **Windows installer was completely broken (worked only on macOS/Linux)** — `scripts\install-global.ps1` aborted on the very first line of its body with *"Parameter set cannot be resolved using the specified named parameters."* on Windows PowerShell 5.1. Cause: `Split-Path -Parent -LiteralPath` is an ambiguous parameter set in 5.1 (`-Parent` and `-LiteralPath` live in different sets). Dropped the redundant `-Parent` (it is the default) in all 4 call sites; verified install / update / `-Status` / `-Help` / `-Uninstall` / `-All` all run clean (exit 0). The `.sh` path was unaffected, which is why the pack appeared to "only work on Mac".
+- **Docs: `install-tools.ps1` invocations failed under default execution policy** — README showed bare `.\scripts\install-tools.ps1`, which throws *"running scripts is disabled on this system"* under the default `Restricted` policy. Switched to the `powershell -ExecutionPolicy Bypass -File ...` form (consistent with the `install-global.ps1` examples) and added an execution-policy / no-admin (no UAC) note. Per-user installs never require elevation.
+
 ## [1.17.1] - 2026-06-11
 
 ### Added

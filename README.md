@@ -55,6 +55,8 @@ powershell -ExecutionPolicy Bypass -File scripts\install-global.ps1
 
 All paths auto-detect Claude Code / Codex CLI / Gemini CLI / Antigravity and install to their global config paths. The Windows scripts target PowerShell 5.1 (built-in on Windows 10/11) — no Git Bash, no WSL, no extra dependencies.
 
+> **PowerShell execution policy.** Running a `.ps1` directly (e.g. `.\scripts\install-global.ps1`) can fail with *"running scripts is disabled on this system"* under the default `Restricted` policy. Use `scripts\setup\install.bat` or the `powershell -ExecutionPolicy Bypass -File ...` form shown above — both bypass the policy for that one run without changing system settings or needing admin. To allow scripts permanently for your user only (no admin/UAC): `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`.
+
 ![Global Install](docs/guide/01-install-global-run.png)
 
 > 🆕 **New here?** Check out the [5-minute quick start guide](docs/quick-start.md) — zero prior knowledge required!
@@ -197,24 +199,28 @@ One-command installer supporting macOS (Homebrew), Linux (apt/snap), Windows (wi
 
 **Windows (PowerShell, native — no Git Bash / WSL needed):**
 
-> ⚠️ **Admin Rights Required:** Run PowerShell as Administrator before executing `install-tools.ps1`. Package managers (`winget`, `choco`, `scoop`) require elevated privileges to install system tools.
-
 ```powershell
 # Interactive: check + prompt install
-.\scripts\install-tools.ps1
+powershell -ExecutionPolicy Bypass -File scripts\install-tools.ps1
 
 # Check tool status only (no admin needed)
-.\scripts\install-tools.ps1 check
+powershell -ExecutionPolicy Bypass -File scripts\install-tools.ps1 check
 
-# Install all missing tools (requires admin)
-.\scripts\install-tools.ps1 install
+# Install all missing tools (only choco packages need admin)
+powershell -ExecutionPolicy Bypass -File scripts\install-tools.ps1 install
 
-# Install tools for a specific agent (requires admin)
-.\scripts\install-tools.ps1 install horus
-.\scripts\install-tools.ps1 install zeus
+# Install tools for a specific agent
+powershell -ExecutionPolicy Bypass -File scripts\install-tools.ps1 install horus
+powershell -ExecutionPolicy Bypass -File scripts\install-tools.ps1 install zeus
 ```
 
-Or double-click `scripts\setup\install.bat` and choose `[2] Tools` (admin mode required for install). Requires `winget` (built into Windows 10 1809+ / Windows 11) or `choco` / `scoop`.
+Or double-click `scripts\setup\install.bat` and choose `[2] Tools`. Requires `winget` (built into Windows 10 1809+ / Windows 11). Run `...install-tools.ps1 help` for full usage.
+
+> **Auto-bootstrap.** `winget` is preferred. When a tool is only available via **Go**, **scoop**, or **uv/pip** and that installer is missing, the script installs it for you automatically (per-user, no admin) before installing the tool — e.g. `kube-score` / `conftest` / `tfsec` pull in the Go toolchain, `pluto` / `polaris` / `d2` pull in scoop, and `yamllint` / `checkov` / `pre-commit` pull in uv. Only `choco`-based packages need an elevated shell.
+>
+> **No admin / UAC required for most installs.** Tools install per-user — do **not** run elevated (self-elevation would install into the Administrator profile, not yours). `check` never needs admin.
+>
+> **PATH after install.** `go install` and `uv` place binaries in `%USERPROFILE%\go\bin` and `%USERPROFILE%\.local\bin`. The installer adds both to your **User PATH**, but Windows only applies PATH changes to *new* processes — so **open a fresh terminal** before running `...install-tools.ps1 check`, or the just-installed tools won't be found yet.
 
 ### Shared Tools
 
