@@ -97,6 +97,17 @@ function Get-DiscoveredWorkflows {
   }
 }
 
+# How to install each AI coding CLI, surfaced when it is missing or not on PATH.
+function Get-CliInstallHint ([string]$cliCmd) {
+  switch ($cliCmd) {
+    'claude'      { return 'npm install -g @anthropic-ai/claude-code' }
+    'codex'       { return 'npm install -g @openai/codex' }
+    'gemini'      { return 'npm install -g @google/gemini-cli' }
+    'antigravity' { return 'download the Antigravity editor: https://antigravity.google' }
+    Default        { return '' }
+  }
+}
+
 function Test-Platform ([string]$displayName, [string]$cliCmd, [string]$configDir) {
   if (Test-Cli $cliCmd) {
     $ver = ''
@@ -116,7 +127,11 @@ function Test-Platform ([string]$displayName, [string]$cliCmd, [string]$configDi
   } else {
     Write-Host '  [--]   ' -ForegroundColor DarkGray -NoNewline
     Write-Host ("{0,-13} " -f $displayName) -NoNewline
-    Write-Host '(not installed -- skipping)' -ForegroundColor DarkGray
+    Write-Host '(not installed)' -ForegroundColor DarkGray
+    $hint = Get-CliInstallHint $cliCmd
+    if ($hint) {
+      Write-Host ('           to install: {0}' -f $hint) -ForegroundColor DarkGray
+    }
     return $false
   }
 }

@@ -214,9 +214,13 @@ powershell -ExecutionPolicy Bypass -File scripts\install-tools.ps1 install horus
 powershell -ExecutionPolicy Bypass -File scripts\install-tools.ps1 install zeus
 ```
 
-Or double-click `scripts\setup\install.bat` and choose `[2] Tools`. Requires `winget` (built into Windows 10 1809+ / Windows 11) or `choco` / `scoop`.
+Or double-click `scripts\setup\install.bat` and choose `[2] Tools`. Requires `winget` (built into Windows 10 1809+ / Windows 11). Run `...install-tools.ps1 help` for full usage.
 
-> **No admin / UAC required for most installs.** Tools install per-user via `winget` / `scoop` / `uv` — do **not** run elevated (self-elevation would install into the Administrator profile, not yours). `check` never needs admin; only `choco` packages need an elevated shell, and the installer prefers `winget` where available.
+> **Auto-bootstrap.** `winget` is preferred. When a tool is only available via **Go**, **scoop**, or **uv/pip** and that installer is missing, the script installs it for you automatically (per-user, no admin) before installing the tool — e.g. `kube-score` / `conftest` / `tfsec` pull in the Go toolchain, `pluto` / `polaris` / `d2` pull in scoop, and `yamllint` / `checkov` / `pre-commit` pull in uv. Only `choco`-based packages need an elevated shell.
+>
+> **No admin / UAC required for most installs.** Tools install per-user — do **not** run elevated (self-elevation would install into the Administrator profile, not yours). `check` never needs admin.
+>
+> **PATH after install.** `go install` and `uv` place binaries in `%USERPROFILE%\go\bin` and `%USERPROFILE%\.local\bin`. The installer adds both to your **User PATH**, but Windows only applies PATH changes to *new* processes — so **open a fresh terminal** before running `...install-tools.ps1 check`, or the just-installed tools won't be found yet.
 
 ### Shared Tools
 

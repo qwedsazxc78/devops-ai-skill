@@ -47,6 +47,17 @@ dir_exists() {
   [[ -d "$1" ]]
 }
 
+# How to install each AI coding CLI, surfaced when it is missing.
+cli_install_hint() {
+  case "$1" in
+    claude)      echo "npm install -g @anthropic-ai/claude-code" ;;
+    codex)       echo "npm install -g @openai/codex" ;;
+    gemini)      echo "npm install -g @google/gemini-cli" ;;
+    antigravity) echo "download the Antigravity editor: https://antigravity.google" ;;
+    *)           echo "" ;;
+  esac
+}
+
 detect_platform() {
   local name="$1"
   local cli_cmd="$2"
@@ -61,7 +72,9 @@ detect_platform() {
     echo -e "  ${YELLOW}[dir]${NC}  $name  ${DIM}(config dir exists, CLI not in PATH)${NC}"
     return 0
   else
-    echo -e "  ${DIM}[--]${NC}   $name  ${DIM}(not installed — skipping)${NC}"
+    echo -e "  ${DIM}[--]${NC}   $name  ${DIM}(not installed)${NC}"
+    local hint; hint=$(cli_install_hint "$cli_cmd")
+    [[ -n "$hint" ]] && echo -e "         ${DIM}to install: $hint${NC}"
     return 1
   fi
 }

@@ -85,26 +85,26 @@ TOOLS=(
   "curl|shared|recommended|brew install curl|apt-get install -y curl||winget install cURL.cURL"
 
   # Zeus (GitOps) — Required
-  "kustomize|zeus|required|brew install kustomize|snap install kustomize||scoop install kustomize"
+  "kustomize|zeus|required|brew install kustomize|snap install kustomize||winget install Kubernetes.kustomize"
 
   # Zeus (GitOps) — Recommended
   "yamllint|zeus|recommended|||pip install yamllint|"
-  "kubeconform|zeus|recommended|brew install kubeconform|||scoop install kubeconform"
+  "kubeconform|zeus|recommended|brew install kubeconform|||winget install YannHamon.kubeconform"
   # ingress2gateway — upstream Kubernetes SIG-Network tool.
   # Used by gateway-api-migration skill Step 4c (second opinion) AND
   # Step 4d validator (scripts/validate_generated.py check #11). Missing tool
   # → validator falls back to offline-only checks. Fallback install via `go`
   # is handled by get_install_cmd() below when no system package manager is
   # available. Source: https://github.com/kubernetes-sigs/ingress2gateway
-  "ingress2gateway|zeus|recommended|brew install ingress2gateway|||"
+  "ingress2gateway|zeus|recommended|brew install ingress2gateway|||winget install Kubernetes.ingress2gateway"
   "kube-score|zeus|recommended|brew install kube-score|||"
-  "kube-linter|zeus|recommended|brew install kube-linter|||"
-  "polaris|zeus|recommended|brew install FairwindsOps/tap/polaris|||"
-  "pluto|zeus|recommended|brew install FairwindsOps/tap/pluto|||"
+  "kube-linter|zeus|recommended|brew install kube-linter|||winget install stackrox.kube-linter"
+  "polaris|zeus|recommended|brew install FairwindsOps/tap/polaris|||scoop install polaris"
+  "pluto|zeus|recommended|brew install FairwindsOps/tap/pluto|||scoop install pluto"
   "conftest|zeus|recommended|brew install conftest|||"
   "checkov|zeus|recommended|||pip install checkov|"
-  "trivy|zeus|recommended|brew install trivy|||choco install trivy"
-  "gitleaks|zeus|recommended|brew install gitleaks|||choco install gitleaks"
+  "trivy|zeus|recommended|brew install trivy|||winget install AquaSecurity.Trivy"
+  "gitleaks|zeus|recommended|brew install gitleaks|||winget install Gitleaks.Gitleaks"
   "d2|zeus|recommended|brew install d2|||scoop install d2"
 
   # Horus (IaC) — Required
@@ -112,8 +112,8 @@ TOOLS=(
   "helm|horus|required|brew install helm|snap install helm --classic||winget install Helm.Helm"
 
   # Horus (IaC) — Recommended
-  "tflint|horus|recommended|brew install tflint|||choco install tflint"
-  "tfsec|horus|recommended|brew install tfsec|||choco install tfsec"
+  "tflint|horus|recommended|brew install tflint|||winget install TerraformLinters.tflint"
+  "tfsec|horus|recommended|brew install tfsec|||"
   "pre-commit|horus|recommended|||pip install pre-commit|"
 )
 
@@ -148,6 +148,8 @@ get_go_install_path() {
     ingress2gateway) echo "github.com/kubernetes-sigs/ingress2gateway@latest" ;;
     kube-score)      echo "github.com/zegl/kube-score/cmd/kube-score@latest" ;;
     kubeconform)     echo "github.com/yannh/kubeconform/cmd/kubeconform@latest" ;;
+    conftest)        echo "github.com/open-policy-agent/conftest@latest" ;;
+    tfsec)           echo "github.com/aquasecurity/tfsec/cmd/tfsec@latest" ;;
     *) echo "" ;;
   esac
 }
@@ -156,15 +158,16 @@ get_install_cmd() {
   local entry="$1"
   IFS='|' read -r name category tier brew_cmd apt_cmd pip_cmd winget_cmd <<< "$entry"
 
-  # Python tools first (cross-platform): uv > pip3 > pip
-  # uv tool install → ~/.local/bin/ (globally accessible)
-  # pip install --user → ~/.local/bin/ (user-level, avoids sudo)
-  if [[ -n "$pip_cmd" && -n "$PIP" ]]; then
+  # Python tools first (cross-platform). Prefer an existing pip; otherwise emit
+  # the uv command. We emit it even when neither uv nor pip is present — the
+  # installer (ensure_installer) bootstraps uv before running it.
+  # uv tool install → ~/.local/bin/ ; pip install --user → ~/.local/bin/
+  if [[ -n "$pip_cmd" ]]; then
     local pkg="${pip_cmd##pip install }"
-    if [[ "$PIP" == "uv" ]]; then
-      echo "uv tool install $pkg"
-    else
+    if [[ "$PIP" == "pip3" || "$PIP" == "pip" ]]; then
       echo "$PIP install --user $pkg"
+    else
+      echo "uv tool install $pkg"
     fi
     return
   fi
@@ -180,13 +183,12 @@ get_install_cmd() {
       echo "scoop install ${name}" && return ;;
   esac
 
-  # `go install` fallback: Go-native tools that don't have platform package
-  # manager entries can still be installed via `go install <path>@latest` if
-  # Go is on PATH. This is how the upstream ingress2gateway repo recommends
-  # non-Homebrew installation.
+  # `go install` fallback for Go-native tools without a platform package. The
+  # Go toolchain is bootstrapped by ensure_installer() when absent, so emit the
+  # command regardless of whether `go` is currently on PATH.
   local go_path
   go_path=$(get_go_install_path "$name")
-  if [[ -n "$go_path" ]] && command -v go &>/dev/null; then
+  if [[ -n "$go_path" ]]; then
     echo "go install $go_path"
     return
   fi
@@ -213,10 +215,48 @@ get_install_hint() {
   echo "see https://github.com/search?q=${name} for install instructions"
 }
 
+# Tracks installers we've already attempted to bootstrap this run (space-padded).
+BOOTSTRAPPED=" "
+
+# ensure_installer: bootstrap a missing installer/toolchain on demand so tools
+# that depend on it (go install / uv / pip) become installable without the user
+# pre-installing it. $1 is the leading token of an install command. Returns 0 if
+# the installer is available afterwards, 1 otherwise. System package managers
+# (brew/apt/winget) are assumed present and never bootstrapped here.
+ensure_installer() {
+  local mgr="$1"
+  command -v "$mgr" &>/dev/null && return 0
+  case "$BOOTSTRAPPED" in *" $mgr "*) command -v "$mgr" &>/dev/null; return $? ;; esac
+  BOOTSTRAPPED="${BOOTSTRAPPED}${mgr} "
+
+  printf "  ${BOLD}[bootstrap]${NC} %s not found — installing it ...\n" "$mgr"
+  case "$mgr" in
+    go)
+      case "$PKG_MANAGER" in
+        brew) brew install go &>/dev/null ;;
+        apt)  sudo apt-get install -y golang-go &>/dev/null ;;
+      esac
+      # go-installed binaries land in $(go env GOPATH)/bin (default ~/go/bin)
+      export PATH="${HOME}/go/bin:$PATH" ;;
+    uv)
+      curl -LsSf https://astral.sh/uv/install.sh | sh &>/dev/null
+      export PATH="${HOME}/.local/bin:${HOME}/.cargo/bin:$PATH" ;;
+    pip|pip3)
+      { python3 -m ensurepip --upgrade || python -m ensurepip --upgrade; } &>/dev/null
+      PIP="$mgr" ;;
+    *) : ;;  # scoop/choco are Windows-only; nothing to bootstrap on this OS
+  esac
+  command -v "$mgr" &>/dev/null
+}
+
 # --- Commands ---------------------------------------------------------------
 
 do_check() {
   local filter="${1:-all}"
+
+  # Make per-user tool bin dirs visible so detection sees tools installed since
+  # this shell opened (go install -> ~/go/bin, uv tool install -> ~/.local/bin).
+  export PATH="${HOME}/go/bin:${HOME}/.local/bin:$PATH"
 
   printf "${BOLD}DevOps Plugin — Tool Status${NC}\n"
   printf "============================\n"
@@ -346,6 +386,15 @@ do_install() {
       continue
     fi
 
+    # Bootstrap the installer this command needs (go/uv/pip) if it is missing.
+    local mgr="${cmd%% *}"
+    if ! ensure_installer "$mgr"; then
+      printf "  ${YELLOW}[SKIP]${NC}  %s — could not bootstrap '%s'\n" "$name" "$mgr"
+      printf "          hint: %s\n" "$(get_install_hint "$entry")"
+      ((failed++))
+      continue
+    fi
+
     printf "  Installing ${BOLD}%s${NC} via: %s ... " "$name" "$cmd"
 
     local success=false
@@ -376,7 +425,13 @@ do_install() {
   fi
   echo
   echo
-  printf "Run ${BOLD}./scripts/install-tools.sh check${NC} to verify.\n"
+  if [[ $installed -gt 0 ]]; then
+    printf "${YELLOW}Note:${NC} freshly installed tools (and any bootstrapped go/uv) may need a\n"
+    printf "      new shell or 'source ~/.profile' to land on PATH. Open a new terminal,\n"
+    printf "      then run ${BOLD}./scripts/install-tools.sh check${NC} to verify.\n"
+  else
+    printf "Run ${BOLD}./scripts/install-tools.sh check${NC} to verify.\n"
+  fi
 }
 
 do_interactive() {
@@ -394,6 +449,39 @@ do_interactive() {
   fi
 }
 
+do_help() {
+  cat <<'EOF'
+
+DevOps AI Skill Pack -- Tool Installer
+======================================
+
+Usage:
+  ./scripts/install-tools.sh [command] [agent]
+
+Commands:
+  (none)     Interactive: check, then offer to install missing tools
+  check      Show tool status only (never installs)
+  install    Install all missing tools
+  help       Show this help
+
+Agent filter (optional 2nd arg):
+  all        Shared + Zeus + Horus tools (default)
+  zeus       Shared + Zeus (GitOps) tools
+  horus      Shared + Horus (IaC) tools
+
+Examples:
+  ./scripts/install-tools.sh check
+  ./scripts/install-tools.sh install zeus
+
+Auto-bootstrap:
+  Uses the platform package manager (brew/apt/winget). When a tool needs Go /
+  uv / pip and it is missing, the installer bootstraps it automatically. On
+  Windows, scoop/choco are bootstrapped too (per-user where possible). go/uv-
+  installed tools land in ~/go/bin and ~/.local/bin -- make sure those are on
+  PATH (open a new shell or 'source ~/.profile') after install.
+EOF
+}
+
 # --- Main -------------------------------------------------------------------
 detect_platform
 
@@ -403,6 +491,9 @@ case "${1:-}" in
     ;;
   install)
     do_install "${2:-all}"
+    ;;
+  help|-h|--help)
+    do_help
     ;;
   *)
     do_interactive "${1:-all}"

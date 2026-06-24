@@ -219,7 +219,11 @@ powershell -ExecutionPolicy Bypass -File scripts\install-tools.ps1 install zeus
 
 或雙擊 `scripts\setup\install.bat`，選擇 `[2] Tools`。需要 `winget`（Windows 10 1809+ / Windows 11 內建）或 `choco` / `scoop`。
 
-> **無需系統管理員 / UAC。** 工具以目前使用者身分透過 `winget` / `scoop` / `uv` 安裝，請勿用系統管理員權限執行（自我提權會安裝到 Administrator 設定檔而非你的）。僅 `choco` 套件需要提權終端機；安裝器會優先使用 `winget`。
+> **無需系統管理員 / UAC。** 工具以目前使用者身分安裝，請勿用系統管理員權限執行（自我提權會安裝到 Administrator 設定檔而非你的）。`check` 永遠不需要系統管理員。
+>
+> **自動引導（auto-bootstrap）。** 優先使用 `winget`。當某工具僅能透過 **Go** / **scoop** / **uv·pip** 安裝、而該安裝器缺失時，指令碼會先自動為你安裝它（目前使用者、不需系統管理員），再安裝該工具 —— 例如 `kube-score` / `conftest` / `tfsec` 會引導 Go 工具鏈，`pluto` / `polaris` / `d2` 會引導 scoop，`yamllint` / `checkov` / `pre-commit` 會引導 uv。僅 `choco` 套件需要提權終端機。
+>
+> **安裝後的 PATH。** `go install` 與 `uv` 會把執行檔放到 `%USERPROFILE%\go\bin` 與 `%USERPROFILE%\.local\bin`。指令碼會把這兩個目錄加入你的 **User PATH**，但 Windows 只對*新*行程生效 —— 請**開啟一個新終端機**再執行 `...install-tools.ps1 check`，否則剛裝好的工具尚無法被找到。
 >
 > **PowerShell 執行原則：** 直接執行 `.ps1`（如 `.\scripts\install-tools.ps1`）在預設 `Restricted` 原則下會報 *"running scripts is disabled on this system"*。請使用上方的 `powershell -ExecutionPolicy Bypass -File ...` 形式或 `scripts\setup\install.bat`，兩者都只對該次執行繞過原則，不需更改系統設定、不需系統管理員。若要為目前使用者永久允許指令碼（不需 UAC）：`Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`。
 

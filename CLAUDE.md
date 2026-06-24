@@ -34,6 +34,24 @@ first, then port the diff to the matching `.ps1`. Do not let them diverge.
   `prompts/` (see `Get-DiscoveredSkills` / `_discover_skills`). Do not hardcode
   skill/workflow names — they go stale as the set grows.
 
+**`install-tools.ps1` tool registry + bootstrap:**
+- Registry 7th `|`-field is the **Windows install command**. Prefer a real
+  `winget install <Id>` when one exists (verify via `winget search`); use
+  `scoop install <name>` only when there is no winget package (e.g. `d2`,
+  `polaris`, `pluto`). Leave it empty for Go-native tools and add the path to
+  `Get-GoInstallPath` instead.
+- Missing installers (Go / scoop / uv / pip) are **auto-bootstrapped** by
+  `Install-Manager` before a tool installs (per-user, no admin; choco needs
+  elevation). `Get-InstallCmd` therefore emits go/uv commands even when those
+  installers are absent.
+- **`go install` paths are case-sensitive** and main may not live at the module
+  root — e.g. polaris/pluto declare a lowercase `github.com/fairwindsops/...`
+  module path (capital-O fails) and their main isn't `cmd/<tool>`. Prefer scoop
+  for these. `go install` drops binaries in `%USERPROFILE%\go\bin`, `uv` in
+  `%USERPROFILE%\.local\bin` — neither is auto-added to PATH, so the installer
+  persists both to the **User PATH** (`Save-PerUserBinPath`) and `check` refreshes
+  the session PATH (`Update-SessionPath`) so detection works without a restart.
+
 **Smoke test (non-destructive paths first):**
 ```powershell
 powershell -NoProfile -File scripts\install-global.ps1 -Help
